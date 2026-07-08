@@ -666,3 +666,6 @@ body[data-theme="light"] .command-alert-list article{
 .pricing-table-head,.pricing-row{min-width:1060px}
 .pricing-table-head span,.pricing-row span{padding:7px 9px}
 @media(max-width:720px){.pricing-actions{justify-self:start}.pricing-column-panel{grid-template-columns:1fr}}
+
+.pricing-color-select{width:100%;height:24px;border:1px solid var(--line);border-radius:4px;background:var(--field-bg);color:var(--text);font:inherit;font-size:12px;padding:0 6px;min-width:0}
+.pricing-color-select option{color:#102033}
