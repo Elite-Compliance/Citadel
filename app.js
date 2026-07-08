@@ -1,4 +1,4 @@
-var CITADEL_VERSION="1.2.8";
+var CITADEL_VERSION="1.2.9";
 var CITADEL_API_URL="https://script.google.com/macros/s/AKfycbzKIMMrIFdmS3xKUHzSzwR-Y-Z4FebDLBod1OWmORqDC-_J9pXH2azFVrONruv1djvIhw/exec";
 var commandCenterSource="Loading modules";
 var COMMAND_FOCUS_NOTE_PREFIX="citadel_command_focus_note_";
