@@ -1,4 +1,4 @@
-const CITADEL_VERSION = '1.2.9';
+const CITADEL_VERSION = '1.3.0';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
