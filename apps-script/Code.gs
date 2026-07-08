@@ -809,7 +809,7 @@ function buildLienMetrics_(records) {
 function getPricing(e) {
   const spreadsheetId = getPricingSpreadsheetId_();
   const sheetName = getParam_(e, 'sheet') || 'Pricing';
-  const limit = Math.min(Math.max(Number(getParam_(e, 'limit') || 75), 1), 150);
+  const limit = Math.min(Math.max(Number(getParam_(e, 'limit') || 75), 1), 2000);
   const offset = Math.max(Number(getParam_(e, 'offset') || 0), 0);
   const search = String(getParam_(e, 'search') || '').trim().toLowerCase();
   const state = String(getParam_(e, 'state') || 'All states');
@@ -867,7 +867,7 @@ function getPricing(e) {
 function findPricingRowsByText_(sheet, keys, indexes, options) {
   const lastCol = sheet.getLastColumn();
   const offset = Math.max(Number(options.offset || 0), 0);
-  const limit = Math.min(Math.max(Number(options.limit || 75), 1), 150);
+  const limit = Math.min(Math.max(Number(options.limit || 75), 1), 2000);
   const needed = offset + limit + 1;
   const rowNumbers = [];
   const seen = {};
@@ -899,7 +899,7 @@ function scanPricingRowsFast_(sheet, keys, indexes, options) {
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
   const offset = Math.max(Number(options.offset || 0), 0);
-  const limit = Math.min(Math.max(Number(options.limit || 75), 1), 150);
+  const limit = Math.min(Math.max(Number(options.limit || 75), 1), 2000);
   const matched = [];
   let total = 0;
   const chunkSize = 1200;
