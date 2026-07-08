@@ -615,8 +615,8 @@ body[data-theme="light"] .command-alert-list article{
 @media(max-width:720px){.liens-filter-card,.contractors-filter-card,.standard-filter-card{grid-template-columns:1fr !important}.liens-filter-card>button,.contractors-filter-card>button,.standard-filter-card>button{justify-self:start !important}.liens-filters,.contractors-filters,.standard-filters{grid-template-columns:1fr !important}}
 
 /* Module status line */
-.module-status-line{min-height:16px;display:flex;align-items:center;justify-content:flex-end;gap:7px;margin:0;color:var(--muted);font-size:12px;font-weight:800;line-height:1}
-.module-status-line span{width:8px;height:8px;background:#4ba579;display:inline-block}
+.module-status-line{min-height:28px;display:flex;align-items:center;justify-content:flex-end;gap:7px;margin:0 0 6px;color:#fff;font-size:12px;font-weight:800;line-height:1}
+.module-status-line .module-status-pill{display:inline-flex;align-items:center;gap:7px;min-height:24px;padding:0 10px;background:#2f8f6d;color:#fff;border:1px solid rgba(255,255,255,.2);box-shadow:0 6px 16px rgba(47,143,109,.2)}.module-status-line .module-status-pill i{width:7px;height:7px;background:#b8f5d2;display:inline-block}
 .module-status-line:empty{display:none}
 
 
@@ -677,7 +677,7 @@ body[data-theme="light"] .command-alert-list article{
 .region-score-dial{width:92px;height:92px;border:1px solid var(--line);display:grid;place-items:center;align-content:center;background:rgba(45,109,159,.12);border-top:4px solid var(--blue-300)}
 .region-score-dial strong{font-size:32px;line-height:1}.region-score-dial span{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:800}
 .region-score-dial.critical{border-top-color:#c46f74}.region-score-dial.watch{border-top-color:#c5a15b}.region-score-dial.healthy{border-top-color:#78c6a3}
-.region-health-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;border:1px solid var(--line);background:rgba(255,255,255,.035);padding:8px}
+.region-health-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;border:1px solid var(--line);background:rgba(255,255,255,.035);padding:8px}
 .region-health-metrics article{border:1px solid var(--line);border-top:3px solid rgba(131,183,221,.72);background:var(--card-bg);padding:7px 9px;min-height:48px}
 .region-health-metrics span,.region-health-metrics em{display:block;color:var(--muted);font-size:10px;line-height:1.05;font-style:normal}.region-health-metrics span{text-transform:uppercase;font-weight:800}.region-health-metrics strong{display:block;margin-top:3px;color:var(--text);font-size:19px;line-height:1}
 .region-health-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:10px;min-height:0}.region-list-panel,.region-focus-panel{border:1px solid var(--line);background:var(--card-bg);padding:12px}.region-focus-panel{align-self:start}
