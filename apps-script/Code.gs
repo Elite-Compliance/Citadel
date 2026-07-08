@@ -1,4 +1,4 @@
-const CITADEL_VERSION = '1.2.3';
+const CITADEL_VERSION = '1.2.5';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
@@ -537,6 +537,19 @@ function mapFleetDriver_(row) {
     next_action: getFleetField_(row, ['next_action', 'next action']) || 'Review protected workflow',
     last_updated: getFleetField_(row, ['last_updated', 'updated_at', 'last_communication_date', 'last communication date']) || today_()
   };
+}
+
+function getFleetField_(row, names) {
+  if (!row) return '';
+  const normalized = {};
+  Object.keys(row).forEach(function(key) {
+    normalized[normalizeHeader_(key)] = row[key];
+  });
+  for (let i = 0; i < names.length; i++) {
+    const key = normalizeHeader_(names[i]);
+    if (Object.prototype.hasOwnProperty.call(normalized, key) && normalized[key] !== '') return normalized[key];
+  }
+  return '';
 }
 
 function fleetDriverNameFromRow_(row) {

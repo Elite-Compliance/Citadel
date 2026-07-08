@@ -724,3 +724,5 @@ html,body{overflow:hidden}
   .contractors-row span:nth-child(1),.contractors-row span:nth-child(2){grid-column:auto !important}
   .contractors-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
 }
+
+.topbar-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}.refresh-button{min-height:40px;border:1px solid rgba(185,195,207,.34);background:var(--blue-500);color:#fff;padding:0 14px;font-weight:750;cursor:pointer}.refresh-button:hover{filter:brightness(1.08)}body[data-theme="light"] .refresh-button{background:#123b63;color:#fff}
