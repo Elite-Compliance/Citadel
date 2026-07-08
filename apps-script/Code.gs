@@ -1,11 +1,12 @@
-const CITADEL_VERSION = '1.2.5';
+const CITADEL_VERSION = '1.2.7';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
   contractors: '1qsMCA_kC129S4FbbMiLt1X9_VJlkwPRqGxx0WRrPuTg',
   pricing: '1kF3oCkjkMzAqwohT-pYk2CSKkZ0C5hGx3aPee9XsIgY',
   reviews: '1EjRpoie4MP8eE4SmYi0xqXIbGavH3ffz5DTb-MUdE1U',
-  fleet: '1cUbzbYW_7UCwD4oD9_pSWZBLDZYF3VpvqBijUOMBhuo'
+  fleet: '1cUbzbYW_7UCwD4oD9_pSWZBLDZYF3VpvqBijUOMBhuo',
+  registrations: ''
 };
 const LIEN_STATUS_REPORTS_FOLDER_ID = '1XcllT_u0WP7H5Cr9zvw9G6NNcOUTYcTH';
 const LIEN_MASTER_REPORT_NAME = 'Receivables Aging';
@@ -34,7 +35,8 @@ const SHEETS = {
   fleetNotes: 'FleetNotes',
   fleetAlerts: 'FleetAlerts',
   fleetFollowUps: 'FleetFollowUps',
-  fleetMetrics: 'FleetMetrics'
+  fleetMetrics: 'FleetMetrics',
+  registrationRequests: 'RegistrationRequests'
 };
 
 const CONTRACTOR_RECORD_HEADERS = ['Contractor', 'Phone', 'Email', 'Regions', 'Risk', 'Documents', 'GL Expiry', 'WC Expiry', 'Next Action', 'Address'];
@@ -54,6 +56,7 @@ const FLEET_NOTE_HEADERS = ['note_id', 'fleet_record_id', 'record_type', 'note_d
 const FLEET_ALERT_HEADERS = ['alert_id', 'fleet_record_id', 'record_type', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const FLEET_FOLLOWUP_HEADERS = ['followup_id', 'fleet_record_id', 'record_type', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const FLEET_METRIC_HEADERS = ['metric_key', 'label', 'value', 'note', 'tone', 'sort_order'];
+const REGISTRATION_REQUEST_HEADERS = ['request_id', 'submitted_at', 'requestor_name', 'brand', 'date_submitted', 'region', 'pure', 'jurisdiction', 'requirements', 'website', 'phone', 'email', 'notes', 'status', 'stage', 'assigned_to', 'completed_date', 'active'];
 
 function doGet(e) {
   const action = getParam_(e, 'action') || 'getLiens';
@@ -115,6 +118,10 @@ function doGet(e) {
       return output_(e, { ok: true, data: saveReviewFollowUp(paramsToPayload_(e)), version: CITADEL_VERSION });
     }
 
+    if (action === 'saveRegistrationRequest') {
+      return output_(e, { ok: true, data: saveRegistrationRequest(paramsToPayload_(e)), version: CITADEL_VERSION });
+    }
+
     if (action === 'setupContractorsSheet') {
       return output_(e, { ok: true, data: setupContractorsSheet(), version: CITADEL_VERSION });
     }
@@ -141,6 +148,47 @@ function doPost(e) {
   } catch (error) {
     return output_(e, { ok: false, error: error.message || String(error) });
   }
+}
+
+function getRegistrationsSpreadsheetId_() {
+  return SPREADSHEETS.registrations || SPREADSHEETS.commandCenter;
+}
+
+function setupRegistrationsSheet() {
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationRequests, REGISTRATION_REQUEST_HEADERS);
+  return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.registrationRequests] };
+}
+
+function saveRegistrationRequest(payload) {
+  if (!payload || !payload.requestor_name) throw new Error('requestor_name is required.');
+  if (!payload.brand) throw new Error('brand is required.');
+  if (!payload.region) throw new Error('region is required.');
+  if (!payload.jurisdiction) throw new Error('jurisdiction is required.');
+  if (!payload.requirements) throw new Error('requirements are required.');
+  const record = {
+    request_id: payload.request_id || makeId_('reg'),
+    submitted_at: new Date(),
+    requestor_name: payload.requestor_name || '',
+    brand: payload.brand || '',
+    date_submitted: payload.date_submitted || today_(),
+    region: payload.region || '',
+    pure: payload.pure || '',
+    jurisdiction: payload.jurisdiction || '',
+    requirements: payload.requirements || '',
+    website: payload.website || '',
+    phone: payload.phone || '',
+    email: payload.email || '',
+    notes: payload.notes || '',
+    status: payload.status || 'Submitted',
+    stage: payload.stage || 'New Request',
+    assigned_to: payload.assigned_to || 'Carlynn',
+    completed_date: payload.completed_date || '',
+    active: true
+  };
+  setupRegistrationsSheet();
+  appendObject_(getRegistrationsSpreadsheetId_(), SHEETS.registrationRequests, record);
+  return record;
 }
 
 function setupReviewsSheet() {
