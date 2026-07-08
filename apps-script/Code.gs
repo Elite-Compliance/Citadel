@@ -1,10 +1,11 @@
-const CITADEL_VERSION = '0.9.0';
+const CITADEL_VERSION = '1.2.0';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
   contractors: '1qsMCA_kC129S4FbbMiLt1X9_VJlkwPRqGxx0WRrPuTg',
   pricing: '1kF3oCkjkMzAqwohT-pYk2CSKkZ0C5hGx3aPee9XsIgY',
-  reviews: '1EjRpoie4MP8eE4SmYi0xqXIbGavH3ffz5DTb-MUdE1U'
+  reviews: '1EjRpoie4MP8eE4SmYi0xqXIbGavH3ffz5DTb-MUdE1U',
+  fleet: '1cUbzbYW_7UCwD4oD9_pSWZBLDZYF3VpvqBijUOMBhuo'
 };
 const LIEN_STATUS_REPORTS_FOLDER_ID = '1XcllT_u0WP7H5Cr9zvw9G6NNcOUTYcTH';
 const LIEN_MASTER_REPORT_NAME = 'Receivables Aging';
@@ -26,7 +27,13 @@ const SHEETS = {
   reviewNotes: 'ReviewNotes',
   reviewAlerts: 'ReviewAlerts',
   reviewFollowUps: 'ReviewFollowUps',
-  reviewMetrics: 'ReviewMetrics'
+  reviewMetrics: 'ReviewMetrics',
+  fleetVehicles: 'FleetVehicles',
+  fleetDrivers: 'FleetDrivers',
+  fleetNotes: 'FleetNotes',
+  fleetAlerts: 'FleetAlerts',
+  fleetFollowUps: 'FleetFollowUps',
+  fleetMetrics: 'FleetMetrics'
 };
 
 const CONTRACTOR_RECORD_HEADERS = ['Contractor', 'Phone', 'Email', 'Regions', 'Risk', 'Documents', 'GL Expiry', 'WC Expiry', 'Next Action', 'Address'];
@@ -39,6 +46,12 @@ const REVIEW_NOTE_HEADERS = ['note_id', 'review_id', 'note_date', 'note_by', 'no
 const REVIEW_ALERT_HEADERS = ['alert_id', 'review_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const REVIEW_FOLLOWUP_HEADERS = ['followup_id', 'review_id', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const REVIEW_METRIC_HEADERS = ['metric_key', 'label', 'value', 'note', 'tone', 'sort_order'];
+const FLEET_VEHICLE_HEADERS = ['vehicle_id', 'unit_number', 'region', 'status', 'service_status', 'registration_status', 'vin', 'plate', 'make', 'model', 'year', 'assigned_driver', 'next_service_date', 'last_updated'];
+const FLEET_DRIVER_HEADERS = ['driver_id', 'driver_name', 'region', 'status', 'phone', 'email', 'license_expiry', 'medical_card_expiry', 'insurance_expiry', 'assigned_vehicle', 'next_action', 'last_updated'];
+const FLEET_NOTE_HEADERS = ['note_id', 'fleet_record_id', 'record_type', 'note_date', 'note_by', 'note_type', 'note_text', 'follow_up_date', 'active'];
+const FLEET_ALERT_HEADERS = ['alert_id', 'fleet_record_id', 'record_type', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
+const FLEET_FOLLOWUP_HEADERS = ['followup_id', 'fleet_record_id', 'record_type', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
+const FLEET_METRIC_HEADERS = ['metric_key', 'label', 'value', 'note', 'tone', 'sort_order'];
 
 function doGet(e) {
   const action = getParam_(e, 'action') || 'getLiens';
@@ -58,6 +71,10 @@ function doGet(e) {
 
     if (action === 'getReviews') {
       return output_(e, { ok: true, data: getReviews(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'getFleet') {
+      return output_(e, { ok: true, data: getFleet(), version: CITADEL_VERSION });
     }
 
     if (action === 'saveLienNote') {
@@ -372,6 +389,99 @@ function getContractorsSpreadsheetId_() {
   const spreadsheetId = SPREADSHEETS.contractors;
   if (!spreadsheetId || spreadsheetId === 'PASTE_CONTRACTORS_SHEET_ID_HERE') throw new Error('Contractors spreadsheet ID is not configured yet.');
   return spreadsheetId;
+}
+
+function setupFleetSheet() {
+  const spreadsheetId = getFleetSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetVehicles, FLEET_VEHICLE_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetDrivers, FLEET_DRIVER_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetNotes, FLEET_NOTE_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetAlerts, FLEET_ALERT_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetFollowUps, FLEET_FOLLOWUP_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetMetrics, FLEET_METRIC_HEADERS);
+  return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.fleetVehicles, SHEETS.fleetDrivers, SHEETS.fleetNotes, SHEETS.fleetAlerts, SHEETS.fleetFollowUps, SHEETS.fleetMetrics] };
+}
+
+function getFleet() {
+  const spreadsheetId = getFleetSpreadsheetId_();
+  const vehicles = sheetExists_(spreadsheetId, SHEETS.fleetVehicles) ? readSheetObjects_(spreadsheetId, SHEETS.fleetVehicles).map(mapFleetVehicle_) : [];
+  const drivers = sheetExists_(spreadsheetId, SHEETS.fleetDrivers) ? readSheetObjects_(spreadsheetId, SHEETS.fleetDrivers).map(mapFleetDriver_) : [];
+  const notes = sheetExists_(spreadsheetId, SHEETS.fleetNotes) ? readSheetObjects_(spreadsheetId, SHEETS.fleetNotes) : [];
+  const alerts = sheetExists_(spreadsheetId, SHEETS.fleetAlerts) ? readSheetObjects_(spreadsheetId, SHEETS.fleetAlerts).filter(isActiveRow_) : [];
+  const followUps = sheetExists_(spreadsheetId, SHEETS.fleetFollowUps) ? readSheetObjects_(spreadsheetId, SHEETS.fleetFollowUps).filter(isActiveRow_) : [];
+  const metrics = sheetExists_(spreadsheetId, SHEETS.fleetMetrics) ? readSheetObjects_(spreadsheetId, SHEETS.fleetMetrics).sort(sortByOrder_) : buildFleetMetrics_(vehicles, drivers, alerts, followUps);
+  return { metrics: metrics, vehicles: vehicles, drivers: drivers, notes: notes, alerts: alerts, followUps: followUps };
+}
+
+function mapFleetVehicle_(row) {
+  const unit = getFleetField_(row, ['unit_number', 'unit', 'vehicle', 'vehicle_id', 'truck_number']);
+  return {
+    vehicle_id: getFleetField_(row, ['vehicle_id', 'id']) || makeIdFromText_('vehicle', unit),
+    unit_number: unit,
+    region: getFleetField_(row, ['region', 'market', 'location']),
+    status: getFleetField_(row, ['status', 'vehicle_status']) || 'Active',
+    service_status: getFleetField_(row, ['service_status', 'service', 'maintenance_status']),
+    registration_status: getFleetField_(row, ['registration_status', 'registration']),
+    vin: getFleetField_(row, ['vin']),
+    plate: getFleetField_(row, ['plate', 'license_plate']),
+    make: getFleetField_(row, ['make']),
+    model: getFleetField_(row, ['model']),
+    year: getFleetField_(row, ['year']),
+    assigned_driver: getFleetField_(row, ['assigned_driver', 'driver']),
+    next_service_date: getFleetField_(row, ['next_service_date', 'service_due_date']),
+    last_updated: getFleetField_(row, ['last_updated', 'updated_at']) || today_()
+  };
+}
+
+function mapFleetDriver_(row) {
+  const name = getFleetField_(row, ['driver_name', 'driver', 'name']);
+  return {
+    driver_id: getFleetField_(row, ['driver_id', 'id']) || makeIdFromText_('driver', name),
+    driver_name: name,
+    region: getFleetField_(row, ['region', 'market', 'location']),
+    status: getFleetField_(row, ['status', 'driver_status']) || 'Active',
+    phone: getFleetField_(row, ['phone']),
+    email: getFleetField_(row, ['email']),
+    license_expiry: getFleetField_(row, ['license_expiry', 'license_expiration']),
+    medical_card_expiry: getFleetField_(row, ['medical_card_expiry', 'medical_expiry']),
+    insurance_expiry: getFleetField_(row, ['insurance_expiry']),
+    assigned_vehicle: getFleetField_(row, ['assigned_vehicle', 'vehicle', 'unit_number']),
+    next_action: getFleetField_(row, ['next_action', 'next action']),
+    last_updated: getFleetField_(row, ['last_updated', 'updated_at']) || today_()
+  };
+}
+
+function getFleetField_(row, names) {
+  return cleanPrefixedValue_(getField_(row, names));
+}
+
+function cleanPrefixedValue_(value) {
+  if (typeof value !== 'string') return value;
+  return /^[A-Za-z0-9_ ]{2,40}:\s+/.test(value) ? value.replace(/^[A-Za-z0-9_ ]{2,40}:\s+/, '').trim() : value;
+}
+
+function buildFleetMetrics_(vehicles, drivers, alerts, followUps) {
+  const openWorkflow = (alerts || []).length + (followUps || []).length;
+  const serviceDue = vehicles.filter(function(row) { return /due|overdue|service/i.test(String(row.service_status || '')) || isDateWithinDays_(row.next_service_date, 30); }).length;
+  const driverDocs = drivers.filter(function(row) { return isDateWithinDays_(row.license_expiry, 30) || isDateWithinDays_(row.medical_card_expiry, 30) || isDateWithinDays_(row.insurance_expiry, 30); }).length;
+  return [
+    { metric_key: 'open_alerts', label: 'Open Alerts', value: openWorkflow, note: 'Alerts + follow-ups', tone: 'blue', sort_order: 1 },
+    { metric_key: 'vehicles', label: 'Vehicles', value: vehicles.length, note: 'Current records', tone: 'blue', sort_order: 2 },
+    { metric_key: 'drivers', label: 'Drivers', value: drivers.length, note: 'Current records', tone: 'blue', sort_order: 3 },
+    { metric_key: 'service_due', label: 'Service Due', value: serviceDue, note: 'Next 30 days', tone: 'amber', sort_order: 4 },
+    { metric_key: 'driver_docs', label: 'Driver Docs', value: driverDocs, note: 'Expiring soon', tone: 'red', sort_order: 5 }
+  ];
+}
+
+function getFleetSpreadsheetId_() {
+  const spreadsheetId = SPREADSHEETS.fleet;
+  if (!spreadsheetId) throw new Error('Fleet spreadsheet ID is not configured yet.');
+  return spreadsheetId;
+}
+
+function makeIdFromText_(prefix, value) {
+  const clean = String(value || prefix).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  return prefix + '-' + (clean || Utilities.getUuid().slice(0, 8));
 }
 
 function ensureSheetWithHeaders_(spreadsheetId, sheetName, headers) {
@@ -1146,4 +1256,12 @@ function testGetContractors() {
 
 function testGetPricing() {
   Logger.log(JSON.stringify(getPricing({ parameter: { limit: '10' } }), null, 2));
+}
+
+function testSetupFleetSheet() {
+  Logger.log(JSON.stringify(setupFleetSheet(), null, 2));
+}
+
+function testGetFleet() {
+  Logger.log(JSON.stringify(getFleet(), null, 2));
 }
