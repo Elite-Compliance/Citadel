@@ -837,21 +837,15 @@ function getPricing(e) {
     rows = readCount ? sheet.getRange(startRow, 1, readCount, lastCol).getValues().map(function(row, index) {
       return pricingRecordFromRow_(row, keys, startRow + index);
     }) : [];
+  } else if (search) {
+    const result = findPricingRowsByText_(sheet, keys, indexes, { search: search, state: state, trade: trade, type: type, supplier: supplier, offset: offset, limit: limit });
+    total = result.total;
+    rows = result.rows;
+    if (sort !== 'Default') rows = sortPricingRecords_(rows, sort);
   } else {
-    const matched = [];
-    total = 0;
-    const chunkSize = 1500;
-    for (let rowStart = 2; rowStart <= lastRow; rowStart += chunkSize) {
-      const rowCount = Math.min(chunkSize, lastRow - rowStart + 1);
-      const values = sheet.getRange(rowStart, 1, rowCount, lastCol).getValues();
-      for (let i = 0; i < values.length; i++) {
-        const row = values[i];
-        if (!pricingRowMatches_(row, indexes, { search: search, state: state, trade: trade, type: type, supplier: supplier })) continue;
-        if (total >= offset && matched.length < limit) matched.push({ row: row, rowNumber: rowStart + i });
-        total++;
-      }
-    }
-    rows = matched.map(function(item) { return pricingRecordFromRow_(item.row, keys, item.rowNumber); });
+    const result = scanPricingRowsFast_(sheet, keys, indexes, { state: state, trade: trade, type: type, supplier: supplier, offset: offset, limit: limit });
+    total = result.total;
+    rows = result.rows;
     if (sort !== 'Default') rows = sortPricingRecords_(rows, sort);
   }
 
@@ -868,6 +862,61 @@ function getPricing(e) {
     types: meta.types,
     suppliers: meta.suppliers
   };
+}
+
+function findPricingRowsByText_(sheet, keys, indexes, options) {
+  const lastCol = sheet.getLastColumn();
+  const offset = Math.max(Number(options.offset || 0), 0);
+  const limit = Math.min(Math.max(Number(options.limit || 75), 1), 150);
+  const needed = offset + limit + 1;
+  const rowNumbers = [];
+  const seen = {};
+  const finder = sheet.createTextFinder(options.search).matchCase(false).matchEntireCell(false);
+  const matches = finder.findAll();
+  for (let i = 0; i < matches.length && rowNumbers.length < needed; i++) {
+    const rowNumber = matches[i].getRow();
+    if (rowNumber < 2 || seen[rowNumber]) continue;
+    seen[rowNumber] = true;
+    rowNumbers.push(rowNumber);
+  }
+  rowNumbers.sort(function(a, b) { return a - b; });
+
+  const pageRows = [];
+  for (let i = offset; i < rowNumbers.length && pageRows.length < limit; i++) {
+    const rowNumber = rowNumbers[i];
+    const row = sheet.getRange(rowNumber, 1, 1, lastCol).getValues()[0];
+    if (!pricingRowMatches_(row, indexes, options)) continue;
+    pageRows.push(pricingRecordFromRow_(row, keys, rowNumber));
+  }
+
+  return {
+    rows: pageRows,
+    total: rowNumbers.length > offset + pageRows.length ? offset + pageRows.length + 1 : offset + pageRows.length
+  };
+}
+
+function scanPricingRowsFast_(sheet, keys, indexes, options) {
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  const offset = Math.max(Number(options.offset || 0), 0);
+  const limit = Math.min(Math.max(Number(options.limit || 75), 1), 150);
+  const matched = [];
+  let total = 0;
+  const chunkSize = 1200;
+
+  for (let rowStart = 2; rowStart <= lastRow; rowStart += chunkSize) {
+    const rowCount = Math.min(chunkSize, lastRow - rowStart + 1);
+    const values = sheet.getRange(rowStart, 1, rowCount, lastCol).getValues();
+    for (let i = 0; i < values.length; i++) {
+      const row = values[i];
+      if (!pricingRowMatches_(row, indexes, options)) continue;
+      if (total >= offset && matched.length < limit) matched.push(pricingRecordFromRow_(row, keys, rowStart + i));
+      total++;
+      if (matched.length >= limit) return { rows: matched, total: total + 1 };
+    }
+  }
+
+  return { rows: matched, total: total };
 }
 
 function emptyPricingPayload_(sheetName, offset, limit) {
