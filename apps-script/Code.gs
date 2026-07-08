@@ -1,4 +1,4 @@
-const CITADEL_VERSION = '1.2.1';
+const CITADEL_VERSION = '1.2.2';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
@@ -28,6 +28,7 @@ const SHEETS = {
   reviewAlerts: 'ReviewAlerts',
   reviewFollowUps: 'ReviewFollowUps',
   reviewMetrics: 'ReviewMetrics',
+  fleet: 'Fleet',
   fleetVehicles: 'FleetVehicles',
   fleetDrivers: 'FleetDrivers',
   fleetNotes: 'FleetNotes',
@@ -46,8 +47,9 @@ const REVIEW_NOTE_HEADERS = ['note_id', 'review_id', 'note_date', 'note_by', 'no
 const REVIEW_ALERT_HEADERS = ['alert_id', 'review_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const REVIEW_FOLLOWUP_HEADERS = ['followup_id', 'review_id', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const REVIEW_METRIC_HEADERS = ['metric_key', 'label', 'value', 'note', 'tone', 'sort_order'];
-const FLEET_VEHICLE_HEADERS = ['vehicle_id', 'unit_number', 'region', 'status', 'service_status', 'registration_status', 'vin', 'plate', 'make', 'model', 'year', 'assigned_driver', 'next_service_date', 'last_updated'];
-const FLEET_DRIVER_HEADERS = ['driver_id', 'driver_name', 'region', 'status', 'phone', 'email', 'license_expiry', 'medical_card_expiry', 'insurance_expiry', 'assigned_vehicle', 'next_action', 'last_updated'];
+const FLEET_SOURCE_HEADERS = ['Device', 'Device Group', 'First Name', 'Last Name', 'Current Driver', 'Work time', 'Current Activity', 'In Privacy Mode', 'Last Stop Address', 'Last Stop Zone Types', 'Current Odometer', 'Current Engine Hours', 'Active from', 'Active to', 'Is Archived (Historical)', 'Plan', 'Device Type', 'Firmware Version', 'Serial No.', 'License Plate', 'License State/Province', 'VIN', 'Time Zone', 'Device Comment', 'Download Status', 'Last Trip', 'Last Communication Date'];
+const FLEET_VEHICLE_HEADERS = ['vehicle_id', 'unit_number', 'device_group', 'region', 'status', 'service_status', 'registration_status', 'vin', 'plate', 'license_state', 'make', 'model', 'year', 'assigned_driver', 'current_activity', 'last_stop_address', 'current_odometer', 'current_engine_hours', 'active_from', 'active_to', 'is_archived', 'plan', 'device_type', 'firmware_version', 'serial_no', 'time_zone', 'device_comment', 'download_status', 'last_trip', 'last_communication_date', 'last_updated'];
+const FLEET_DRIVER_HEADERS = ['driver_id', 'driver_name', 'first_name', 'last_name', 'region', 'status', 'phone', 'email', 'license_expiry', 'medical_card_expiry', 'insurance_expiry', 'assigned_vehicle', 'current_activity', 'work_time', 'last_stop_address', 'next_action', 'last_updated'];
 const FLEET_NOTE_HEADERS = ['note_id', 'fleet_record_id', 'record_type', 'note_date', 'note_by', 'note_type', 'note_text', 'follow_up_date', 'active'];
 const FLEET_ALERT_HEADERS = ['alert_id', 'fleet_record_id', 'record_type', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const FLEET_FOLLOWUP_HEADERS = ['followup_id', 'fleet_record_id', 'record_type', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
@@ -393,71 +395,145 @@ function getContractorsSpreadsheetId_() {
 
 function setupFleetSheet() {
   const spreadsheetId = getFleetSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleet, FLEET_SOURCE_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetVehicles, FLEET_VEHICLE_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetDrivers, FLEET_DRIVER_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetNotes, FLEET_NOTE_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetAlerts, FLEET_ALERT_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetFollowUps, FLEET_FOLLOWUP_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetMetrics, FLEET_METRIC_HEADERS);
-  return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.fleetVehicles, SHEETS.fleetDrivers, SHEETS.fleetNotes, SHEETS.fleetAlerts, SHEETS.fleetFollowUps, SHEETS.fleetMetrics] };
+  return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.fleet, SHEETS.fleetVehicles, SHEETS.fleetDrivers, SHEETS.fleetNotes, SHEETS.fleetAlerts, SHEETS.fleetFollowUps, SHEETS.fleetMetrics] };
 }
 
 function getFleet() {
   const spreadsheetId = getFleetSpreadsheetId_();
-  const vehicles = sheetExists_(spreadsheetId, SHEETS.fleetVehicles) ? readSheetObjects_(spreadsheetId, SHEETS.fleetVehicles).map(mapFleetVehicle_) : [];
+  const sourceRows = sheetExists_(spreadsheetId, SHEETS.fleet) ? readSheetObjects_(spreadsheetId, SHEETS.fleet) : [];
+  const vehicles = sourceRows.length ? sourceRows.map(mapFleetVehicle_) : (sheetExists_(spreadsheetId, SHEETS.fleetVehicles) ? readSheetObjects_(spreadsheetId, SHEETS.fleetVehicles).map(mapFleetVehicle_) : []);
   const drivers = sheetExists_(spreadsheetId, SHEETS.fleetDrivers) ? readSheetObjects_(spreadsheetId, SHEETS.fleetDrivers).map(mapFleetDriver_) : [];
   const notes = sheetExists_(spreadsheetId, SHEETS.fleetNotes) ? readSheetObjects_(spreadsheetId, SHEETS.fleetNotes) : [];
   const alerts = sheetExists_(spreadsheetId, SHEETS.fleetAlerts) ? readSheetObjects_(spreadsheetId, SHEETS.fleetAlerts).filter(isActiveRow_) : [];
   const followUps = sheetExists_(spreadsheetId, SHEETS.fleetFollowUps) ? readSheetObjects_(spreadsheetId, SHEETS.fleetFollowUps).filter(isActiveRow_) : [];
   const metrics = sheetExists_(spreadsheetId, SHEETS.fleetMetrics) ? readSheetObjects_(spreadsheetId, SHEETS.fleetMetrics).sort(sortByOrder_) : buildFleetMetrics_(vehicles, drivers, alerts, followUps);
-  return { metrics: metrics, vehicles: vehicles, drivers: drivers, notes: notes, alerts: alerts, followUps: followUps };
+  return { metrics: metrics, fleetRecords: sourceRows.map(mapFleetSource_), vehicles: vehicles, drivers: drivers, notes: notes, alerts: alerts, followUps: followUps, source_rows: sourceRows.length };
+}
+
+function mapFleetSource_(row) {
+  return {
+    device: getFleetField_(row, ['device']),
+    device_group: getFleetField_(row, ['device_group', 'device group']),
+    first_name: getFleetField_(row, ['first_name', 'first name']),
+    last_name: getFleetField_(row, ['last_name', 'last name']),
+    current_driver: getFleetField_(row, ['current_driver', 'current driver']),
+    work_time: getFleetField_(row, ['work_time', 'work time']),
+    current_activity: getFleetField_(row, ['current_activity', 'current activity']),
+    in_privacy_mode: getFleetField_(row, ['in_privacy_mode', 'in privacy mode']),
+    last_stop_address: getFleetField_(row, ['last_stop_address', 'last stop address']),
+    last_stop_zone_types: getFleetField_(row, ['last_stop_zone_types', 'last stop zone types']),
+    current_odometer: getFleetField_(row, ['current_odometer', 'current odometer']),
+    current_engine_hours: getFleetField_(row, ['current_engine_hours', 'current engine hours']),
+    active_from: getFleetField_(row, ['active_from', 'active from']),
+    active_to: getFleetField_(row, ['active_to', 'active to']),
+    is_archived: getFleetField_(row, ['is_archived_historical', 'is archived historical', 'is_archived', 'archived']),
+    plan: getFleetField_(row, ['plan']),
+    device_type: getFleetField_(row, ['device_type', 'device type']),
+    firmware_version: getFleetField_(row, ['firmware_version', 'firmware version']),
+    serial_no: getFleetField_(row, ['serial_no', 'serial no', 'serial number']),
+    license_plate: getFleetField_(row, ['license_plate', 'license plate']),
+    license_state: getFleetField_(row, ['license_state_province', 'license state province', 'license_state']),
+    vin: getFleetField_(row, ['vin']),
+    time_zone: getFleetField_(row, ['time_zone', 'time zone']),
+    device_comment: getFleetField_(row, ['device_comment', 'device comment']),
+    download_status: getFleetField_(row, ['download_status', 'download status']),
+    last_trip: getFleetField_(row, ['last_trip', 'last trip']),
+    last_communication_date: getFleetField_(row, ['last_communication_date', 'last communication date'])
+  };
 }
 
 function mapFleetVehicle_(row) {
-  const unit = getFleetField_(row, ['unit_number', 'unit', 'vehicle', 'vehicle_id', 'truck_number']);
+  const device = getFleetField_(row, ['device', 'unit_number', 'unit', 'vehicle', 'vehicle_id', 'truck_number']);
+  const group = getFleetField_(row, ['device_group', 'device group', 'group', 'region']);
+  const archived = getFleetField_(row, ['is_archived_historical', 'is archived historical', 'is_archived', 'archived']);
+  const activity = getFleetField_(row, ['current_activity', 'current activity', 'status', 'vehicle_status']);
   return {
-    vehicle_id: getFleetField_(row, ['vehicle_id', 'id']) || makeIdFromText_('vehicle', unit),
-    unit_number: unit,
-    region: getFleetField_(row, ['region', 'market', 'location']),
-    status: getFleetField_(row, ['status', 'vehicle_status']) || 'Active',
-    service_status: getFleetField_(row, ['service_status', 'service', 'maintenance_status']),
-    registration_status: getFleetField_(row, ['registration_status', 'registration']),
+    vehicle_id: getFleetField_(row, ['vehicle_id', 'id']) || makeIdFromText_('vehicle', device),
+    unit_number: device,
+    device_group: group,
+    region: fleetRegionFromGroup_(group),
+    status: /true|yes|archived/i.test(String(archived || '')) ? 'Archived' : 'Active',
+    service_status: activity || getFleetField_(row, ['service_status', 'service', 'maintenance_status']),
+    registration_status: getFleetField_(row, ['registration_status', 'registration']) || 'Source only',
     vin: getFleetField_(row, ['vin']),
-    plate: getFleetField_(row, ['plate', 'license_plate']),
+    plate: getFleetField_(row, ['license_plate', 'license plate', 'plate']),
+    license_state: getFleetField_(row, ['license_state_province', 'license state province', 'license_state']),
     make: getFleetField_(row, ['make']),
-    model: getFleetField_(row, ['model']),
+    model: getFleetField_(row, ['model', 'device_type', 'device type']),
     year: getFleetField_(row, ['year']),
-    assigned_driver: getFleetField_(row, ['assigned_driver', 'driver']),
-    next_service_date: getFleetField_(row, ['next_service_date', 'service_due_date']),
-    last_updated: getFleetField_(row, ['last_updated', 'updated_at']) || today_()
+    assigned_driver: getFleetField_(row, ['current_driver', 'current driver', 'assigned_driver', 'driver']) || fleetDriverNameFromRow_(row),
+    current_activity: activity,
+    last_stop_address: getFleetField_(row, ['last_stop_address', 'last stop address']),
+    current_odometer: getFleetField_(row, ['current_odometer', 'current odometer']),
+    current_engine_hours: getFleetField_(row, ['current_engine_hours', 'current engine hours']),
+    active_from: getFleetField_(row, ['active_from', 'active from']),
+    active_to: getFleetField_(row, ['active_to', 'active to']),
+    is_archived: archived,
+    plan: getFleetField_(row, ['plan']),
+    device_type: getFleetField_(row, ['device_type', 'device type']),
+    firmware_version: getFleetField_(row, ['firmware_version', 'firmware version']),
+    serial_no: getFleetField_(row, ['serial_no', 'serial no', 'serial number']),
+    time_zone: getFleetField_(row, ['time_zone', 'time zone']),
+    device_comment: getFleetField_(row, ['device_comment', 'device comment']),
+    download_status: getFleetField_(row, ['download_status', 'download status']),
+    last_trip: getFleetField_(row, ['last_trip', 'last trip']),
+    last_communication_date: getFleetField_(row, ['last_communication_date', 'last communication date']),
+    last_updated: getFleetField_(row, ['last_updated', 'updated_at', 'last_communication_date', 'last communication date']) || today_()
   };
 }
 
 function mapFleetDriver_(row) {
-  const name = getFleetField_(row, ['driver_name', 'driver', 'name']);
+  const name = getFleetField_(row, ['driver_name', 'current_driver', 'current driver', 'driver', 'name']) || fleetDriverNameFromRow_(row);
   return {
     driver_id: getFleetField_(row, ['driver_id', 'id']) || makeIdFromText_('driver', name),
     driver_name: name,
-    region: getFleetField_(row, ['region', 'market', 'location']),
+    first_name: getFleetField_(row, ['first_name', 'first name']),
+    last_name: getFleetField_(row, ['last_name', 'last name']),
+    region: fleetRegionFromGroup_(getFleetField_(row, ['device_group', 'device group', 'region', 'market', 'location'])),
     status: getFleetField_(row, ['status', 'driver_status']) || 'Active',
     phone: getFleetField_(row, ['phone']),
     email: getFleetField_(row, ['email']),
     license_expiry: getFleetField_(row, ['license_expiry', 'license_expiration']),
     medical_card_expiry: getFleetField_(row, ['medical_card_expiry', 'medical_expiry']),
     insurance_expiry: getFleetField_(row, ['insurance_expiry']),
-    assigned_vehicle: getFleetField_(row, ['assigned_vehicle', 'vehicle', 'unit_number']),
-    next_action: getFleetField_(row, ['next_action', 'next action']),
-    last_updated: getFleetField_(row, ['last_updated', 'updated_at']) || today_()
+    assigned_vehicle: getFleetField_(row, ['assigned_vehicle', 'vehicle', 'unit_number', 'device']),
+    current_activity: getFleetField_(row, ['current_activity', 'current activity']),
+    work_time: getFleetField_(row, ['work_time', 'work time']),
+    last_stop_address: getFleetField_(row, ['last_stop_address', 'last stop address']),
+    next_action: getFleetField_(row, ['next_action', 'next action']) || 'Review protected workflow',
+    last_updated: getFleetField_(row, ['last_updated', 'updated_at', 'last_communication_date', 'last communication date']) || today_()
   };
 }
 
-function getFleetField_(row, names) {
-  return cleanPrefixedValue_(getField_(row, names));
+function fleetDriverNameFromRow_(row) {
+  const first = getFleetField_(row, ['first_name', 'first name']);
+  const last = getFleetField_(row, ['last_name', 'last name']);
+  return [first, last].filter(Boolean).join(' ').trim();
 }
 
-function cleanPrefixedValue_(value) {
-  if (typeof value !== 'string') return value;
-  return /^[A-Za-z0-9_ ]{2,40}:\s+/.test(value) ? value.replace(/^[A-Za-z0-9_ ]{2,40}:\s+/, '').trim() : value;
+function fleetRegionFromGroup_(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const upper = text.toUpperCase();
+  const regions = ['PHX', 'STL', 'MIL', 'CLE', 'CHI', 'MIN', 'ABQ', 'PIT', 'IND'];
+  for (let i = 0; i < regions.length; i++) if (upper.indexOf(regions[i]) > -1) return regions[i];
+  if (/PHOENIX|ARIZONA|AZ/.test(upper)) return 'PHX';
+  if (/ST.?s*LOUIS|MISSOURI|MO/.test(upper)) return 'STL';
+  if (/MILWAUKEE|WISCONSIN|WI/.test(upper)) return 'MIL';
+  if (/CLEVELAND|OHIO|OH/.test(upper)) return 'CLE';
+  if (/CHICAGO|ILLINOIS|IL/.test(upper)) return 'CHI';
+  if (/MINNEAPOLIS|MINNESOTA|MN/.test(upper)) return 'MIN';
+  if (/ALBUQUERQUE|NEW MEXICO|NM/.test(upper)) return 'ABQ';
+  if (/PITTSBURGH|PITTSBURG|PENNSYLVANIA|PA/.test(upper)) return 'PIT';
+  if (/INDIANAPOLIS|INDIANA|IN/.test(upper)) return 'IND';
+  return text;
 }
 
 function buildFleetMetrics_(vehicles, drivers, alerts, followUps) {
