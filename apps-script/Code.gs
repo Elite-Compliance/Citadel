@@ -1,4 +1,4 @@
-const CITADEL_VERSION = '1.2.2';
+const CITADEL_VERSION = '1.2.3';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
@@ -407,14 +407,41 @@ function setupFleetSheet() {
 
 function getFleet() {
   const spreadsheetId = getFleetSpreadsheetId_();
-  const sourceRows = sheetExists_(spreadsheetId, SHEETS.fleet) ? readSheetObjects_(spreadsheetId, SHEETS.fleet) : [];
+  const fleetSource = readFleetSource_(spreadsheetId);
+  const sourceRows = fleetSource.rows;
   const vehicles = sourceRows.length ? sourceRows.map(mapFleetVehicle_) : (sheetExists_(spreadsheetId, SHEETS.fleetVehicles) ? readSheetObjects_(spreadsheetId, SHEETS.fleetVehicles).map(mapFleetVehicle_) : []);
   const drivers = sheetExists_(spreadsheetId, SHEETS.fleetDrivers) ? readSheetObjects_(spreadsheetId, SHEETS.fleetDrivers).map(mapFleetDriver_) : [];
   const notes = sheetExists_(spreadsheetId, SHEETS.fleetNotes) ? readSheetObjects_(spreadsheetId, SHEETS.fleetNotes) : [];
   const alerts = sheetExists_(spreadsheetId, SHEETS.fleetAlerts) ? readSheetObjects_(spreadsheetId, SHEETS.fleetAlerts).filter(isActiveRow_) : [];
   const followUps = sheetExists_(spreadsheetId, SHEETS.fleetFollowUps) ? readSheetObjects_(spreadsheetId, SHEETS.fleetFollowUps).filter(isActiveRow_) : [];
   const metrics = sheetExists_(spreadsheetId, SHEETS.fleetMetrics) ? readSheetObjects_(spreadsheetId, SHEETS.fleetMetrics).sort(sortByOrder_) : buildFleetMetrics_(vehicles, drivers, alerts, followUps);
-  return { metrics: metrics, fleetRecords: sourceRows.map(mapFleetSource_), vehicles: vehicles, drivers: drivers, notes: notes, alerts: alerts, followUps: followUps, source_rows: sourceRows.length };
+  return { metrics: metrics, fleetRecords: sourceRows.map(mapFleetSource_), vehicles: vehicles, drivers: drivers, notes: notes, alerts: alerts, followUps: followUps, source_rows: sourceRows.length, source_tab: fleetSource.name };
+}
+
+function readFleetSource_(spreadsheetId) {
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const sourceSheet = findFleetSourceSheet_(ss);
+  if (!sourceSheet) return { name: '', rows: [] };
+  return { name: sourceSheet.getName(), rows: readSheetObjects_(spreadsheetId, sourceSheet.getName()) };
+}
+
+function findFleetSourceSheet_(ss) {
+  const preferredNames = [SHEETS.fleet, 'Fleet', 'Geotab', 'Geotab Fleet', 'Fleet Report'];
+  for (let i = 0; i < preferredNames.length; i++) {
+    const sheet = ss.getSheetByName(preferredNames[i]);
+    if (sheet && sheetLooksLikeFleetSource_(sheet)) return sheet;
+  }
+  const sheets = ss.getSheets();
+  for (let j = 0; j < sheets.length; j++) {
+    if (sheetLooksLikeFleetSource_(sheets[j])) return sheets[j];
+  }
+  return ss.getSheetByName(SHEETS.fleet);
+}
+
+function sheetLooksLikeFleetSource_(sheet) {
+  if (!sheet || sheet.getLastRow() < 1 || sheet.getLastColumn() < 1) return false;
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(normalizeHeader_);
+  return headers.indexOf('device') > -1 && headers.indexOf('device_group') > -1 && headers.indexOf('vin') > -1;
 }
 
 function mapFleetSource_(row) {
