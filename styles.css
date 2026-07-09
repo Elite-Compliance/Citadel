@@ -752,3 +752,7 @@ html,body{overflow:hidden}
 
 /* Registration split sub-tabs */
 .workflow-registration-page .registration-workflow-shell>.registration-form{margin-top:0!important}.nav-children .nav-item{font-size:14px!important}
+
+
+/* Registration standard workflow alignment */
+.workflow-registration-page .registration-metrics{display:grid!important;grid-template-columns:repeat(6,minmax(120px,1fr))!important;gap:10px!important}.workflow-registration-page .registration-metrics .contractor-metric-button{min-height:62px!important;text-align:left!important}.workflow-registration-page .registration-filter-card{border-radius:8px!important}.workflow-registration-page .registration-workspace-grid{grid-template-columns:minmax(0,1fr) 430px!important}.workflow-registration-page .registration-detail{position:sticky;top:10px}.workflow-registration-page .registration-workspace-grid.is-read-only{grid-template-columns:1fr!important}.workflow-registration-page .registration-workspace-grid.is-read-only .registration-detail{display:none!important}@media(max-width:1280px){.workflow-registration-page .registration-metrics{grid-template-columns:repeat(3,minmax(120px,1fr))!important}.workflow-registration-page .registration-workspace-grid{grid-template-columns:1fr!important}.workflow-registration-page .registration-detail{position:static!important}}
