@@ -1,4 +1,4 @@
-const CITADEL_VERSION = '1.3.9';
+const CITADEL_VERSION = '1.4.0';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
@@ -365,6 +365,12 @@ function mapRegistrationStartingRow_(row, rowNumber) {
   };
 }
 
+function registrationIdHeaderIndex_(headers) {
+  let index = headers.indexOf('request_id');
+  if (index < 0) index = headers.indexOf('id');
+  return index;
+}
+
 function updateRegistrationRequest(payload) {
   if (!payload || !payload.request_id) throw new Error('request_id is required.');
   setupRegistrationsSheet();
@@ -373,19 +379,25 @@ function updateRegistrationRequest(payload) {
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) throw new Error('No registration requests found.');
   const headers = values[0].map(normalizeHeader_);
-  const idIndex = headers.indexOf('request_id');
-  if (idIndex < 0) throw new Error('RegistrationRequests is missing request_id.');
+  const idIndex = registrationIdHeaderIndex_(headers);
+  if (idIndex < 0) throw new Error('RegistrationRequests is missing request_id or id.');
   let rowNumber = -1;
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][idIndex]) === String(payload.request_id)) { rowNumber = i + 1; break; }
   }
   if (rowNumber < 0) throw new Error('Registration request not found.');
-  const allowed = ['status', 'stage', 'assigned_to', 'completed_date', 'active', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days'];
+  const allowed = ['status', 'stage', 'assigned_to', 'completed_date', 'active', 'status_updated_by', 'status_updated_at', 'archive_reason', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days'];
   allowed.forEach(function(key) {
     if (!Object.prototype.hasOwnProperty.call(payload, key)) return;
     const col = headers.indexOf(key);
     if (col > -1) sheet.getRange(rowNumber, col + 1).setValue(payload[key]);
   });
+  if (Object.prototype.hasOwnProperty.call(payload, 'status')) {
+    const byCol = headers.indexOf('status_updated_by');
+    const atCol = headers.indexOf('status_updated_at');
+    if (byCol > -1 && !payload.status_updated_by) sheet.getRange(rowNumber, byCol + 1).setValue(payload.updated_by || 'Emma');
+    if (atCol > -1 && !payload.status_updated_at) sheet.getRange(rowNumber, atCol + 1).setValue(new Date());
+  }
   return { request_id: payload.request_id, updated: true };
 }
 
