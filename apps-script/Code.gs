@@ -1,4 +1,4 @@
-const CITADEL_VERSION = '1.3.1';
+const CITADEL_VERSION = '1.3.3';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
@@ -118,8 +118,16 @@ function doGet(e) {
       return output_(e, { ok: true, data: saveReviewFollowUp(paramsToPayload_(e)), version: CITADEL_VERSION });
     }
 
+    if (action === 'getRegistrations') {
+      return output_(e, { ok: true, data: getRegistrations(), version: CITADEL_VERSION });
+    }
+
     if (action === 'saveRegistrationRequest') {
       return output_(e, { ok: true, data: saveRegistrationRequest(paramsToPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'updateRegistrationRequest') {
+      return output_(e, { ok: true, data: updateRegistrationRequest(paramsToPayload_(e)), version: CITADEL_VERSION });
     }
 
     if (action === 'setupContractorsSheet') {
@@ -160,6 +168,36 @@ function setupRegistrationsSheet() {
   return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.registrationRequests] };
 }
 
+function getRegistrations() {
+  setupRegistrationsSheet();
+  const requests = readSheetObjects_(getRegistrationsSpreadsheetId_(), SHEETS.registrationRequests);
+  return { requests: requests };
+}
+
+function updateRegistrationRequest(payload) {
+  if (!payload || !payload.request_id) throw new Error('request_id is required.');
+  setupRegistrationsSheet();
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  const sheet = getRequiredSheet_(spreadsheetId, SHEETS.registrationRequests);
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) throw new Error('No registration requests found.');
+  const headers = values[0].map(normalizeHeader_);
+  const idIndex = headers.indexOf('request_id');
+  if (idIndex < 0) throw new Error('RegistrationRequests is missing request_id.');
+  let rowNumber = -1;
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idIndex]) === String(payload.request_id)) { rowNumber = i + 1; break; }
+  }
+  if (rowNumber < 0) throw new Error('Registration request not found.');
+  const allowed = ['status', 'stage', 'assigned_to', 'completed_date', 'active'];
+  allowed.forEach(function(key) {
+    if (!Object.prototype.hasOwnProperty.call(payload, key)) return;
+    const col = headers.indexOf(key);
+    if (col > -1) sheet.getRange(rowNumber, col + 1).setValue(payload[key]);
+  });
+  return { request_id: payload.request_id, updated: true };
+}
+
 function saveRegistrationRequest(payload) {
   if (!payload || !payload.requestor_name) throw new Error('requestor_name is required.');
   if (!payload.brand) throw new Error('brand is required.');
@@ -180,9 +218,9 @@ function saveRegistrationRequest(payload) {
     phone: payload.phone || '',
     email: payload.email || '',
     notes: payload.notes || '',
-    status: payload.status || 'Submitted',
-    stage: payload.stage || 'New Request',
-    assigned_to: payload.assigned_to || 'Carlynn',
+    status: payload.status || 'Open',
+    stage: payload.stage || 'New',
+    assigned_to: payload.assigned_to || 'Emma',
     completed_date: payload.completed_date || '',
     active: true
   };
