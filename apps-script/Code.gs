@@ -1,4 +1,4 @@
-const CITADEL_VERSION = '1.3.3';
+const CITADEL_VERSION = '1.3.9';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
@@ -6,7 +6,7 @@ const SPREADSHEETS = {
   pricing: '1kF3oCkjkMzAqwohT-pYk2CSKkZ0C5hGx3aPee9XsIgY',
   reviews: '1EjRpoie4MP8eE4SmYi0xqXIbGavH3ffz5DTb-MUdE1U',
   fleet: '1cUbzbYW_7UCwD4oD9_pSWZBLDZYF3VpvqBijUOMBhuo',
-  registrations: ''
+  registrations: '1_vi1q6qUu821TiUgMtelsF4ya2EBsXlPIlt-COEb6X8'
 };
 const LIEN_STATUS_REPORTS_FOLDER_ID = '1XcllT_u0WP7H5Cr9zvw9G6NNcOUTYcTH';
 const LIEN_MASTER_REPORT_NAME = 'Receivables Aging';
@@ -56,7 +56,7 @@ const FLEET_NOTE_HEADERS = ['note_id', 'fleet_record_id', 'record_type', 'note_d
 const FLEET_ALERT_HEADERS = ['alert_id', 'fleet_record_id', 'record_type', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const FLEET_FOLLOWUP_HEADERS = ['followup_id', 'fleet_record_id', 'record_type', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const FLEET_METRIC_HEADERS = ['metric_key', 'label', 'value', 'note', 'tone', 'sort_order'];
-const REGISTRATION_REQUEST_HEADERS = ['request_id', 'submitted_at', 'requestor_name', 'brand', 'date_submitted', 'region', 'pure', 'jurisdiction', 'requirements', 'website', 'phone', 'email', 'notes', 'status', 'stage', 'assigned_to', 'completed_date', 'active'];
+const REGISTRATION_REQUEST_HEADERS = ['request_id', 'submitted_at', 'requestor_name', 'brand', 'date_submitted', 'region', 'pure', 'jurisdiction', 'requirements', 'website', 'phone', 'email', 'notes', 'status', 'stage', 'assigned_to', 'completed_date', 'active', 'source_system', 'source_record_id', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'expires_soon_flag', 'expired_flag', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days'];
 
 function doGet(e) {
   const action = getParam_(e, 'action') || 'getLiens';
@@ -122,6 +122,14 @@ function doGet(e) {
       return output_(e, { ok: true, data: getRegistrations(), version: CITADEL_VERSION });
     }
 
+    if (action === 'setupRegistrationsSheet') {
+      return output_(e, { ok: true, data: setupRegistrationsSheet(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'importRegistrationStartingData') {
+      return output_(e, { ok: true, data: importRegistrationStartingData(), version: CITADEL_VERSION });
+    }
+
     if (action === 'saveRegistrationRequest') {
       return output_(e, { ok: true, data: saveRegistrationRequest(paramsToPayload_(e)), version: CITADEL_VERSION });
     }
@@ -170,8 +178,191 @@ function setupRegistrationsSheet() {
 
 function getRegistrations() {
   setupRegistrationsSheet();
+  const importResult = ensureRegistrationStartingDataImported_();
   const requests = readSheetObjects_(getRegistrationsSpreadsheetId_(), SHEETS.registrationRequests);
-  return { requests: requests };
+  return { requests: requests, import_status: importResult };
+}
+
+function ensureRegistrationStartingDataImported_() {
+  const existing = readSheetObjects_(getRegistrationsSpreadsheetId_(), SHEETS.registrationRequests);
+  if (existing.length) return { skipped: true, reason: 'RegistrationRequests already has rows', existing: existing.length };
+  return importRegistrationStartingData();
+}
+
+function normalizeRegistrationStarterRowsActive() {
+  setupRegistrationsSheet();
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  const sheet = getRequiredSheet_(spreadsheetId, SHEETS.registrationRequests);
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return { updated: 0, reason: 'No registration rows found.' };
+  const headers = values[0].map(normalizeHeader_);
+  const sourceIndex = headers.indexOf('source_system');
+  const statusIndex = headers.indexOf('status');
+  const stageIndex = headers.indexOf('stage');
+  const activeIndex = headers.indexOf('active');
+  if (sourceIndex < 0 || statusIndex < 0 || stageIndex < 0 || activeIndex < 0) {
+    throw new Error('RegistrationRequests is missing source_system, status, stage, or active. Run setupRegistrationsSheet first.');
+  }
+  let updated = 0;
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][sourceIndex]) !== 'registration-starting-data') continue;
+    sheet.getRange(i + 1, statusIndex + 1).setValue('Active');
+    sheet.getRange(i + 1, stageIndex + 1).setValue('Active');
+    sheet.getRange(i + 1, activeIndex + 1).setValue(true);
+    updated++;
+  }
+  return { updated: updated, status: 'Active', stage: 'Active' };
+}
+
+function testNormalizeRegistrationStarterRowsActive() {
+  Logger.log(JSON.stringify(normalizeRegistrationStarterRowsActive(), null, 2));
+}
+
+function importRegistrationStartingData() {
+  setupRegistrationsSheet();
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  const sourceSheet = getRegistrationSourceSheet_(spreadsheetId);
+  if (!sourceSheet) return { imported: 0, skipped: true, reason: 'No Sheet1 or starting data sheet found' };
+
+  const sourceLastRow = sourceSheet.getLastRow();
+  const sourceLastColumn = sourceSheet.getLastColumn();
+  if (sourceLastRow < 2 || sourceLastColumn < 1) {
+    return { imported: 0, skipped: true, reason: 'No starting rows found on ' + sourceSheet.getName() };
+  }
+
+  const values = sourceSheet.getRange(1, 1, sourceLastRow, sourceLastColumn).getValues();
+  const headers = values[0].map(normalizeHeader_);
+  const targetSheet = getRequiredSheet_(spreadsheetId, SHEETS.registrationRequests);
+  const targetHeaders = targetSheet.getRange(1, 1, 1, targetSheet.getLastColumn()).getValues()[0].map(normalizeHeader_);
+  const existing = readSheetObjects_(spreadsheetId, SHEETS.registrationRequests);
+  const existingKeys = existing.reduce(function(map, row) {
+    const key = String(row.source_record_id || row.request_id || '');
+    if (key) map[key] = true;
+    return map;
+  }, {});
+
+  const records = [];
+  values.slice(1).forEach(function(row, index) {
+    if (!row.some(function(cell) { return cell !== '' && cell !== null; })) return;
+    const raw = headers.reduce(function(record, header, col) {
+      if (header) record[header] = normalizeValue_(row[col]);
+      return record;
+    }, {});
+    const record = mapRegistrationStartingRow_(raw, index + 2);
+    if (existingKeys[record.source_record_id]) return;
+    existingKeys[record.source_record_id] = true;
+    records.push(record);
+  });
+
+  if (!records.length) {
+    return { imported: 0, skipped: true, reason: 'No new starter rows to import', source_sheet: sourceSheet.getName(), existing: existing.length };
+  }
+
+  const outputRows = records.map(function(record) {
+    return targetHeaders.map(function(header) {
+      return Object.prototype.hasOwnProperty.call(record, header) ? record[header] : '';
+    });
+  });
+  targetSheet.getRange(targetSheet.getLastRow() + 1, 1, outputRows.length, targetHeaders.length).setValues(outputRows);
+
+  return { imported: records.length, source_sheet: sourceSheet.getName(), region_buckets: REGISTRATION_REGION_CODES_() };
+}
+
+function getRegistrationSourceSheet_(spreadsheetId) {
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const sheet1 = ss.getSheetByName('Sheet1');
+  if (sheet1 && sheet1.getName() !== SHEETS.registrationRequests) return sheet1;
+  const sheets = ss.getSheets();
+  for (let i = 0; i < sheets.length; i++) {
+    if (sheets[i].getName() !== SHEETS.registrationRequests) return sheets[i];
+  }
+  return null;
+}
+
+function REGISTRATION_REGION_CODES_() {
+  return ['PHX', 'STL', 'MIL', 'CLE', 'CHI', 'MIN', 'ABQ', 'PIT', 'IND', 'OT'];
+}
+
+function normalizeCitadelRegion_(value) {
+  const text = String(value || '').toUpperCase();
+  if (!text) return 'OT';
+  if (/\b(PHX|PHOENIX|PHEONIX|AZ|ARIZONA)\b/.test(text)) return 'PHX';
+  if (/\b(STL|ST\.?\s*LOUIS|SAINT\s*LOUIS|MO|MISSOURI)\b/.test(text)) return 'STL';
+  if (/\b(MIL|MILWAUKEE|WI|WISCONSIN)\b/.test(text)) return 'MIL';
+  if (/\b(CLE|CLEVELAND|OH|OHIO)\b/.test(text)) return 'CLE';
+  if (/\b(CHI|CHICAGO|IL|ILLINOIS)\b/.test(text)) return 'CHI';
+  if (/\b(MIN|MINNEAPOLIS|MN|MINNESOTA)\b/.test(text)) return 'MIN';
+  if (/\b(ABQ|ALBUQUERQUE|NM|NEW\s*MEXICO)\b/.test(text)) return 'ABQ';
+  if (/\b(PIT|PITTSBURGH|PITTSBURG|PA|PENNSYLVANIA)\b/.test(text)) return 'PIT';
+  if (/\b(IND|INDIANAPOLIS|IN|INDIANA)\b/.test(text)) return 'IND';
+  return 'OT';
+}
+
+function getFirstRegistrationValue_(row, names) {
+  for (let i = 0; i < names.length; i++) {
+    if (Object.prototype.hasOwnProperty.call(row, names[i]) && row[names[i]] !== '') return row[names[i]];
+  }
+  return '';
+}
+
+function isTruthyRegistrationFlag_(value) {
+  return /^(true|yes|y|1|expired|x)$/i.test(String(value || '').trim());
+}
+
+function mapRegistrationStartingRow_(row, rowNumber) {
+  const state = getFirstRegistrationValue_(row, ['State', 'state']);
+  const jurisdiction = getFirstRegistrationValue_(row, ['Jurisdiction', 'jurisdiction']);
+  const brand = getFirstRegistrationValue_(row, ['Brand', 'brand']);
+  const licenseType = getFirstRegistrationValue_(row, ['License Type Name', 'license_type_name']);
+  const number = getFirstRegistrationValue_(row, ['Number', 'number']);
+  const expiration = getFirstRegistrationValue_(row, ['Expiration', 'expiration']);
+  const qualifier = getFirstRegistrationValue_(row, ['Qualifier', 'qualifier']);
+  const ceHours = getFirstRegistrationValue_(row, ['Continuing Education Hours', 'continuing_education_hours']);
+  const notes = getFirstRegistrationValue_(row, ['Notes', 'notes']);
+  const eliteOwned = getFirstRegistrationValue_(row, ['Elite Owned', 'elite_owned']);
+  const expiredIn30 = getFirstRegistrationValue_(row, ['Expired in 30 days', 'expired_in_30_days']);
+  const expiresWithin7 = getFirstRegistrationValue_(row, ['Expires within 7 days or Expired', 'expires_within_7_days_or_expired']);
+  const region = normalizeCitadelRegion_(state + ' ' + jurisdiction);
+  const flagged = isTruthyRegistrationFlag_(expiredIn30) || isTruthyRegistrationFlag_(expiresWithin7) || isDatePast_(expiration);
+  const stage = 'Active';
+  const sourceKey = ['license', state, jurisdiction, brand, licenseType, number, rowNumber].map(function(part) { return String(part || '').trim().toLowerCase(); }).join('|');
+  const requirements = [
+    licenseType ? 'License Type: ' + licenseType : '',
+    number ? 'Number: ' + number : '',
+    expiration ? 'Expiration: ' + expiration : '',
+    qualifier ? 'Qualifier: ' + qualifier : '',
+    ceHours ? 'CE Hours: ' + ceHours : ''
+  ].filter(Boolean).join(' | ');
+  return {
+    request_id: 'reg-license-' + Utilities.base64EncodeWebSafe(sourceKey).slice(0, 18),
+    submitted_at: new Date(),
+    requestor_name: 'Imported License Data',
+    brand: brand || 'Unknown',
+    date_submitted: today_(),
+    region: region,
+    pure: '',
+    jurisdiction: jurisdiction || state || 'Unknown jurisdiction',
+    requirements: requirements || 'Imported license record',
+    website: '',
+    phone: '',
+    email: '',
+    notes: notes || '',
+    status: 'Active',
+    stage: 'Active',
+    assigned_to: 'Emma',
+    completed_date: '',
+    active: true,
+    source_system: 'registration-starting-data',
+    source_record_id: sourceKey,
+    license_type_name: licenseType,
+    license_number: number,
+    expiration: expiration,
+    qualifier: qualifier,
+    continuing_education_hours: ceHours,
+    elite_owned: eliteOwned,
+    expires_soon_flag: expiredIn30,
+    expired_flag: expiresWithin7
+  };
 }
 
 function updateRegistrationRequest(payload) {
@@ -189,7 +380,7 @@ function updateRegistrationRequest(payload) {
     if (String(values[i][idIndex]) === String(payload.request_id)) { rowNumber = i + 1; break; }
   }
   if (rowNumber < 0) throw new Error('Registration request not found.');
-  const allowed = ['status', 'stage', 'assigned_to', 'completed_date', 'active'];
+  const allowed = ['status', 'stage', 'assigned_to', 'completed_date', 'active', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days'];
   allowed.forEach(function(key) {
     if (!Object.prototype.hasOwnProperty.call(payload, key)) return;
     const col = headers.indexOf(key);
@@ -210,7 +401,7 @@ function saveRegistrationRequest(payload) {
     requestor_name: payload.requestor_name || '',
     brand: payload.brand || '',
     date_submitted: payload.date_submitted || today_(),
-    region: payload.region || '',
+    region: normalizeCitadelRegion_(payload.region || ''),
     pure: payload.pure || '',
     jurisdiction: payload.jurisdiction || '',
     requirements: payload.requirements || '',
@@ -218,8 +409,8 @@ function saveRegistrationRequest(payload) {
     phone: payload.phone || '',
     email: payload.email || '',
     notes: payload.notes || '',
-    status: payload.status || 'Open',
-    stage: payload.stage || 'New',
+    status: payload.status || 'New',
+    stage: payload.stage || 'Info',
     assigned_to: payload.assigned_to || 'Emma',
     completed_date: payload.completed_date || '',
     active: true
@@ -1415,7 +1606,7 @@ function sortByOrder_(a, b) {
 function paramsToPayload_(e) {
   const payload = {};
   const params = e && e.parameter ? e.parameter : {};
-  ['lien_id', 'contractor_id', 'note_id', 'note_date', 'note_by', 'note_type', 'note_text', 'follow_up_date', 'alert_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'followup_id', 'assigned_to', 'followup_type', 'followup_text', 'created_by', 'completed_date', 'active'].forEach(function(key) {
+  ['lien_id', 'contractor_id', 'note_id', 'note_date', 'note_by', 'note_type', 'note_text', 'follow_up_date', 'alert_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'followup_id', 'assigned_to', 'followup_type', 'followup_text', 'created_by', 'completed_date', 'active', 'request_id', 'requestor_name', 'brand', 'date_submitted', 'region', 'pure', 'jurisdiction', 'requirements', 'website', 'phone', 'email', 'notes', 'stage'].forEach(function(key) {
     if (Object.prototype.hasOwnProperty.call(params, key)) payload[key] = params[key];
   });
   return payload;
