@@ -761,3 +761,14 @@ html,body{overflow:hidden}
 .registration-sortable-head button{appearance:none;border:0;background:transparent;color:inherit;font:inherit;font-weight:800;text-align:left;text-transform:uppercase;cursor:pointer;padding:0;letter-spacing:0}
 .registration-sortable-head button:hover{color:var(--accent-blue)}
 .registration-sortable-head button:focus-visible{outline:2px solid var(--accent-blue);outline-offset:3px}
+
+
+/* Registration Requests open table */
+.registration-request-action.active{border-color:rgba(45,112,163,.78);background:rgba(131,183,221,.18)}
+.registration-request-table-card{border:1px solid var(--line);background:var(--card-bg);border-radius:7px;overflow:hidden;max-width:1400px}
+.registration-request-table{min-height:210px;background:var(--card-bg)}
+.registration-request-table-head{display:grid;grid-template-columns:.85fr .9fr 1fr 1fr 1.05fr .8fr 1.15fr .65fr 1.6fr;align-items:center;background:var(--table-head-bg,#f3efe7);border-bottom:1px solid var(--line);min-height:34px}
+.registration-request-table-head button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:800;text-align:left;text-transform:uppercase;cursor:pointer;padding:8px 10px;letter-spacing:0}
+.registration-request-table-head button:hover{color:var(--accent-blue)}
+.registration-request-table-head button:focus-visible{outline:2px solid var(--accent-blue);outline-offset:-2px}
+@media(max-width:1200px){.registration-request-table{overflow-x:auto}.registration-request-table-head{min-width:1080px}}
