@@ -1,4 +1,4 @@
-const CITADEL_VERSION = '1.4.4';
+const CITADEL_VERSION = '1.4.6';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
@@ -119,7 +119,7 @@ function doGet(e) {
     }
 
     if (action === 'getRegistrations') {
-      return output_(e, { ok: true, data: getRegistrations(), version: CITADEL_VERSION });
+      return output_(e, { ok: true, data: getRegistrations(getParam_(e, 'mode')), version: CITADEL_VERSION });
     }
 
     if (action === 'setupRegistrationsSheet') {
@@ -173,12 +173,32 @@ function getRegistrationsSpreadsheetId_() {
 function setupRegistrationsSheet() {
   const spreadsheetId = getRegistrationsSpreadsheetId_();
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationRequests, REGISTRATION_REQUEST_HEADERS);
+  repairRegistrationRequestsHeader_(spreadsheetId);
   return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.registrationRequests] };
 }
 
-function getRegistrations() {
+
+function repairRegistrationRequestsHeader_(spreadsheetId) {
+  const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SHEETS.registrationRequests);
+  if (!sheet) return { repaired: false, reason: 'RegistrationRequests missing' };
+  const width = Math.max(sheet.getLastColumn(), REGISTRATION_REQUEST_HEADERS.length);
+  const current = sheet.getRange(1, 1, 1, width).getValues()[0];
+  const normalized = current.map(function(header) { return normalizeHeader_(header); });
+  const firstCell = String(current[0] || '');
+  const malformed = firstCell.indexOf(',') >= 0 || normalized.indexOf('request_id') < 0 || normalized.indexOf('requestor_name') < 0;
+  if (!malformed) return { repaired: false, reason: 'Header already ok' };
+  sheet.getRange(1, 1, 1, REGISTRATION_REQUEST_HEADERS.length).setValues([REGISTRATION_REQUEST_HEADERS]);
+  return { repaired: true, headers: REGISTRATION_REQUEST_HEADERS.length };
+}
+
+function testRepairRegistrationRequestsHeader() {
+  Logger.log(JSON.stringify(repairRegistrationRequestsHeader_(getRegistrationsSpreadsheetId_()), null, 2));
+}
+
+function getRegistrations(mode) {
   setupRegistrationsSheet();
   const spreadsheetId = getRegistrationsSpreadsheetId_();
+  const requestedMode = String(mode || 'all').toLowerCase();
   const workflowRequests = readSheetObjects_(spreadsheetId, SHEETS.registrationRequests).filter(function(row) {
     return String(row.source_system || '').trim() !== 'registration-starting-data';
   });
@@ -186,7 +206,20 @@ function getRegistrations() {
   const legacyRequests = getLegacyRegistrationRequests_(spreadsheetId);
   const seen = {};
   const requests = [];
-  activeLicenses.concat(workflowRequests).concat(legacyRequests).forEach(function(row) {
+  let sourceRows = [];
+  if (requestedMode === 'active') {
+    sourceRows = activeLicenses.concat(workflowRequests.filter(function(row) { return normalizeRegistrationStatus_(row.status || row.stage) === 'Active'; }));
+  } else if (requestedMode === 'archived') {
+    sourceRows = workflowRequests.concat(legacyRequests).filter(function(row) { return normalizeRegistrationStatus_(row.status || row.stage) === 'Archived'; });
+  } else if (requestedMode === 'open' || requestedMode === 'request') {
+    sourceRows = workflowRequests.concat(legacyRequests).filter(function(row) {
+      const status = normalizeRegistrationStatus_(row.status || row.stage || 'New');
+      return ['New', 'Open', 'Pending'].indexOf(status) >= 0;
+    });
+  } else {
+    sourceRows = workflowRequests.concat(activeLicenses).concat(legacyRequests);
+  }
+  sourceRows.forEach(function(row) {
     const key = String(row.request_id || row.id || row.source_record_id || '').trim();
     if (key && seen[key]) return;
     if (key) seen[key] = true;
@@ -194,13 +227,13 @@ function getRegistrations() {
   });
   return {
     requests: requests,
+    mode: requestedMode,
     workflow_count: workflowRequests.length,
     active_license_count: activeLicenses.length,
     legacy_count: legacyRequests.length,
-    import_status: { skipped: true, reason: 'Reading RegistrationRequests and Registrations/Licenses directly.' }
+    returned_count: requests.length
   };
 }
-
 function normalizeRegistrationStatus_(value) {
   const raw = String(value || '').trim();
   const normalized = raw.toLowerCase();
@@ -1804,4 +1837,103 @@ function testSetupFleetSheet() {
 
 function testGetFleet() {
   Logger.log(JSON.stringify(getFleet(), null, 2));
+}
+
+function testGetOpenRegistrations() {
+  Logger.log(JSON.stringify(getRegistrations('open'), null, 2));
+}
+function testGetActiveRegistrations() {
+  Logger.log(JSON.stringify(getRegistrations('active'), null, 2));
+}
+
+function repairRegistrationRequestsData() {
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const sheet = ss.getSheetByName(SHEETS.registrationRequests);
+  if (!sheet || sheet.getLastRow() < 2) return { repaired: false, reason: 'No request rows to repair' };
+
+  const values = sheet.getDataRange().getValues();
+  const backupName = 'RegistrationRequests_Backup_' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
+  const backup = ss.insertSheet(backupName);
+  backup.getRange(1, 1, values.length, values[0].length).setValues(values);
+
+  const headers = values[0].map(function(header) { return normalizeHeader_(header); });
+  const rows = values.slice(1);
+  const currentIndexes = {};
+  headers.forEach(function(header, index) { if (header) currentIndexes[header] = index; });
+
+  const repairedRows = rows.map(function(row, rowIndex) {
+    const get = function(header, fallbackIndex) {
+      const key = normalizeHeader_(header);
+      if (currentIndexes[key] !== undefined) return row[currentIndexes[key]];
+      if (fallbackIndex !== undefined && fallbackIndex < row.length) return row[fallbackIndex];
+      return '';
+    };
+
+    const record = {
+      request_id: get('request_id', 0) || get('id', 0) || makeId_('reg'),
+      submitted_at: get('submitted_at', 1) || get('created_at', 13) || get('date', 5) || new Date(),
+      requestor_name: get('requestor_name', 2) || get('submitted_by', 1) || get('name', 2) || '',
+      brand: get('brand', 3) || '',
+      date_submitted: get('date_submitted', 4) || get('date', 5) || today_(),
+      region: normalizeCitadelRegion_(get('region', 5) || ''),
+      pure: get('pure', 6) || '',
+      jurisdiction: get('jurisdiction', 7) || '',
+      requirements: get('requirements', 8) || '',
+      website: get('website', 9) || '',
+      phone: get('phone', 10) || '',
+      email: get('email', 11) || '',
+      notes: get('notes', 12) || '',
+      status: normalizeRegistrationStatus_(get('status', 13) || 'New'),
+      stage: get('stage', 14) || 'Info',
+      assigned_to: get('assigned_to', 15) || 'Emma',
+      completed_date: get('completed_date', 16) || '',
+      active: String(get('active', 17)).toLowerCase() === 'false' ? false : true,
+      source_system: get('source_system', 18) || 'registration-request',
+      source_record_id: get('source_record_id', 19) || '',
+      received_date: get('received_date', 20) || '',
+      researched_date: get('researched_date', 21) || '',
+      submitted_license_date: get('submitted_license_date', 22) || '',
+      license_received_date: get('license_received_date', 23) || '',
+      archived_date: get('archived_date', 24) || '',
+      renewal_due_date: get('renewal_due_date', 25) || '',
+      license_type_name: get('license_type_name', 26) || '',
+      license_number: get('license_number', 27) || '',
+      expiration: get('expiration', 28) || '',
+      qualifier: get('qualifier', 29) || '',
+      continuing_education_hours: get('continuing_education_hours', 30) || '',
+      elite_owned: get('elite_owned', 31) || '',
+      expires_soon_flag: get('expires_soon_flag', 32) || '',
+      expired_flag: get('expired_flag', 33) || '',
+      license_category: get('license_category', 34) || '',
+      license_action: get('license_action', 35) || '',
+      bond_type: get('bond_type', 36) || '',
+      coi_type: get('coi_type', 37) || '',
+      payment_status: get('payment_status', 38) || '',
+      payment_method: get('payment_method', 39) || '',
+      documents_included: get('documents_included', 40) || '',
+      submission_method: get('submission_method', 41) || '',
+      research_notes: get('research_notes', 42) || '',
+      received_license_name: get('received_license_name', 43) || '',
+      received_license_state: get('received_license_state', 44) || '',
+      received_license_type: get('received_license_type', 45) || '',
+      ce_due_date: get('ce_due_date', 46) || '',
+      ce_reminder_days: get('ce_reminder_days', 47) || ''
+    };
+
+    return REGISTRATION_REQUEST_HEADERS.map(function(header) { return record[header] === undefined ? '' : record[header]; });
+  }).filter(function(row) {
+    return row.some(function(cell) { return String(cell || '').trim() !== ''; });
+  });
+
+  sheet.clearContents();
+  sheet.getRange(1, 1, 1, REGISTRATION_REQUEST_HEADERS.length).setValues([REGISTRATION_REQUEST_HEADERS]);
+  if (repairedRows.length) {
+    sheet.getRange(2, 1, repairedRows.length, REGISTRATION_REQUEST_HEADERS.length).setValues(repairedRows);
+  }
+  return { repaired: true, backup: backupName, rows: repairedRows.length };
+}
+
+function testRepairRegistrationRequestsData() {
+  Logger.log(JSON.stringify(repairRegistrationRequestsData(), null, 2));
 }
