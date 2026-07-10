@@ -852,3 +852,164 @@ html,body{overflow:hidden}
 .registration-form-actions{margin-top:7px}
 .registration-form-actions button{padding:7px 16px;min-width:138px;border-radius:7px}
 @media(max-width:1150px){.registration-form-grid{grid-template-columns:1fr 1fr}.registration-form-grid .req-name,.registration-form-grid .req-brand,.registration-form-grid .req-pure,.registration-form-grid .req-region,.registration-form-grid .req-jurisdiction,.registration-form-grid .req-requirements,.registration-form-grid .req-note-title,.registration-form-grid .req-website,.registration-form-grid .req-phone,.registration-form-grid .req-email,.registration-form-grid .req-notes{grid-column:auto}.registration-form-grid .req-jurisdiction,.registration-form-grid .req-requirements,.registration-form-grid .req-note-title,.registration-form-grid .req-notes{grid-column:1/-1}}
+
+
+/* Registration request form layout - final requested arrangement */
+.registration-submit-form{
+  max-width:none;
+  border:1px solid var(--line);
+  background:var(--card-bg);
+  border-radius:7px;
+  overflow:hidden;
+}
+.registration-form-title{
+  background:var(--navy,#0d2238);
+  color:#fff;
+  text-transform:uppercase;
+  font-weight:900;
+  letter-spacing:1.6px;
+  padding:10px 18px;
+  font-size:15px;
+}
+.registration-form-body{
+  padding:12px 18px 12px;
+}
+.registration-form-body p{
+  margin:0 0 10px;
+  font-size:14px;
+  color:var(--text);
+}
+.registration-form-top-row{
+  display:grid;
+  grid-template-columns:.8fr 1.42fr .8fr 1.42fr;
+  gap:10px 14px;
+  align-items:end;
+}
+.registration-form-mid-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 260px;
+  gap:10px 14px;
+  align-items:end;
+  margin-top:10px;
+}
+.registration-form-lower{
+  margin-top:10px;
+}
+.registration-contact-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px 14px;
+  margin-top:10px;
+}
+.registration-form-top-row label,
+.registration-form-mid-row label,
+.registration-form-lower label,
+.req-pure{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  margin:0;
+  color:var(--text);
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.15px;
+}
+.registration-form-top-row input,
+.registration-form-top-row select,
+.registration-form-mid-row textarea,
+.registration-form-lower input,
+.registration-form-lower textarea{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid var(--line);
+  background:var(--input-bg,var(--card-bg));
+  color:var(--text);
+  font:inherit;
+  font-size:15px;
+  font-weight:500;
+  text-transform:none;
+  letter-spacing:0;
+  padding:7px 10px;
+  min-height:34px;
+}
+.registration-form-mid-row textarea{
+  min-height:54px;
+  resize:vertical;
+  line-height:1.3;
+}
+.req-pure{
+  border:0;
+  padding:0 0 4px;
+  display:grid;
+  grid-template-columns:auto auto;
+  gap:7px 18px;
+  align-content:end;
+}
+.req-pure legend{
+  grid-column:1/-1;
+  margin:0;
+  padding:0;
+  color:var(--text);
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+.req-pure label{
+  display:inline-flex;
+  flex-direction:row;
+  align-items:center;
+  gap:6px;
+  margin:0;
+  color:var(--text);
+  font-size:15px;
+  font-weight:700;
+  text-transform:none;
+  letter-spacing:0;
+}
+.req-pure input{
+  width:auto;
+  min-height:auto;
+  margin:0;
+}
+.registration-form-note{
+  border:1px solid rgba(115,174,224,.7);
+  background:rgba(115,174,224,.18);
+  padding:9px 12px;
+  color:var(--text);
+  font-weight:900;
+  border-radius:5px;
+}
+.req-notes{
+  margin-top:10px !important;
+}
+.req-notes textarea{
+  min-height:52px;
+  resize:vertical;
+  line-height:1.3;
+}
+.registration-form-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:8px;
+}
+.registration-form-actions button{
+  min-width:150px;
+  border:0;
+  background:var(--navy,#0d2238);
+  color:#fff;
+  padding:8px 16px;
+  font:inherit;
+  font-weight:900;
+  border-radius:8px;
+  cursor:pointer;
+}
+.registration-form-actions button:hover{filter:brightness(1.08)}
+@media(max-width:1250px){
+  .registration-form-top-row{grid-template-columns:1fr 1.35fr 1fr 1.35fr}
+  .registration-form-mid-row{grid-template-columns:minmax(0,1fr) 220px}
+}
+@media(max-width:900px){
+  .registration-form-top-row,.registration-form-mid-row,.registration-contact-row{grid-template-columns:1fr 1fr}
+  .req-jurisdiction,.req-requirements,.req-notes,.registration-form-note{grid-column:1/-1}
+}
