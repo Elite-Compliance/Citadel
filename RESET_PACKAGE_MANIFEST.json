@@ -1,0 +1,7 @@
+{
+  "package": "citadel-github-app-v2.1.0-reset",
+  "version": "2.1.0",
+  "sourceCommit": "7480392c869cd638ba987f1b024073439047dfea (v1.2.5 clean pre-registration)",
+  "note": "Clean pre-registration reset package, relabeled to v2.1.0 so it stands out.",
+  "upload": "Upload the contents of this folder to the root of the GitHub repository."
+}
