@@ -798,3 +798,27 @@ html,body{overflow:hidden}
 .registration-form-actions button:hover{filter:brightness(1.08)}
 @media(max-width:1050px){.registration-form-grid{grid-template-columns:1fr 1fr}.registration-form-grid .wide-2{grid-column:1/-1}}
 @media(max-width:720px){.registration-form-grid{grid-template-columns:1fr}}
+
+
+/* Compact registration request form so all fields fit the workspace */
+.registration-submit-form{max-width:none}
+.registration-form-title{padding:11px 18px;font-size:15px;letter-spacing:1.5px}
+.registration-form-body{padding:12px 18px}
+.registration-form-body p{margin:0 0 10px;font-size:14px}
+.registration-form-grid{grid-template-columns:1fr 1.15fr .95fr;gap:9px 14px}
+.registration-form-grid label,.registration-form-grid fieldset{gap:4px;font-size:11px}
+.registration-form-grid small{display:inline;font-size:11px}
+.registration-form-grid input,.registration-form-grid select,.registration-form-grid textarea{min-height:34px;padding:7px 10px;font-size:14px}
+.registration-form-grid textarea{min-height:54px}
+.registration-form-grid label.full textarea{min-height:58px}
+.registration-form-grid fieldset{display:grid;grid-template-columns:auto auto;align-content:start;gap:6px 12px;padding-top:0}
+.registration-form-grid fieldset legend{grid-column:1/-1;margin:0;font-size:11px}
+.registration-form-grid fieldset label{font-size:14px;gap:5px}
+.registration-form-note{padding:8px 10px;font-size:13px;border-radius:4px}
+.registration-form-actions{margin-top:8px}
+.registration-form-actions button{min-width:140px;padding:8px 16px;border-radius:7px}
+.registration-request-page .registration-intake-card{padding:14px 18px}
+.registration-request-page .registration-intake-head h2{font-size:24px}
+.registration-request-page .registration-request-preview{margin-top:14px}
+.registration-request-page .registration-request-action{min-height:64px;padding:10px 14px}
+@media(max-height:820px){.registration-form-title{padding:9px 16px}.registration-form-body{padding:10px 16px}.registration-form-grid{gap:7px 12px}.registration-form-grid textarea{min-height:46px}.registration-form-grid label.full textarea{min-height:50px}.registration-request-page .registration-intake-card{padding:12px 16px}.registration-request-page .registration-request-preview{margin-top:10px}}
