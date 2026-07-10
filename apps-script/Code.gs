@@ -1,4 +1,4 @@
-const CITADEL_VERSION = '1.4.6';
+const CITADEL_VERSION = '1.4.7';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
@@ -56,7 +56,7 @@ const FLEET_NOTE_HEADERS = ['note_id', 'fleet_record_id', 'record_type', 'note_d
 const FLEET_ALERT_HEADERS = ['alert_id', 'fleet_record_id', 'record_type', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const FLEET_FOLLOWUP_HEADERS = ['followup_id', 'fleet_record_id', 'record_type', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const FLEET_METRIC_HEADERS = ['metric_key', 'label', 'value', 'note', 'tone', 'sort_order'];
-const REGISTRATION_REQUEST_HEADERS = ['request_id', 'submitted_at', 'requestor_name', 'brand', 'date_submitted', 'region', 'pure', 'jurisdiction', 'requirements', 'website', 'phone', 'email', 'notes', 'status', 'stage', 'assigned_to', 'completed_date', 'active', 'source_system', 'source_record_id', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'expires_soon_flag', 'expired_flag', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days'];
+const REGISTRATION_REQUEST_HEADERS = ['request_id', 'submitted_at', 'requestor_name', 'brand', 'date_submitted', 'region', 'pure', 'jurisdiction', 'requirements', 'website', 'phone', 'email', 'notes', 'status', 'stage', 'assigned_to', 'completed_date', 'active', 'source_system', 'source_record_id', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'expires_soon_flag', 'expired_flag', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'coi_requested_date', 'coi_received_date', 'bond_requested_date', 'bond_received_date', 'payment_requested_date', 'payment_received_date', 'other_requested_date', 'other_received_date', 'ce_reminder_days'];
 
 function doGet(e) {
   const action = getParam_(e, 'action') || 'getLiens';
@@ -514,7 +514,7 @@ function updateRegistrationRequest(payload) {
     if (String(values[i][idIndex]) === String(payload.request_id)) { rowNumber = i + 1; break; }
   }
   if (rowNumber < 0) throw new Error('Registration request not found.');
-  const allowed = ['status', 'stage', 'assigned_to', 'completed_date', 'active', 'status_updated_by', 'status_updated_at', 'archive_reason', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days'];
+  const allowed = ['status', 'stage', 'assigned_to', 'completed_date', 'active', 'status_updated_by', 'status_updated_at', 'archive_reason', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'coi_requested_date', 'coi_received_date', 'bond_requested_date', 'bond_received_date', 'payment_requested_date', 'payment_received_date', 'other_requested_date', 'other_received_date', 'ce_reminder_days'];
   allowed.forEach(function(key) {
     if (!Object.prototype.hasOwnProperty.call(payload, key)) return;
     const col = headers.indexOf(key);
@@ -1918,6 +1918,14 @@ function repairRegistrationRequestsData() {
       received_license_state: get('received_license_state', 44) || '',
       received_license_type: get('received_license_type', 45) || '',
       ce_due_date: get('ce_due_date', 46) || '',
+      coi_requested_date: get('coi_requested_date') || '',
+      coi_received_date: get('coi_received_date') || '',
+      bond_requested_date: get('bond_requested_date') || '',
+      bond_received_date: get('bond_received_date') || '',
+      payment_requested_date: get('payment_requested_date') || '',
+      payment_received_date: get('payment_received_date') || '',
+      other_requested_date: get('other_requested_date') || '',
+      other_received_date: get('other_received_date') || '',
       ce_reminder_days: get('ce_reminder_days', 47) || ''
     };
 
