@@ -751,3 +751,13 @@ html,body{overflow:hidden}
 .registration-request-action:focus-visible{outline:2px solid var(--accent-blue);outline-offset:2px}
 .registration-request-action strong{display:block;font-size:15px;font-weight:800;color:var(--text)}
 .registration-request-action span{display:block;margin-top:6px;font-size:13px;line-height:1.3;color:var(--muted)}
+
+
+/* Open Registrations table columns */
+.registration-open-table-head{grid-template-columns:1fr 1fr 1fr 1.1fr 1.5fr !important}
+
+
+/* Sortable registration workflow headers */
+.registration-sortable-head button{appearance:none;border:0;background:transparent;color:inherit;font:inherit;font-weight:800;text-align:left;text-transform:uppercase;cursor:pointer;padding:0;letter-spacing:0}
+.registration-sortable-head button:hover{color:var(--accent-blue)}
+.registration-sortable-head button:focus-visible{outline:2px solid var(--accent-blue);outline-offset:3px}
