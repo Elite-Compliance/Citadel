@@ -468,10 +468,10 @@ function renderWorkflowPage(kind) {
 
 function metricRow(kind) {
   const open = state.data.openRequests;
-  const alerts = (state.data.alerts || []).length + (state.data.followUps || []).length;
+  const alertRecords = metricRows(kind).filter(registrationHasAlert).length;
   const metrics = kind === "active"
     ? [
-        { key: "alerts", label: "Open Alerts", value: alerts, note: "Follow-up needed" },
+        { key: "alerts", label: "Open Alerts", value: alertRecords, note: "Follow-up needed" },
         { key: "expired", label: "Expired", value: expiredCount(), note: "Past due" },
         { key: "due7", label: "7 Days", value: expirationWindowCount(0, 7), note: "Due soon" },
         { key: "due30", label: "30 Days", value: expirationWindowCount(8, 30), note: "Renewal window" },
@@ -480,17 +480,23 @@ function metricRow(kind) {
       ]
     : kind === "archived"
       ? [
-          { key: "alerts", label: "Open Alerts", value: alerts, note: "Follow-up needed" },
+          { key: "alerts", label: "Open Alerts", value: alertRecords, note: "Follow-up needed" },
           { key: "all", label: "Archived", value: state.data.archivedRequests.length, note: "Completed records" }
         ]
       : [
-          { key: "alerts", label: "Open Alerts", value: alerts, note: "Follow-up needed" },
+          { key: "alerts", label: "Open Alerts", value: alertRecords, note: "Follow-up needed" },
           { key: "new", label: "New", value: open.filter(row => row.status === "New").length, note: "Needs intake" },
           { key: "open", label: "Open", value: open.filter(row => row.status === "Open").length, note: "In compliance" },
           { key: "pending", label: "Pending", value: open.filter(row => row.status === "Pending").length, note: "With jurisdiction" },
           { key: "researched", label: "Researched", value: open.filter(row => isResearched(row)).length, note: "Ready to submit" }
         ];
   return `<div class="metric-row">${metrics.map(item => `<button type="button" class="metric-button ${state.metricFilter === item.key ? "active" : ""}" data-metric="${item.key}" aria-pressed="${state.metricFilter === item.key}"><small>${escapeHtml(item.label)}</small><b>${escapeHtml(item.value)}</b><span>${escapeHtml(item.note)}</span></button>`).join("")}</div>`;
+}
+
+function metricRows(kind) {
+  if (kind === "active") return state.data.activeRegistrations || [];
+  if (kind === "archived") return state.data.archivedRequests || [];
+  return state.data.openRequests || [];
 }
 
 function filters() {
@@ -578,10 +584,7 @@ function isResearched(row) {
 }
 
 function matchesMetric(row, kind, metric) {
-  if (metric === "alerts") {
-    const recordId = row.request_id || row.registration_id;
-    return [...(state.data.alerts || []), ...(state.data.followUps || [])].some(item => (item.request_id || item.registration_id) === recordId);
-  }
+  if (metric === "alerts") return registrationHasAlert(row);
   if (kind === "open") {
     if (metric === "researched") return isResearched(row);
     return String(row.status || "").toLowerCase() === metric;
