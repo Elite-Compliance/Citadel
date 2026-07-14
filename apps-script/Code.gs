@@ -61,8 +61,8 @@ const FLEET_NOTE_HEADERS = ['note_id', 'fleet_record_id', 'record_type', 'note_d
 const FLEET_ALERT_HEADERS = ['alert_id', 'fleet_record_id', 'record_type', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const FLEET_FOLLOWUP_HEADERS = ['followup_id', 'fleet_record_id', 'record_type', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const FLEET_METRIC_HEADERS = ['metric_key', 'label', 'value', 'note', 'tone', 'sort_order'];
-const REGISTRATION_REQUEST_HEADERS = ['request_id', 'submitted_at', 'requestor_name', 'brand', 'date_submitted', 'region', 'pure', 'jurisdiction', 'requirements', 'website', 'phone', 'email', 'notes', 'status', 'stage', 'assigned_to', 'status_updated_by', 'status_updated_at', 'completed_date', 'active', 'source_system', 'source_record_id', 'reopened_from_request_id', 'research_verified_at', 'research_verified_by', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'renewal_status', 'renewal_owner', 'renewal_notes', 'renewal_started_date', 'renewal_submitted_date', 'renewal_received_date', 'archive_reason', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'expires_soon_flag', 'expired_flag', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days', 'ce_reminder_date'];
-const ACTIVE_REGISTRATION_HEADERS = ['registration_id', 'request_id', 'brand', 'state', 'region', 'jurisdiction', 'license_name', 'license_type_name', 'number', 'license_number', 'expiration', 'qualifier', 'type', 'pure', 'continuing_education_hours', 'elite_owned', 'expires_soon_flag', 'expired_flag', 'status', 'stage', 'source_system', 'source_record_id', 'created_at', 'last_updated', 'archived_date', 'active', 'requestor_name', 'website', 'phone', 'email', 'requirements', 'notes', 'date_submitted', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'completed_date', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days', 'ce_reminder_date', 'renewal_due_date', 'renewal_status', 'renewal_owner', 'renewal_notes', 'renewal_started_date', 'renewal_submitted_date', 'renewal_received_date', 'archive_reason', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'status_updated_by', 'status_updated_at'];
+const REGISTRATION_REQUEST_HEADERS = ['request_id', 'submitted_at', 'requestor_name', 'brand', 'date_submitted', 'region', 'state', 'license_scope', 'pure', 'jurisdiction', 'requirements', 'website', 'phone', 'email', 'notes', 'status', 'stage', 'assigned_to', 'status_updated_by', 'status_updated_at', 'completed_date', 'active', 'source_system', 'source_record_id', 'reopened_from_request_id', 'research_verified_at', 'research_verified_by', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'renewal_status', 'renewal_owner', 'renewal_notes', 'renewal_started_date', 'renewal_submitted_date', 'renewal_received_date', 'archive_reason', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'expires_soon_flag', 'expired_flag', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days', 'ce_reminder_date'];
+const ACTIVE_REGISTRATION_HEADERS = ['registration_id', 'request_id', 'brand', 'state', 'license_scope', 'region', 'jurisdiction', 'license_name', 'license_type_name', 'number', 'license_number', 'expiration', 'qualifier', 'type', 'pure', 'continuing_education_hours', 'elite_owned', 'expires_soon_flag', 'expired_flag', 'status', 'stage', 'source_system', 'source_record_id', 'created_at', 'last_updated', 'archived_date', 'active', 'requestor_name', 'website', 'phone', 'email', 'requirements', 'notes', 'date_submitted', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'completed_date', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days', 'ce_reminder_date', 'renewal_due_date', 'renewal_status', 'renewal_owner', 'renewal_notes', 'renewal_started_date', 'renewal_submitted_date', 'renewal_received_date', 'archive_reason', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'status_updated_by', 'status_updated_at'];
 const REGISTRATION_NOTE_HEADERS = ['note_id', 'request_id', 'registration_id', 'note_date', 'note_by', 'note_type', 'note_text', 'follow_up_date', 'active'];
 const REGISTRATION_ALERT_HEADERS = ['alert_id', 'request_id', 'registration_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const REGISTRATION_FOLLOWUP_HEADERS = ['followup_id', 'request_id', 'registration_id', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
@@ -197,6 +197,8 @@ function setupRegistrationsSheet() {
 
 function getRegistrations() {
   const spreadsheetId = getRegistrationsSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationRequests, REGISTRATION_REQUEST_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.activeRegistrations, ACTIVE_REGISTRATION_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationBanners, REGISTRATION_BANNER_HEADERS);
   const requests = sheetExists_(spreadsheetId, SHEETS.registrationRequests) ? readSheetObjects_(spreadsheetId, SHEETS.registrationRequests).map(mapRegistrationRequest_) : [];
   const activeRegistrations = sheetExists_(spreadsheetId, SHEETS.activeRegistrations) ? readSheetObjects_(spreadsheetId, SHEETS.activeRegistrations).map(mapActiveRegistration_) : [];
@@ -312,6 +314,14 @@ function isActiveBanner_(row) {
 
 function saveRegistrationRequest(payload) {
   payload = payload || {};
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationRequests, REGISTRATION_REQUEST_HEADERS);
+  const stateCode = String(payload.state || '').trim().toUpperCase();
+  const licenseScope = normalizeLicenseScope_(payload.license_scope, payload.jurisdiction, stateCode);
+  const jurisdiction = licenseScope === 'Statewide' ? '' : String(payload.jurisdiction || '').trim();
+  if (!stateCode) throw new Error('State is required.');
+  if (!licenseScope) throw new Error('License scope is required.');
+  if (licenseScope === 'Local Jurisdiction' && !jurisdiction) throw new Error('Jurisdiction is required for a local license.');
   const record = {
     request_id: payload.request_id || makeId_('REG'),
     submitted_at: payload.submitted_at || new Date(),
@@ -319,8 +329,10 @@ function saveRegistrationRequest(payload) {
     brand: payload.brand || '',
     date_submitted: payload.date_submitted || today_(),
     region: normalizeCitadelRegion_(payload.region || ''),
+    state: stateCode,
+    license_scope: licenseScope,
     pure: payload.pure || '',
-    jurisdiction: payload.jurisdiction || '',
+    jurisdiction: jurisdiction,
     requirements: payload.requirements || '',
     website: payload.website || '',
     phone: payload.phone || '',
@@ -375,7 +387,7 @@ function saveRegistrationRequest(payload) {
     ce_reminder_days: '',
     ce_reminder_date: ''
   };
-  appendObject_(getRegistrationsSpreadsheetId_(), SHEETS.registrationRequests, record);
+  appendObject_(spreadsheetId, SHEETS.registrationRequests, record);
   return record;
 }
 
@@ -404,6 +416,8 @@ function restartRegistrationRequest(payload) {
     brand: source.brand || '',
     date_submitted: now,
     region: normalizeCitadelRegion_(source.region || ''),
+    state: String(source.state || source.received_license_state || '').trim().toUpperCase(),
+    license_scope: normalizeLicenseScope_(source.license_scope, source.jurisdiction, source.state || source.received_license_state),
     pure: source.pure || '',
     jurisdiction: source.jurisdiction || '',
     requirements: source.requirements || '',
@@ -482,7 +496,8 @@ function syncActiveRegistrationFromRequest_(spreadsheetId, request) {
     registration_id: 'ACTIVE-' + request.request_id,
     request_id: request.request_id,
     brand: request.brand || '',
-    state: request.received_license_state || '',
+    state: request.received_license_state || request.state || '',
+    license_scope: normalizeLicenseScope_(request.license_scope, request.jurisdiction, request.received_license_state || request.state),
     region: request.region || '',
     jurisdiction: request.jurisdiction || '',
     license_name: licenseName,
@@ -574,6 +589,8 @@ function mapRegistrationRequest_(row) {
     brand: getField_(row, ['brand']),
     date_submitted: dateSubmitted,
     region: normalizeCitadelRegion_(getField_(row, ['region'])),
+    state: getField_(row, ['state', 'received_license_state']),
+    license_scope: normalizeLicenseScope_(getField_(row, ['license_scope', 'scope']), getField_(row, ['jurisdiction']), getField_(row, ['state', 'received_license_state'])),
     pure: getField_(row, ['pure']),
     jurisdiction: getField_(row, ['jurisdiction']),
     requirements: getField_(row, ['requirements']),
@@ -636,6 +653,7 @@ function mapActiveRegistration_(row) {
     request_id: getField_(row, ['request_id']),
     brand: getField_(row, ['brand']),
     state: getField_(row, ['state']),
+    license_scope: normalizeLicenseScope_(getField_(row, ['license_scope', 'scope']), getField_(row, ['jurisdiction']), getField_(row, ['state', 'received_license_state'])),
     region: normalizeCitadelRegion_(getField_(row, ['region', 'state'])),
     jurisdiction: getField_(row, ['jurisdiction']),
     license_name: getField_(row, ['license_name', 'license_type_name', 'license type name']),
@@ -699,6 +717,14 @@ function getRegistrationsSpreadsheetId_() {
   const spreadsheetId = SPREADSHEETS.registrations;
   if (!spreadsheetId) throw new Error('Registrations spreadsheet ID is not configured yet.');
   return spreadsheetId;
+}
+
+function normalizeLicenseScope_(value, jurisdiction, stateCode) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'statewide' || normalized === 'state') return 'Statewide';
+  if (normalized === 'local jurisdiction' || normalized === 'local' || normalized === 'jurisdiction') return 'Local Jurisdiction';
+  if (String(jurisdiction || '').trim()) return 'Local Jurisdiction';
+  return String(stateCode || '').trim() ? 'Statewide' : '';
 }
 
 function normalizeCitadelRegion_(value) {
