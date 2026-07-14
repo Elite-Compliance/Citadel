@@ -4,27 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Citadel Registrations</title>
-  <link rel="stylesheet" href="./styles.css?v=2.1.1">
-  <link rel="stylesheet" href="./embed.css?v=2.1.1">
+  <link rel="stylesheet" href="./styles.css?v=2.1.2">
+  <link rel="stylesheet" href="./embed.css?v=2.1.2">
 </head>
 <body>
   <main class="app-shell embedded-shell">
-    <header class="page-head embedded-head">
+    <div class="module-toolbar">
+      <nav class="module-tabs" aria-label="Registration pages">
+        <button type="button" class="active" data-page="requests">Registration Requests</button>
+        <button type="button" data-page="open">Open Registrations</button>
+        <button type="button" data-page="active">Active Registrations</button>
+        <button type="button" data-page="archived">Archived Registrations</button>
+      </nav>
       <div class="head-actions">
         <button type="button" class="primary" id="refreshButton">Refresh</button>
         <span class="status-pill" id="statusPill"><span></span> Ready</span>
       </div>
-    </header>
-
-    <nav class="module-tabs" aria-label="Registration pages">
-      <button type="button" class="active" data-page="requests">Registration Requests</button>
-      <button type="button" data-page="open">Open Registrations</button>
-      <button type="button" data-page="active">Active Registrations</button>
-      <button type="button" data-page="archived">Archived Registrations</button>
-    </nav>
+    </div>
 
     <section id="app"></section>
   </main>
-  <script src="./app.js?v=2.1.1"></script>
+  <script src="./app.js?v=2.1.2"></script>
 </body>
 </html>
