@@ -1,11 +1,12 @@
-const CITADEL_VERSION='2.1.0';
+const CITADEL_VERSION='2.1.2';
 const SPREADSHEETS = {
   commandCenter: '1zouXOWT2OIH-B74I0CAu1Ox-80s5bj2gDG2t_R2qGII',
   liens: '1X53Or2M0ORxtSAgpE9edH1cTo11Q8FNrXpytsWFcLLQ',
   contractors: '1qsMCA_kC129S4FbbMiLt1X9_VJlkwPRqGxx0WRrPuTg',
   pricing: '1kF3oCkjkMzAqwohT-pYk2CSKkZ0C5hGx3aPee9XsIgY',
   reviews: '1EjRpoie4MP8eE4SmYi0xqXIbGavH3ffz5DTb-MUdE1U',
-  fleet: '1cUbzbYW_7UCwD4oD9_pSWZBLDZYF3VpvqBijUOMBhuo'
+  fleet: '1cUbzbYW_7UCwD4oD9_pSWZBLDZYF3VpvqBijUOMBhuo',
+  registrations: '1_vi1q6qUu821TiUgMtelsF4ya2EBsXlPIlt-COEb6X8'
 };
 const LIEN_STATUS_REPORTS_FOLDER_ID = '1XcllT_u0WP7H5Cr9zvw9G6NNcOUTYcTH';
 const LIEN_MASTER_REPORT_NAME = 'Receivables Aging';
@@ -34,7 +35,12 @@ const SHEETS = {
   fleetNotes: 'FleetNotes',
   fleetAlerts: 'FleetAlerts',
   fleetFollowUps: 'FleetFollowUps',
-  fleetMetrics: 'FleetMetrics'
+  fleetMetrics: 'FleetMetrics',
+  registrationRequests: 'RegistrationRequests',
+  activeRegistrations: 'ActiveRegistrations',
+  registrationNotes: 'RegistrationNotes',
+  registrationAlerts: 'RegistrationAlerts',
+  registrationFollowUps: 'RegistrationFollowUps'
 };
 
 const CONTRACTOR_RECORD_HEADERS = ['Contractor', 'Phone', 'Email', 'Regions', 'Risk', 'Documents', 'GL Expiry', 'WC Expiry', 'Next Action', 'Address'];
@@ -54,6 +60,11 @@ const FLEET_NOTE_HEADERS = ['note_id', 'fleet_record_id', 'record_type', 'note_d
 const FLEET_ALERT_HEADERS = ['alert_id', 'fleet_record_id', 'record_type', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const FLEET_FOLLOWUP_HEADERS = ['followup_id', 'fleet_record_id', 'record_type', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const FLEET_METRIC_HEADERS = ['metric_key', 'label', 'value', 'note', 'tone', 'sort_order'];
+const REGISTRATION_REQUEST_HEADERS = ['request_id', 'submitted_at', 'requestor_name', 'brand', 'date_submitted', 'region', 'pure', 'jurisdiction', 'requirements', 'website', 'phone', 'email', 'notes', 'status', 'stage', 'assigned_to', 'status_updated_by', 'status_updated_at', 'completed_date', 'active', 'source_system', 'source_record_id', 'reopened_from_request_id', 'research_verified_at', 'research_verified_by', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'archived_date', 'renewal_due_date', 'renewal_status', 'renewal_owner', 'renewal_notes', 'renewal_started_date', 'renewal_submitted_date', 'renewal_received_date', 'archive_reason', 'license_type_name', 'license_number', 'expiration', 'qualifier', 'continuing_education_hours', 'elite_owned', 'expires_soon_flag', 'expired_flag', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days', 'ce_reminder_date'];
+const ACTIVE_REGISTRATION_HEADERS = ['registration_id', 'request_id', 'brand', 'state', 'region', 'jurisdiction', 'license_name', 'license_type_name', 'number', 'license_number', 'expiration', 'qualifier', 'type', 'pure', 'continuing_education_hours', 'elite_owned', 'expires_soon_flag', 'expired_flag', 'status', 'stage', 'source_system', 'source_record_id', 'created_at', 'last_updated', 'archived_date', 'active', 'requestor_name', 'website', 'phone', 'email', 'requirements', 'notes', 'date_submitted', 'received_date', 'researched_date', 'submitted_license_date', 'license_received_date', 'completed_date', 'received_license_name', 'received_license_state', 'received_license_type', 'ce_due_date', 'ce_reminder_days', 'ce_reminder_date', 'renewal_due_date', 'renewal_status', 'renewal_owner', 'renewal_notes', 'renewal_started_date', 'renewal_submitted_date', 'renewal_received_date', 'archive_reason', 'license_category', 'license_action', 'bond_type', 'coi_type', 'payment_status', 'payment_method', 'documents_included', 'submission_method', 'research_notes', 'status_updated_by', 'status_updated_at'];
+const REGISTRATION_NOTE_HEADERS = ['note_id', 'request_id', 'registration_id', 'note_date', 'note_by', 'note_type', 'note_text', 'follow_up_date', 'active'];
+const REGISTRATION_ALERT_HEADERS = ['alert_id', 'request_id', 'registration_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
+const REGISTRATION_FOLLOWUP_HEADERS = ['followup_id', 'request_id', 'registration_id', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 
 function doGet(e) {
   const action = getParam_(e, 'action') || 'getLiens';
@@ -77,6 +88,10 @@ function doGet(e) {
 
     if (action === 'getFleet') {
       return output_(e, { ok: true, data: getFleet(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'getRegistrations') {
+      return output_(e, { ok: true, data: getRegistrations(), version: CITADEL_VERSION });
     }
 
     if (action === 'saveLienNote') {
@@ -115,12 +130,28 @@ function doGet(e) {
       return output_(e, { ok: true, data: saveReviewFollowUp(paramsToPayload_(e)), version: CITADEL_VERSION });
     }
 
+    if (action === 'saveRegistrationRequest') {
+      return output_(e, { ok: true, data: saveRegistrationRequest(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'restartRegistrationRequest') {
+      return output_(e, { ok: true, data: restartRegistrationRequest(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'updateRegistrationRequest') {
+      return output_(e, { ok: true, data: updateRegistrationRequest(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
     if (action === 'setupContractorsSheet') {
       return output_(e, { ok: true, data: setupContractorsSheet(), version: CITADEL_VERSION });
     }
 
     if (action === 'setupReviewsSheet') {
       return output_(e, { ok: true, data: setupReviewsSheet(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'setupRegistrationsSheet') {
+      return output_(e, { ok: true, data: setupRegistrationsSheet(), version: CITADEL_VERSION });
     }
 
     if (action === 'importLienStatusReports') {
@@ -141,6 +172,460 @@ function doPost(e) {
   } catch (error) {
     return output_(e, { ok: false, error: error.message || String(error) });
   }
+}
+
+function setupRegistrationsSheet() {
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationRequests, REGISTRATION_REQUEST_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.activeRegistrations, ACTIVE_REGISTRATION_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationNotes, REGISTRATION_NOTE_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationAlerts, REGISTRATION_ALERT_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationFollowUps, REGISTRATION_FOLLOWUP_HEADERS);
+  return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.registrationRequests, SHEETS.activeRegistrations, SHEETS.registrationNotes, SHEETS.registrationAlerts, SHEETS.registrationFollowUps] };
+}
+
+function getRegistrations() {
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  const requests = sheetExists_(spreadsheetId, SHEETS.registrationRequests) ? readSheetObjects_(spreadsheetId, SHEETS.registrationRequests).map(mapRegistrationRequest_) : [];
+  const activeRegistrations = sheetExists_(spreadsheetId, SHEETS.activeRegistrations) ? readSheetObjects_(spreadsheetId, SHEETS.activeRegistrations).map(mapActiveRegistration_) : [];
+  const notes = sheetExists_(spreadsheetId, SHEETS.registrationNotes) ? readSheetObjects_(spreadsheetId, SHEETS.registrationNotes) : [];
+  const alerts = sheetExists_(spreadsheetId, SHEETS.registrationAlerts) ? readSheetObjects_(spreadsheetId, SHEETS.registrationAlerts).filter(isActiveRow_) : [];
+  const followUps = sheetExists_(spreadsheetId, SHEETS.registrationFollowUps) ? readSheetObjects_(spreadsheetId, SHEETS.registrationFollowUps).filter(isActiveRow_) : [];
+  const openRequests = requests.filter(function(row) {
+    const status = String(row.status || '').toLowerCase();
+    return status !== 'active' && status !== 'archived' && isActiveRow_(row);
+  });
+  const archivedRequests = requests.filter(function(row) {
+    return String(row.status || '').toLowerCase() === 'archived' || !isActiveRow_(row);
+  });
+  const openAlertCount = alerts.length + followUps.filter(function(row) { return String(row.status || '').toLowerCase() !== 'completed'; }).length;
+  return {
+    requests: requests,
+    openRequests: openRequests,
+    activeRegistrations: activeRegistrations.filter(function(row) { return String(row.status || '').toLowerCase() !== 'archived' && isActiveRow_(row); }),
+    archivedRequests: archivedRequests,
+    notes: notes,
+    alerts: alerts,
+    followUps: followUps,
+    metrics: {
+      open_alerts: openAlertCount,
+      new_requests: openRequests.filter(function(row) { return String(row.status || '').toLowerCase() === 'new'; }).length,
+      open_requests: openRequests.length,
+      active_registrations: activeRegistrations.filter(function(row) { return String(row.status || '').toLowerCase() !== 'archived' && isActiveRow_(row); }).length,
+      archived_requests: archivedRequests.length
+    }
+  };
+}
+
+function saveRegistrationRequest(payload) {
+  payload = payload || {};
+  const record = {
+    request_id: payload.request_id || makeId_('REG'),
+    submitted_at: payload.submitted_at || new Date(),
+    requestor_name: payload.requestor_name || payload.requestor || payload.submitted_by || '',
+    brand: payload.brand || '',
+    date_submitted: payload.date_submitted || today_(),
+    region: normalizeCitadelRegion_(payload.region || ''),
+    pure: payload.pure || '',
+    jurisdiction: payload.jurisdiction || '',
+    requirements: payload.requirements || '',
+    website: payload.website || '',
+    phone: payload.phone || '',
+    email: payload.email || '',
+    notes: payload.notes || '',
+    status: payload.status || 'New',
+    stage: payload.stage || 'New',
+    assigned_to: payload.assigned_to || 'Emma',
+    status_updated_by: payload.status_updated_by || payload.assigned_to || 'Emma',
+    status_updated_at: payload.status_updated_at || payload.submitted_at || new Date(),
+    completed_date: '',
+    active: true,
+    source_system: payload.source_system || 'Citadel',
+    source_record_id: payload.source_record_id || '',
+    reopened_from_request_id: '',
+    research_verified_at: '',
+    research_verified_by: '',
+    received_date: '',
+    researched_date: '',
+    submitted_license_date: '',
+    license_received_date: '',
+    archived_date: '',
+    renewal_due_date: '',
+    renewal_status: '',
+    renewal_owner: '',
+    renewal_notes: '',
+    renewal_started_date: '',
+    renewal_submitted_date: '',
+    renewal_received_date: '',
+    archive_reason: '',
+    license_type_name: '',
+    license_number: '',
+    expiration: '',
+    qualifier: '',
+    continuing_education_hours: '',
+    elite_owned: '',
+    expires_soon_flag: '',
+    expired_flag: '',
+    license_category: '',
+    license_action: '',
+    bond_type: '',
+    coi_type: '',
+    payment_status: '',
+    payment_method: '',
+    documents_included: '',
+    submission_method: '',
+    research_notes: '',
+    received_license_name: '',
+    received_license_state: '',
+    received_license_type: '',
+    ce_due_date: '',
+    ce_reminder_days: '',
+    ce_reminder_date: ''
+  };
+  appendObject_(getRegistrationsSpreadsheetId_(), SHEETS.registrationRequests, record);
+  return record;
+}
+
+function restartRegistrationRequest(payload) {
+  payload = payload || {};
+  if (!payload.request_id) throw new Error('request_id is required.');
+  const mode = String(payload.restart_mode || 'fresh');
+  if (['fresh', 'reuse_research'].indexOf(mode) === -1) throw new Error('Invalid restart_mode.');
+
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationRequests, REGISTRATION_REQUEST_HEADERS);
+  const requests = readSheetObjects_(spreadsheetId, SHEETS.registrationRequests);
+  const source = requests.find(function(row) { return String(row.request_id) === String(payload.request_id); });
+  if (!source) throw new Error('Archived registration request not found: ' + payload.request_id);
+  if (String(source.status || '').trim().toLowerCase() !== 'archived') throw new Error('Only archived requests can be restarted.');
+
+  const now = new Date();
+  const reuseResearch = mode === 'reuse_research';
+  const verifiedBy = payload.research_verified_by || payload.updated_by || source.assigned_to || 'Emma';
+  const record = {};
+  REGISTRATION_REQUEST_HEADERS.forEach(function(header) { record[header] = ''; });
+  Object.assign(record, {
+    request_id: makeId_('REG'),
+    submitted_at: now,
+    requestor_name: source.requestor_name || '',
+    brand: source.brand || '',
+    date_submitted: now,
+    region: normalizeCitadelRegion_(source.region || ''),
+    pure: source.pure || '',
+    jurisdiction: source.jurisdiction || '',
+    requirements: source.requirements || '',
+    website: source.website || '',
+    phone: source.phone || '',
+    email: source.email || '',
+    status: reuseResearch ? 'Researched' : 'New',
+    stage: reuseResearch ? 'Researched' : 'New',
+    assigned_to: source.assigned_to || 'Emma',
+    status_updated_by: verifiedBy,
+    status_updated_at: now,
+    active: true,
+    source_system: 'Citadel Restart',
+    source_record_id: source.request_id,
+    reopened_from_request_id: source.request_id,
+    research_verified_at: reuseResearch ? now : '',
+    research_verified_by: reuseResearch ? verifiedBy : '',
+    researched_date: reuseResearch ? now : '',
+    license_category: reuseResearch ? (source.license_category || '') : '',
+    license_action: reuseResearch ? (source.license_action || '') : '',
+    bond_type: reuseResearch ? (source.bond_type || '') : '',
+    coi_type: reuseResearch ? (source.coi_type || '') : '',
+    payment_status: reuseResearch ? (source.payment_status || '') : '',
+    payment_method: reuseResearch ? (source.payment_method || '') : '',
+    documents_included: reuseResearch ? (source.documents_included || '') : '',
+    submission_method: reuseResearch ? (source.submission_method || '') : '',
+    research_notes: reuseResearch ? (source.research_notes || '') : ''
+  });
+
+  appendObject_(spreadsheetId, SHEETS.registrationRequests, record);
+  return {
+    request_id: record.request_id,
+    reopened_from_request_id: source.request_id,
+    restart_mode: mode,
+    status: record.status,
+    stage: record.stage
+  };
+}
+
+function updateRegistrationRequest(payload) {
+  payload = payload || {};
+  if (!payload.request_id) throw new Error('request_id is required.');
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  const sheet = getRequiredSheet_(spreadsheetId, SHEETS.registrationRequests);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(normalizeHeader_);
+  const idIndex = headers.indexOf('request_id');
+  if (idIndex < 0) throw new Error('RegistrationRequests is missing request_id.');
+  for (let rowIndex = 1; rowIndex < values.length; rowIndex++) {
+    if (String(values[rowIndex][idIndex]) === String(payload.request_id)) {
+      const updatedRecord = {};
+      const updatedRow = values[rowIndex].slice();
+      headers.forEach(function(header, columnIndex) {
+        if (header && Object.prototype.hasOwnProperty.call(payload, header)) {
+          updatedRow[columnIndex] = payload[header];
+        }
+        if (header) updatedRecord[header] = updatedRow[columnIndex];
+      });
+      sheet.getRange(rowIndex + 1, 1, 1, headers.length).setValues([updatedRow]);
+      syncActiveRegistrationFromRequest_(spreadsheetId, updatedRecord);
+      return { request_id: payload.request_id, updated: true };
+    }
+  }
+  throw new Error('Registration request not found: ' + payload.request_id);
+}
+
+function syncActiveRegistrationFromRequest_(spreadsheetId, request) {
+  const status = String(request.status || '').trim();
+  const lifecycleStatus = status.toLowerCase();
+  if (['active', 'renewal', 'renewal submitted', 'renewal received', 'archived'].indexOf(lifecycleStatus) < 0) return;
+
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.activeRegistrations, ACTIVE_REGISTRATION_HEADERS);
+  const archived = lifecycleStatus === 'archived' || String(request.active).toLowerCase() === 'false';
+  const licenseName = request.received_license_name || request.license_type_name || request.license_category || '';
+  const record = {
+    registration_id: 'ACTIVE-' + request.request_id,
+    request_id: request.request_id,
+    brand: request.brand || '',
+    state: request.received_license_state || '',
+    region: request.region || '',
+    jurisdiction: request.jurisdiction || '',
+    license_name: licenseName,
+    license_type_name: licenseName,
+    number: request.license_number || '',
+    license_number: request.license_number || '',
+    expiration: request.expiration || '',
+    qualifier: request.qualifier || '',
+    type: request.received_license_type || '',
+    pure: request.pure || '',
+    continuing_education_hours: request.continuing_education_hours || '',
+    elite_owned: request.elite_owned || '',
+    expires_soon_flag: request.expires_soon_flag || '',
+    expired_flag: request.expired_flag || '',
+    status: status || 'Active',
+    stage: request.stage || status || 'Active',
+    source_system: 'Citadel',
+    source_record_id: request.request_id,
+    created_at: request.completed_date || request.status_updated_at || new Date(),
+    last_updated: request.status_updated_at || new Date(),
+    archived_date: request.archived_date || '',
+    active: !archived,
+    requestor_name: request.requestor_name || '',
+    website: request.website || '',
+    phone: request.phone || '',
+    email: request.email || '',
+    requirements: request.requirements || '',
+    notes: request.notes || '',
+    date_submitted: request.date_submitted || request.submitted_at || '',
+    received_date: request.received_date || '',
+    researched_date: request.researched_date || '',
+    submitted_license_date: request.submitted_license_date || '',
+    license_received_date: request.license_received_date || '',
+    completed_date: request.completed_date || '',
+    received_license_name: request.received_license_name || '',
+    received_license_state: request.received_license_state || '',
+    received_license_type: request.received_license_type || '',
+    ce_due_date: request.ce_due_date || '',
+    ce_reminder_days: request.ce_reminder_days || '',
+    ce_reminder_date: request.ce_reminder_date || '',
+    renewal_due_date: request.renewal_due_date || '',
+    renewal_status: request.renewal_status || '',
+    renewal_owner: request.renewal_owner || '',
+    renewal_notes: request.renewal_notes || '',
+    renewal_started_date: request.renewal_started_date || '',
+    renewal_submitted_date: request.renewal_submitted_date || '',
+    renewal_received_date: request.renewal_received_date || '',
+    archive_reason: request.archive_reason || '',
+    license_category: request.license_category || '',
+    license_action: request.license_action || '',
+    bond_type: request.bond_type || '',
+    coi_type: request.coi_type || '',
+    payment_status: request.payment_status || '',
+    payment_method: request.payment_method || '',
+    documents_included: request.documents_included || '',
+    submission_method: request.submission_method || '',
+    research_notes: request.research_notes || '',
+    status_updated_by: request.status_updated_by || '',
+    status_updated_at: request.status_updated_at || ''
+  };
+  upsertSheetObject_(spreadsheetId, SHEETS.activeRegistrations, 'request_id', request.request_id, record);
+}
+
+function upsertSheetObject_(spreadsheetId, sheetName, keyHeader, keyValue, record) {
+  const sheet = getRequiredSheet_(spreadsheetId, sheetName);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(normalizeHeader_);
+  const keyIndex = headers.indexOf(keyHeader);
+  if (keyIndex < 0) throw new Error(sheetName + ' is missing ' + keyHeader + '.');
+  for (let rowIndex = 1; rowIndex < values.length; rowIndex++) {
+    if (String(values[rowIndex][keyIndex]) !== String(keyValue)) continue;
+    const updatedRow = values[rowIndex].slice();
+    headers.forEach(function(header, columnIndex) {
+      if (header && Object.prototype.hasOwnProperty.call(record, header)) updatedRow[columnIndex] = record[header];
+    });
+    sheet.getRange(rowIndex + 1, 1, 1, headers.length).setValues([updatedRow]);
+    return;
+  }
+  appendObject_(spreadsheetId, sheetName, record);
+}
+
+function mapRegistrationRequest_(row) {
+  const status = getField_(row, ['status']) || 'New';
+  const dateSubmitted = getField_(row, ['date_submitted', 'requested_date', 'submitted_at', 'date']);
+  return {
+    request_id: getField_(row, ['request_id', 'id']) || makeIdFromText_('REG', [getField_(row, ['brand']), getField_(row, ['jurisdiction']), dateSubmitted].join('|')),
+    submitted_at: getField_(row, ['submitted_at', 'created_at']) || dateSubmitted,
+    requestor_name: getField_(row, ['requestor_name', 'requestor', 'submitted_by', 'name']),
+    brand: getField_(row, ['brand']),
+    date_submitted: dateSubmitted,
+    region: normalizeCitadelRegion_(getField_(row, ['region'])),
+    pure: getField_(row, ['pure']),
+    jurisdiction: getField_(row, ['jurisdiction']),
+    requirements: getField_(row, ['requirements']),
+    website: getField_(row, ['website']),
+    phone: getField_(row, ['phone']),
+    email: getField_(row, ['email']),
+    notes: getField_(row, ['notes']),
+    status: status,
+    stage: getField_(row, ['stage']) || status,
+    assigned_to: getField_(row, ['assigned_to']) || 'Emma',
+    status_updated_by: getField_(row, ['status_updated_by']),
+    status_updated_at: getField_(row, ['status_updated_at', 'last_updated']) || dateSubmitted,
+    completed_date: getField_(row, ['completed_date']),
+    active: getField_(row, ['active']) === '' ? true : getField_(row, ['active']),
+    reopened_from_request_id: getField_(row, ['reopened_from_request_id']),
+    research_verified_at: getField_(row, ['research_verified_at']),
+    research_verified_by: getField_(row, ['research_verified_by']),
+    received_date: getField_(row, ['received_date']),
+    researched_date: getField_(row, ['researched_date']),
+    submitted_license_date: getField_(row, ['submitted_license_date']),
+    license_received_date: getField_(row, ['license_received_date']),
+    archived_date: getField_(row, ['archived_date']),
+    renewal_due_date: getField_(row, ['renewal_due_date']),
+    renewal_status: getField_(row, ['renewal_status']),
+    renewal_owner: getField_(row, ['renewal_owner']),
+    renewal_notes: getField_(row, ['renewal_notes']),
+    renewal_started_date: getField_(row, ['renewal_started_date']),
+    renewal_submitted_date: getField_(row, ['renewal_submitted_date']),
+    renewal_received_date: getField_(row, ['renewal_received_date']),
+    archive_reason: getField_(row, ['archive_reason']),
+    license_type_name: getField_(row, ['license_type_name', 'license type name']),
+    license_number: getField_(row, ['license_number', 'number']),
+    expiration: getField_(row, ['expiration']),
+    qualifier: getField_(row, ['qualifier']),
+    continuing_education_hours: getField_(row, ['continuing_education_hours']),
+    elite_owned: getField_(row, ['elite_owned']),
+    expires_soon_flag: getField_(row, ['expires_soon_flag', 'expired in 30 days']),
+    expired_flag: getField_(row, ['expired_flag', 'expires within 7 days or expired']),
+    license_category: getField_(row, ['license_category']),
+    license_action: getField_(row, ['license_action']),
+    bond_type: getField_(row, ['bond_type']),
+    coi_type: getField_(row, ['coi_type']),
+    payment_status: getField_(row, ['payment_status']),
+    payment_method: getField_(row, ['payment_method']),
+    documents_included: getField_(row, ['documents_included']),
+    submission_method: getField_(row, ['submission_method']),
+    research_notes: getField_(row, ['research_notes']),
+    received_license_name: getField_(row, ['received_license_name']),
+    received_license_state: getField_(row, ['received_license_state']),
+    received_license_type: getField_(row, ['received_license_type']),
+    ce_due_date: getField_(row, ['ce_due_date']),
+    ce_reminder_days: getField_(row, ['ce_reminder_days']),
+    ce_reminder_date: getField_(row, ['ce_reminder_date'])
+  };
+}
+
+function mapActiveRegistration_(row) {
+  return {
+    registration_id: getField_(row, ['registration_id']) || makeIdFromText_('ACTIVE-REG', [getField_(row, ['brand']), getField_(row, ['jurisdiction']), getField_(row, ['number', 'license_number'])].join('|')),
+    request_id: getField_(row, ['request_id']),
+    brand: getField_(row, ['brand']),
+    state: getField_(row, ['state']),
+    region: normalizeCitadelRegion_(getField_(row, ['region', 'state'])),
+    jurisdiction: getField_(row, ['jurisdiction']),
+    license_name: getField_(row, ['license_name', 'license_type_name', 'license type name']),
+    license_type_name: getField_(row, ['license_type_name', 'license type name']),
+    number: getField_(row, ['number', 'license_number']),
+    license_number: getField_(row, ['license_number', 'number']),
+    expiration: getField_(row, ['expiration']),
+    qualifier: getField_(row, ['qualifier']),
+    type: getField_(row, ['type', 'received_license_type']),
+    pure: getField_(row, ['pure']),
+    continuing_education_hours: getField_(row, ['continuing_education_hours']),
+    elite_owned: getField_(row, ['elite_owned']),
+    expires_soon_flag: getField_(row, ['expires_soon_flag', 'expired in 30 days']),
+    expired_flag: getField_(row, ['expired_flag', 'expires within 7 days or expired']),
+    status: getField_(row, ['status']) || 'Active',
+    stage: getField_(row, ['stage']) || 'Active',
+    last_updated: getField_(row, ['last_updated', 'created_at']),
+    active: getField_(row, ['active']) === '' ? true : getField_(row, ['active']),
+    requestor_name: getField_(row, ['requestor_name']),
+    website: getField_(row, ['website']),
+    phone: getField_(row, ['phone']),
+    email: getField_(row, ['email']),
+    requirements: getField_(row, ['requirements']),
+    notes: getField_(row, ['notes']),
+    date_submitted: getField_(row, ['date_submitted', 'created_at']),
+    received_date: getField_(row, ['received_date']),
+    researched_date: getField_(row, ['researched_date']),
+    submitted_license_date: getField_(row, ['submitted_license_date']),
+    license_received_date: getField_(row, ['license_received_date']),
+    completed_date: getField_(row, ['completed_date', 'created_at']),
+    archived_date: getField_(row, ['archived_date']),
+    received_license_name: getField_(row, ['received_license_name', 'license_name']),
+    received_license_state: getField_(row, ['received_license_state', 'state']),
+    received_license_type: getField_(row, ['received_license_type', 'type']),
+    ce_due_date: getField_(row, ['ce_due_date']),
+    ce_reminder_days: getField_(row, ['ce_reminder_days']),
+    ce_reminder_date: getField_(row, ['ce_reminder_date']),
+    renewal_due_date: getField_(row, ['renewal_due_date']),
+    renewal_status: getField_(row, ['renewal_status']),
+    renewal_owner: getField_(row, ['renewal_owner']),
+    renewal_notes: getField_(row, ['renewal_notes']),
+    renewal_started_date: getField_(row, ['renewal_started_date']),
+    renewal_submitted_date: getField_(row, ['renewal_submitted_date']),
+    renewal_received_date: getField_(row, ['renewal_received_date']),
+    archive_reason: getField_(row, ['archive_reason']),
+    license_category: getField_(row, ['license_category']),
+    license_action: getField_(row, ['license_action']),
+    bond_type: getField_(row, ['bond_type']),
+    coi_type: getField_(row, ['coi_type']),
+    payment_status: getField_(row, ['payment_status']),
+    payment_method: getField_(row, ['payment_method']),
+    documents_included: getField_(row, ['documents_included']),
+    submission_method: getField_(row, ['submission_method']),
+    research_notes: getField_(row, ['research_notes']),
+    status_updated_by: getField_(row, ['status_updated_by']),
+    status_updated_at: getField_(row, ['status_updated_at', 'last_updated'])
+  };
+}
+
+function getRegistrationsSpreadsheetId_() {
+  const spreadsheetId = SPREADSHEETS.registrations;
+  if (!spreadsheetId) throw new Error('Registrations spreadsheet ID is not configured yet.');
+  return spreadsheetId;
+}
+
+function normalizeCitadelRegion_(value) {
+  const text = String(value || '').trim();
+  const upper = text.toUpperCase();
+  const map = [
+    ['PHX', ['PHX', 'PHOENIX', 'ARIZONA', 'AZ']],
+    ['STL', ['STL', 'ST LOUIS', 'SAINT LOUIS', 'MISSOURI', 'MO']],
+    ['MIL', ['MIL', 'MILWAUKEE', 'WISCONSIN', 'WI']],
+    ['CLE', ['CLE', 'CLEVELAND', 'OHIO', 'OH']],
+    ['CHI', ['CHI', 'CHICAGO', 'ILLINOIS', 'IL']],
+    ['MIN', ['MIN', 'MINNEAPOLIS', 'MINNESOTA', 'MN']],
+    ['ABQ', ['ABQ', 'ALBUQUERQUE', 'NEW MEXICO', 'NM']],
+    ['PIT', ['PIT', 'PITTSBURGH', 'PENNSYLVANIA', 'PA']],
+    ['IND', ['IND', 'INDIANAPOLIS', 'INDIANA', 'IN']]
+  ];
+  for (let i = 0; i < map.length; i++) {
+    if (map[i][1].some(function(token) { return upper.indexOf(token) > -1 || upper === token; })) return map[i][0];
+  }
+  return text ? 'OT' : '';
 }
 
 function setupReviewsSheet() {
@@ -1331,6 +1816,15 @@ function paramsToPayload_(e) {
   const params = e && e.parameter ? e.parameter : {};
   ['lien_id', 'contractor_id', 'note_id', 'note_date', 'note_by', 'note_type', 'note_text', 'follow_up_date', 'alert_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'followup_id', 'assigned_to', 'followup_type', 'followup_text', 'created_by', 'completed_date', 'active'].forEach(function(key) {
     if (Object.prototype.hasOwnProperty.call(params, key)) payload[key] = params[key];
+  });
+  return payload;
+}
+
+function paramsToRegistrationPayload_(e) {
+  const payload = {};
+  const params = e && e.parameter ? e.parameter : {};
+  Object.keys(params).forEach(function(key) {
+    if (key !== 'action' && key !== 'callback') payload[key] = params[key];
   });
   return payload;
 }
