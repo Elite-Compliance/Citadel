@@ -693,38 +693,6 @@ body[data-theme="light"] .command-alert-list article{
 .update-toast{position:fixed;right:18px;bottom:18px;z-index:120;display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center;max-width:min(390px,calc(100vw - 28px));padding:11px 12px;border:1px solid var(--line);background:var(--panel-bg);color:var(--text);box-shadow:var(--shadow);border-radius:7px}.update-toast strong{grid-column:1/2;font-size:14px}.update-toast span{grid-column:1/2;color:var(--muted);font-size:12px}.update-toast button{height:30px;border:1px solid var(--line);background:var(--brand);color:#fff;font-weight:800;cursor:pointer;padding:0 10px}.update-toast [data-update-dismiss]{width:30px;padding:0;background:var(--card-bg);color:var(--text)}@media(max-width:640px){.update-toast{left:12px;right:12px;bottom:12px}}
 
 
-/* Workstation resize guardrails: keep data pages readable instead of squished */
-html,body{overflow:hidden}
-.app-shell{min-width:1180px;grid-template-columns:268px minmax(912px,1fr) !important;overflow:auto !important}
-.workspace{min-width:912px;overflow:auto !important}
-.page-panel{min-width:860px;overflow:auto !important}
-.contractors-page,.liens-page,.pricing-page,.region-health-page,.standard-page{min-width:980px !important}
-.contractors-page{grid-template-columns:minmax(640px,1fr) 390px !important;display:grid !important}
-.contractors-workspace{display:contents !important}
-.contractors-records{min-width:0 !important;overflow:auto !important}
-.contractors-detail{min-width:340px !important;overflow:auto !important}
-.contractors-metrics,.metric-grid,.liens-metrics{grid-template-columns:repeat(5,minmax(132px,1fr)) !important}
-.contractors-filters,.standard-filters,.liens-filters{grid-template-columns:repeat(5,minmax(130px,1fr)) !important}
-.pricing-filters{grid-template-columns:repeat(6,minmax(120px,1fr)) !important}
-.fleet-preview{margin-top:10px;border-top:1px solid var(--line)}
-.fleet-driver-preview-table{min-width:760px}
-@media(max-width:1180px){
-  .app-shell{width:1180px;height:100vh !important;min-height:620px !important}
-  .sidebar{border-right:1px solid rgba(215,221,229,.14) !important;border-bottom:0 !important}
-  .nav-list{grid-template-columns:1fr !important}
-  .workspace{overflow:auto !important}
-  .page-panel{overflow:auto !important}
-  .contractors-page,.liens-page,.pricing-page,.region-health-page,.standard-page{overflow:auto !important}
-}
-@media(max-width:720px){
-  .contractors-page{grid-template-columns:minmax(640px,1fr) 390px !important}
-  .contractors-table{min-width:760px !important}
-  .contractors-table-head{display:grid !important}
-  .contractors-row{grid-template-columns:1.35fr 1.15fr .7fr .7fr .45fr .45fr !important}
-  .contractors-row span:nth-child(1),.contractors-row span:nth-child(2){grid-column:auto !important}
-  .contractors-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
-}
-
 .topbar-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}.refresh-button{min-height:40px;border:1px solid rgba(185,195,207,.34);background:var(--blue-500);color:#fff;padding:0 14px;font-weight:750;cursor:pointer}.refresh-button:hover{filter:brightness(1.08)}body[data-theme="light"] .refresh-button{background:#123b63;color:#fff}
 
 
