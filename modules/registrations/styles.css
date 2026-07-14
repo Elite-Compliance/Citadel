@@ -171,7 +171,7 @@ p { margin: 0; }
   margin: 0;
 }
 .scope-grid { align-items: end; }
-.scope-field {
+.field.scope-field {
   flex: 0 1 300px;
   min-width: 260px;
 }
