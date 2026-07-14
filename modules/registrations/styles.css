@@ -161,32 +161,21 @@ p { margin: 0; }
 .field textarea { min-height: 46px; resize: vertical; }
 .radio-line { display: flex; align-items: center; gap: 14px; min-height: 34px; }
 .radio-line label { display: inline-flex; align-items: center; gap: 6px; text-transform: none; font-size: 14px; }
-.scope-grid { align-items: stretch; }
-.scope-field {
-  min-width: 290px;
+.radio-line input[type="radio"] {
+  appearance: auto;
+  width: 14px !important;
+  height: 14px !important;
+  min-height: 14px !important;
+  flex: 0 0 14px;
+  padding: 0 !important;
   margin: 0;
-  padding: 7px 9px;
-  border: 1px solid #bac7d3;
 }
-.scope-field legend {
-  padding: 0 4px;
-  color: #152a42;
-  font-size: 12px;
-  font-weight: 900;
-  text-transform: uppercase;
+.scope-grid { align-items: end; }
+.scope-field {
+  flex: 0 1 300px;
+  min-width: 260px;
 }
-.scope-options { display: flex; flex-wrap: wrap; gap: 8px 18px; }
-.scope-options label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; text-transform: none; }
-.scope-field small { color: var(--muted); font-size: 11px; line-height: 1.25; }
 .jurisdiction-field { align-self: end; }
-.info-strip {
-  border: 1px solid #9fc9ee;
-  background: #e2f1ff;
-  padding: 8px 11px;
-  font-weight: 800;
-  margin: 4px 0 10px;
-  border-radius: 6px;
-}
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
 .metric-row {
@@ -1200,7 +1189,6 @@ html[data-theme="dark"] .research-chip {
 }
 html[data-theme="dark"] .field label,
 html[data-theme="dark"] .filter label,
-html[data-theme="dark"] .scope-field legend,
 html[data-theme="dark"] .alert-modal label,
 html[data-theme="dark"] .registration-report-form-grid label,
 html[data-theme="dark"] .banner-region-fieldset legend,
@@ -1234,7 +1222,6 @@ html[data-theme="dark"] .license-field select {
 }
 html[data-theme="dark"] input::placeholder,
 html[data-theme="dark"] textarea::placeholder { color: #7f93a6; }
-html[data-theme="dark"] .info-strip,
 html[data-theme="dark"] .registration-report-callout {
   background: #14324b;
   border-color: #31658c;
