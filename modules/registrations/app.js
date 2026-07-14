@@ -1,10 +1,11 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbzKIMMrIFdmS3xKUHzSzwR-Y-Z4FebDLBod1OWmORqDC-_J9pXH2azFVrONruv1djvIhw/exec";
 const TODAY = formatDateStamp(new Date());
+const BANNER_ACTOR_KEY = "citadel_banner_actor";
 
 const state = {
   page: "requests",
   requestView: "submit",
-  data: { requests: [], openRequests: [], activeRegistrations: [], archivedRequests: [], notes: [], alerts: [], followUps: [], metrics: {} },
+  data: { requests: [], openRequests: [], activeRegistrations: [], archivedRequests: [], notes: [], alerts: [], followUps: [], banners: [], metrics: {} },
   selectedId: "",
   workflowTab: "info",
   metricFilter: "",
@@ -22,12 +23,12 @@ const activeStatuses = ["Active", "Renewal", "Renewal Submitted", "Renewal Recei
 const els = {
   app: document.querySelector("#app"),
   status: document.querySelector("#statusPill"),
-  refresh: document.querySelector("#refreshButton"),
+  banners: document.querySelector("#bannerButton"),
   tabs: document.querySelectorAll("[data-page]")
 };
 
 function setStatus(text) {
-  els.status.innerHTML = `<span></span> ${escapeHtml(text)}`;
+  if (els.status) els.status.textContent = text;
 }
 
 function toast(message) {
@@ -68,6 +69,7 @@ function normalizeRows(payload) {
     notes: data.notes || [],
     alerts: data.alerts || [],
     followUps: data.followUps || [],
+    banners: Array.isArray(data.banners) ? data.banners.map(normalizeBanner) : [],
     metrics: data.metrics || {}
   };
   if (!state.data.openRequests.length) {
@@ -84,6 +86,18 @@ function normalizeRows(payload) {
   if (!state.data.archivedRequests.length) {
     state.data.archivedRequests = state.data.requests.filter(row => String(row.status).toLowerCase() === "archived");
   }
+}
+
+function normalizeBanner(row) {
+  row = row || {};
+  return {
+    banner_id: pick(row, ["banner_id", "id"]) || "",
+    regions: pick(row, ["regions"]) || "ALL",
+    message: pick(row, ["message", "banner_message"]) || "",
+    status: pick(row, ["status"]) || "Active",
+    active_at: dateTimeValue(pick(row, ["active_at", "created_at"])),
+    active_by: pick(row, ["active_by", "created_by"]) || "Citadel User"
+  };
 }
 
 function normalizeRequest(row) {
@@ -1022,6 +1036,154 @@ function closeRegistrationReportsModal() {
   });
 }
 
+function getBannerActor() {
+  try {
+    return localStorage.getItem(BANNER_ACTOR_KEY) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function rememberBannerActor(actor) {
+  try {
+    localStorage.setItem(BANNER_ACTOR_KEY, actor);
+  } catch (error) {
+    // The audit name still saves even when browser storage is unavailable.
+  }
+}
+
+function bannerRegionLabel(value) {
+  const regionList = String(value || "ALL").split("|").filter(Boolean);
+  return regionList.includes("ALL") ? "ALL REGIONS" : regionList.join(" / ");
+}
+
+function renderActiveBanners(modal) {
+  const list = modal.querySelector("[data-active-banners]");
+  if (!list) return;
+  if (!state.data.banners.length) {
+    list.innerHTML = '<p class="banner-empty">No active banners.</p>';
+    return;
+  }
+  list.innerHTML = state.data.banners.map(banner => `<article class="active-banner-card">
+    <div><strong>${escapeHtml(bannerRegionLabel(banner.regions))}</strong><span>${escapeHtml(banner.active_at || "")}${banner.active_by ? ` / ${escapeHtml(banner.active_by)}` : ""}</span><p>${escapeHtml(banner.message)}</p></div>
+    <button type="button" data-remove-banner="${escapeHtml(banner.banner_id)}" aria-label="Remove banner">&#128465;</button>
+  </article>`).join("");
+}
+
+function closeBannerModal() {
+  document.querySelectorAll(".banner-modal-backdrop").forEach(modal => {
+    if (modal._escapeHandler) document.removeEventListener("keydown", modal._escapeHandler);
+    modal.remove();
+  });
+}
+
+function openBannerModal() {
+  closeBannerModal();
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop banner-modal-backdrop";
+  modal.innerHTML = `<section class="banner-modal" role="dialog" aria-modal="true" aria-labelledby="banner-modal-title">
+    <header class="banner-modal-head"><h3 id="banner-modal-title"><span aria-hidden="true">&#128227;</span> Compliance Banners</h3><button type="button" data-close-banner aria-label="Close banners">X</button></header>
+    <div class="banner-modal-content">
+      <section class="new-banner-panel">
+        <div class="banner-section-title">New Banner</div>
+        <form data-banner-form>
+          <fieldset class="banner-region-fieldset"><legend>Show on these regions</legend>
+            <label class="banner-region-chip all-regions"><input type="checkbox" data-banner-all-regions checked> All Regions</label>
+            <div class="banner-region-grid">${regions.map(region => `<label class="banner-region-chip"><input type="checkbox" value="${escapeHtml(region)}" data-banner-region> ${escapeHtml(region)}</label>`).join("")}</div>
+          </fieldset>
+          <label class="banner-actor-field">Posted by<input type="text" data-banner-actor autocomplete="name" maxlength="120" placeholder="Your name or email" value="${escapeHtml(getBannerActor())}" required></label>
+          <label class="banner-message-field">Message<textarea data-banner-message rows="3" maxlength="1000" placeholder="Type the banner message..." required></textarea></label>
+          <div class="banner-post-row"><button type="submit" class="primary" data-post-banner>Post Banner</button></div>
+        </form>
+      </section>
+      <section class="active-banners-section"><h4>Active Banners</h4><div data-active-banners></div></section>
+    </div>
+    <footer class="banner-modal-footer"><button type="button" class="secondary" data-close-banner>Done</button></footer>
+  </section>`;
+
+  const form = modal.querySelector("[data-banner-form]");
+  const allRegions = modal.querySelector("[data-banner-all-regions]");
+  const regionInputs = Array.from(modal.querySelectorAll("[data-banner-region]"));
+  const actorInput = modal.querySelector("[data-banner-actor]");
+  const messageInput = modal.querySelector("[data-banner-message]");
+  const postButton = modal.querySelector("[data-post-banner]");
+  const syncRegionChoice = changedInput => {
+    if (changedInput === allRegions && allRegions.checked) regionInputs.forEach(input => { input.checked = false; });
+    if (changedInput !== allRegions && changedInput.checked) allRegions.checked = false;
+    if (!allRegions.checked && !regionInputs.some(input => input.checked)) allRegions.checked = true;
+  };
+
+  allRegions.addEventListener("change", () => syncRegionChoice(allRegions));
+  regionInputs.forEach(input => input.addEventListener("change", () => syncRegionChoice(input)));
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const actor = actorInput.value.trim();
+    const message = messageInput.value.trim();
+    if (!actor) {
+      actorInput.focus();
+      return;
+    }
+    if (!message) {
+      messageInput.focus();
+      return;
+    }
+    const selectedRegions = allRegions.checked ? ["ALL"] : regionInputs.filter(input => input.checked).map(input => input.value);
+    postButton.disabled = true;
+    postButton.textContent = "Posting...";
+    try {
+      const response = await jsonp({ action: "saveRegistrationBanner", regions: selectedRegions.join("|"), message, active_by: actor });
+      if (!response || !response.ok) throw new Error(response && response.error ? response.error : "Banner could not be posted");
+      rememberBannerActor(actor);
+      state.data.banners.unshift(normalizeBanner(response.data));
+      messageInput.value = "";
+      renderActiveBanners(modal);
+      toast("Banner posted.");
+    } catch (error) {
+      toast(error.message || "Banner could not be posted");
+    } finally {
+      postButton.disabled = false;
+      postButton.textContent = "Post Banner";
+    }
+  });
+
+  modal.addEventListener("click", async event => {
+    if (event.target === modal || event.target.closest("[data-close-banner]")) {
+      closeBannerModal();
+      return;
+    }
+    const removeButton = event.target.closest("[data-remove-banner]");
+    if (!removeButton) return;
+    const actor = actorInput.value.trim();
+    if (!actor) {
+      actorInput.focus();
+      toast("Enter your name before removing a banner.");
+      return;
+    }
+    const banner = state.data.banners.find(item => item.banner_id === removeButton.dataset.removeBanner);
+    if (!banner || !window.confirm(`Remove this banner from view?\n\n${banner.message}`)) return;
+    removeButton.disabled = true;
+    try {
+      const response = await jsonp({ action: "removeRegistrationBanner", banner_id: banner.banner_id, removed_by: actor });
+      if (!response || !response.ok) throw new Error(response && response.error ? response.error : "Banner could not be removed");
+      rememberBannerActor(actor);
+      state.data.banners = state.data.banners.filter(item => item.banner_id !== banner.banner_id);
+      renderActiveBanners(modal);
+      toast("Banner removed from view. Its audit history was retained.");
+    } catch (error) {
+      removeButton.disabled = false;
+      toast(error.message || "Banner could not be removed");
+    }
+  });
+
+  modal._escapeHandler = event => {
+    if (event.key === "Escape") closeBannerModal();
+  };
+  document.addEventListener("keydown", modal._escapeHandler);
+  document.body.appendChild(modal);
+  renderActiveBanners(modal);
+  (actorInput.value ? messageInput : actorInput).focus();
+}
+
 function selectedPanel(row, kind) {
   const tabs = kind === "active"
     ? ["info", "license", "qualifier", "research", "dates", "notes", "renewal", "archive"]
@@ -1844,5 +2006,5 @@ async function loadData(showLoading = true) {
 }
 
 els.tabs.forEach(tab => tab.addEventListener("click", () => setPage(tab.dataset.page)));
-els.refresh.addEventListener("click", () => loadData(true));
+els.banners.addEventListener("click", openBannerModal);
 loadData(true);
