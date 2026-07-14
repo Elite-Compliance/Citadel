@@ -14,9 +14,11 @@ const state = {
   loading: false
 };
 let workflowSearchTimer = 0;
+let shellThemeObserver = null;
 
 const brands = ["Accuserve", "Aspen Exteriors, Inc", "Elite", "Grove Exteriors, LLC dba 123 Exteriors", "Reimagine Roofing & Construction, LLC", "Universal Roofing, LLC", "Wildwood Roofing & Construction, Inc"];
 const regions = ["PHX", "STL", "MIL", "CLE", "CHI", "MIN", "ABQ", "PIT", "IND", "OT"];
+const stateCodes = ["AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NM", "NV", "NY", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY"];
 const openStatuses = ["New", "Open", "Researched", "Pending", "Submitted", "Follow Up", "License Received"];
 const activeStatuses = ["Active", "Renewal", "Renewal Submitted", "Renewal Received", "Archived"];
 
@@ -29,6 +31,25 @@ const els = {
 
 function setStatus(text) {
   if (els.status) els.status.textContent = text;
+}
+
+function applyEmbeddedTheme(theme) {
+  document.documentElement.dataset.theme = theme === "dark" ? "dark" : "light";
+}
+
+function initEmbeddedTheme() {
+  try {
+    if (window.parent !== window) {
+      const shell = window.parent.document.body;
+      applyEmbeddedTheme(shell.dataset.theme);
+      shellThemeObserver = new MutationObserver(() => applyEmbeddedTheme(shell.dataset.theme));
+      shellThemeObserver.observe(shell, { attributes: true, attributeFilter: ["data-theme"] });
+      return;
+    }
+    applyEmbeddedTheme(localStorage.getItem("citadel-theme") || "light");
+  } catch (error) {
+    applyEmbeddedTheme("light");
+  }
 }
 
 function toast(message) {
@@ -100,8 +121,18 @@ function normalizeBanner(row) {
   };
 }
 
+function normalizeLicenseScope(value, jurisdiction, stateCode) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "statewide" || normalized === "state") return "Statewide";
+  if (normalized === "local jurisdiction" || normalized === "local" || normalized === "jurisdiction") return "Local Jurisdiction";
+  if (String(jurisdiction || "").trim()) return "Local Jurisdiction";
+  return String(stateCode || "").trim() ? "Statewide" : "";
+}
+
 function normalizeRequest(row) {
   row = row || {};
+  const jurisdiction = pick(row, ["jurisdiction"]) || "";
+  const requestState = pick(row, ["state", "request_state", "received_license_state"]) || "";
   return {
     request_id: pick(row, ["request_id", "id", "source_record_id"]) || "",
     reopened_from_request_id: pick(row, ["reopened_from_request_id"]) || "",
@@ -112,8 +143,10 @@ function normalizeRequest(row) {
     brand: pick(row, ["brand"]) || "",
     date_submitted: dateTimeValue(pick(row, ["date_submitted", "date", "submitted_at", "created_at"])),
     region: pick(row, ["region"]) || "",
+    state: requestState,
+    license_scope: normalizeLicenseScope(pick(row, ["license_scope", "scope"]), jurisdiction, requestState),
     pure: yesNo(pick(row, ["pure"])),
-    jurisdiction: pick(row, ["jurisdiction"]) || "",
+    jurisdiction,
     requirements: pick(row, ["requirements"]) || "",
     website: pick(row, ["website"]) || "",
     phone: pick(row, ["phone"]) || "",
@@ -162,13 +195,16 @@ function normalizeRequest(row) {
 
 function normalizeActive(row) {
   row = row || {};
+  const jurisdiction = pick(row, ["jurisdiction", "Jurisdiction"]) || "";
+  const registrationState = pick(row, ["state", "State", "received_license_state"]) || "";
   return {
     request_id: pick(row, ["request_id", "id", "source_record_id"]) || "",
     date_submitted: dateTimeValue(pick(row, ["date_submitted", "date", "submitted_at", "created_at"])),
     brand: pick(row, ["brand", "Brand"]) || "",
-    state: pick(row, ["state", "State", "received_license_state"]) || "",
+    state: registrationState,
+    license_scope: normalizeLicenseScope(pick(row, ["license_scope", "scope"]), jurisdiction, registrationState),
     region: pick(row, ["region"]) || "",
-    jurisdiction: pick(row, ["jurisdiction", "Jurisdiction"]) || "",
+    jurisdiction,
     license_name: pick(row, ["license_name", "license_type_name", "License Type Name", "received_license_name"]) || "",
     number: pick(row, ["number", "Number", "license_number"]) || "",
     expiration: dateOnly(pick(row, ["expiration", "Expiration"])),
@@ -339,19 +375,33 @@ function requestForm() {
     <form class="request-form" id="requestForm">
       <p class="form-note">Fields marked * are required.</p>
       <div class="form-grid">
-        ${field("requestor_name", "Requestor Name *", "text", "", "small")}
-        ${selectField("brand", "Brand *", brands, "-- Select --", "medium")}
-        ${selectField("region", "Region *", regions, "-- Select region --", "small")}
-        ${field("jurisdiction", "Jurisdiction *", "text", "City, county, or municipality", "large")}
+        ${field("requestor_name", "Requestor Name *", "text", "", "small", true)}
+        ${selectField("brand", "Brand *", brands, "-- Select --", "medium", true)}
+        ${selectField("region", "Region *", regions, "-- Select region --", "small", true)}
+        ${selectField("state", "State *", stateCodes, "-- Select state --", "small", true)}
+      </div>
+      <div class="form-grid scope-grid">
+        <fieldset class="field scope-field medium">
+          <legend>License Scope *</legend>
+          <div class="scope-options">
+            <label><input type="radio" name="license_scope" value="Statewide" required> Statewide</label>
+            <label><input type="radio" name="license_scope" value="Local Jurisdiction" required> Local Jurisdiction</label>
+          </div>
+          <small>Choose whether the license covers the entire state or one city, county, or municipality.</small>
+        </fieldset>
+        <div class="field large jurisdiction-field" data-jurisdiction-field hidden>
+          <label for="jurisdiction">Jurisdiction *</label>
+          <input id="jurisdiction" name="jurisdiction" type="text" placeholder="City, county, or municipality" disabled>
+        </div>
       </div>
       <div class="form-grid">
-        ${textareaField("requirements", "Requirements *", "Describe permit requirements for this jurisdiction...", "large")}
+        ${textareaField("requirements", "Requirements *", "Describe registration or license requirements...", "large", true)}
         <div class="field small"><label>PURE *</label><div class="radio-line">
-          <label><input type="radio" name="pure" value="Yes"> Yes</label>
-          <label><input type="radio" name="pure" value="No"> No</label>
+          <label><input type="radio" name="pure" value="Yes" required> Yes</label>
+          <label><input type="radio" name="pure" value="No" required> No</label>
         </div></div>
       </div>
-      <div class="info-strip">Please provide the following data for the jurisdiction requested</div>
+      <div class="info-strip" data-scope-info>Please choose a license scope above.</div>
       <div class="form-grid">
         ${field("website", "Website", "url", "https://...", "small")}
         ${field("phone", "Phone", "tel", "(000) 000-0000", "medium")}
@@ -363,18 +413,41 @@ function requestForm() {
   </section>`;
 }
 
-function field(name, label, type, placeholder, size) {
-  return `<div class="field ${size}"><label for="${name}">${label}</label><input id="${name}" name="${name}" type="${type}" placeholder="${escapeHtml(placeholder)}"></div>`;
+function field(name, label, type, placeholder, size, isRequired = false) {
+  const required = isRequired ? " required" : "";
+  return `<div class="field ${size}"><label for="${name}">${label}</label><input id="${name}" name="${name}" type="${type}" placeholder="${escapeHtml(placeholder)}"${required}></div>`;
 }
 
-function selectField(name, label, options, placeholder, size) {
-  return `<div class="field ${size}"><label for="${name}">${label}</label><select id="${name}" name="${name}">
+function selectField(name, label, options, placeholder, size, isRequired = false) {
+  const required = isRequired ? " required" : "";
+  return `<div class="field ${size}"><label for="${name}">${label}</label><select id="${name}" name="${name}"${required}>
     <option value="">${escapeHtml(placeholder)}</option>${options.map(option => `<option>${escapeHtml(option)}</option>`).join("")}
   </select></div>`;
 }
 
-function textareaField(name, label, placeholder, size) {
-  return `<div class="field ${size}"><label for="${name}">${label}</label><textarea id="${name}" name="${name}" placeholder="${escapeHtml(placeholder)}"></textarea></div>`;
+function textareaField(name, label, placeholder, size, isRequired = false) {
+  const required = isRequired ? " required" : "";
+  return `<div class="field ${size}"><label for="${name}">${label}</label><textarea id="${name}" name="${name}" placeholder="${escapeHtml(placeholder)}"${required}></textarea></div>`;
+}
+
+function updateScopeFields(form) {
+  const selected = form.querySelector('input[name="license_scope"]:checked');
+  const scope = selected ? selected.value : "";
+  const jurisdictionField = form.querySelector("[data-jurisdiction-field]");
+  const jurisdictionInput = form.elements.jurisdiction;
+  const scopeInfo = form.querySelector("[data-scope-info]");
+  const isLocal = scope === "Local Jurisdiction";
+  jurisdictionField.hidden = !isLocal;
+  jurisdictionInput.disabled = !isLocal;
+  jurisdictionInput.required = isLocal;
+  if (!isLocal) jurisdictionInput.value = "";
+  if (scopeInfo) {
+    scopeInfo.textContent = scope === "Statewide"
+      ? "This request will be recorded as covering the entire selected state."
+      : isLocal
+        ? "Enter the city, county, or municipality covered by this request."
+        : "Please choose a license scope above.";
+  }
 }
 
 function bindRequestHub() {
@@ -386,10 +459,13 @@ function bindRequestHub() {
   });
   const form = document.querySelector("#requestForm");
   if (form) {
+    form.querySelectorAll('input[name="license_scope"]').forEach(input => input.addEventListener("change", () => updateScopeFields(form)));
     form.phone.addEventListener("input", () => form.phone.value = formatPhone(form.phone.value));
     form.website.addEventListener("blur", () => form.website.value = formatWebsite(form.website.value));
     form.email.addEventListener("blur", () => form.email.value = form.email.value.trim().toLowerCase());
+    form.addEventListener("reset", () => window.setTimeout(() => updateScopeFields(form), 0));
     form.addEventListener("submit", saveRequest);
+    updateScopeFields(form);
   }
 }
 
@@ -410,18 +486,20 @@ function formPayload(form) {
   const data = new FormData(form);
   const stamp = currentTimestamp();
   return {
-    requestor_name: data.get("requestor_name").trim(),
+    requestor_name: String(data.get("requestor_name") || "").trim(),
     brand: data.get("brand"),
     submitted_at: stamp,
     date_submitted: stamp,
     region: data.get("region"),
+    state: data.get("state"),
+    license_scope: data.get("license_scope") || "",
     pure: data.get("pure") || "",
-    jurisdiction: data.get("jurisdiction").trim(),
-    requirements: data.get("requirements").trim(),
+    jurisdiction: String(data.get("jurisdiction") || "").trim(),
+    requirements: String(data.get("requirements") || "").trim(),
     website: formatWebsite(data.get("website")),
     phone: formatPhone(data.get("phone")),
     email: String(data.get("email") || "").trim().toLowerCase(),
-    notes: data.get("notes").trim(),
+    notes: String(data.get("notes") || "").trim(),
     status: "New",
     stage: "New",
     status_updated_at: stamp,
@@ -434,7 +512,8 @@ async function saveRequest(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const payload = formPayload(form);
-  if (!payload.requestor_name || !payload.brand || !payload.region || !payload.jurisdiction || !payload.requirements || !payload.pure) {
+  const jurisdictionRequired = payload.license_scope === "Local Jurisdiction";
+  if (!payload.requestor_name || !payload.brand || !payload.region || !payload.state || !payload.license_scope || (jurisdictionRequired && !payload.jurisdiction) || !payload.requirements || !payload.pure) {
     toast("Please complete all required fields.");
     return;
   }
@@ -551,20 +630,30 @@ function tableBlock(title, subtitle, columns, rows, selectable) {
     <tbody>${rows.length ? rows.map(row => `<tr ${selectable ? `data-row-id="${escapeHtml(row.request_id)}"` : ""} class="${row.request_id && row.request_id === state.selectedId ? "selected" : ""}">${columns.map(col => `<td><div class="truncate">${escapeHtml(col.value(row))}</div></td>`).join("")}</tr>`).join("") : `<tr><td colspan="${columns.length}">No registration records match this view.</td></tr>`}</tbody></table></div>`;
 }
 
+function registrationScope(row) {
+  return normalizeLicenseScope(row.license_scope, row.jurisdiction, row.state || row.received_license_state);
+}
+
+function registrationCoverage(row) {
+  const stateCode = row.state || row.received_license_state || "";
+  if (registrationScope(row) === "Statewide") return [stateCode, "Statewide"].filter(Boolean).join(" · ");
+  return [stateCode, row.jurisdiction].filter(Boolean).join(" · ") || row.jurisdiction || stateCode;
+}
+
 function requestColumns() {
   return [
     { key: "status", label: "Status", value: row => row.status },
     { key: "status_updated_at", label: "Last Updated", value: row => row.status_updated_at || row.date_submitted },
     { key: "date_submitted", label: "Requested Date", value: row => row.date_submitted },
     { key: "requestor_name", label: "Requestor", value: row => row.requestor_name },
-    { key: "jurisdiction", label: "Jurisdiction", value: row => row.jurisdiction }
+    { key: "jurisdiction", label: "Coverage", value: registrationCoverage }
   ];
 }
 
 function activeColumns() {
   return [
     { key: "state", label: "State", value: row => row.state },
-    { key: "jurisdiction", label: "Jurisdiction", value: row => row.jurisdiction },
+    { key: "jurisdiction", label: "Jurisdiction", value: row => registrationScope(row) === "Statewide" ? "Statewide" : row.jurisdiction },
     { key: "expiration", label: "Expiration Date", value: row => row.expiration },
     { key: "qualifier", label: "Qualifier", value: row => row.qualifier },
     { key: "type", label: "Type", value: row => row.type },
@@ -659,6 +748,8 @@ function registrationReportInitialFilters() {
   return {
     view: registrationReportViewName(),
     region: state.filters.region || "All regions",
+    state: "All states",
+    scope: "All scopes",
     brand: state.filters.brand || "All brands",
     status: state.filters.status || "All statuses",
     stage: "All stages",
@@ -677,6 +768,8 @@ function readRegistrationReportFilters(modal) {
   return {
     view: read("view", "All Records"),
     region: read("region", "All regions"),
+    state: read("state", "All states"),
+    scope: read("scope", "All scopes"),
     brand: read("brand", "All brands"),
     status: read("status", "All statuses"),
     stage: read("stage", "All stages"),
@@ -711,6 +804,8 @@ function getRegistrationReportRecords(modal = document.querySelector(".registrat
   let records = registrationReportBaseRecords(filters.view).filter(row => {
     const region = row.region || row.state || "";
     if (filters.region !== "All regions" && region !== filters.region && row.state !== filters.region) return false;
+    if (filters.state !== "All states" && (row.state || row.received_license_state) !== filters.state) return false;
+    if (filters.scope !== "All scopes" && registrationScope(row) !== filters.scope) return false;
     if (filters.brand !== "All brands" && row.brand !== filters.brand) return false;
     if (filters.status !== "All statuses" && row.status !== filters.status) return false;
     if (filters.stage !== "All stages" && row.stage !== filters.stage) return false;
@@ -733,7 +828,7 @@ function getRegistrationReportRecords(modal = document.querySelector(".registrat
     });
   }
 
-  const groupFields = { View: "_report_view", Region: "region", Brand: "brand", Status: "status", Stage: "stage" };
+  const groupFields = { View: "_report_view", Region: "region", State: "state", Scope: "license_scope", Brand: "brand", Status: "status", Stage: "stage" };
   const groupField = groupFields[filters.groupBy];
   records.sort((a, b) => {
     const groupCompare = groupField ? String(a[groupField] || a.state || "").localeCompare(String(b[groupField] || b.state || "")) : 0;
@@ -756,7 +851,7 @@ function getRegistrationReportParameters(modal = document.querySelector(".regist
 
 function getRegistrationReportRows(records) {
   const headers = [
-    "Request ID", "View", "Status", "Stage", "Requestor", "Brand", "Region", "State", "Jurisdiction",
+    "Request ID", "View", "Status", "Stage", "Requestor", "Brand", "Region", "State", "License Scope", "Jurisdiction",
     "Submitted", "Received", "Researched", "License Submitted", "License Received", "Completed", "Archived",
     "Expiration", "Qualifier", "License / Registration Name", "License Number", "Type", "PURE", "Assigned To",
     "Research Category", "License Action", "Bond / Insurance", "COI", "Payment Status", "Payment Method",
@@ -766,7 +861,7 @@ function getRegistrationReportRows(records) {
   const rows = records.map(row => [
     row.request_id || row.registration_id || "", row._report_view || "", row.status || "", row.stage || "",
     row.requestor_name || "", row.brand || "", row.region || "", row.state || row.received_license_state || "",
-    row.jurisdiction || "", row.date_submitted || row.submitted_at || "", row.received_date || "", row.researched_date || "",
+    registrationScope(row), registrationScope(row) === "Statewide" ? "" : row.jurisdiction || "", row.date_submitted || row.submitted_at || "", row.received_date || "", row.researched_date || "",
     row.submitted_license_date || "", row.license_received_date || "", row.completed_date || "", row.archived_date || "",
     row.expiration || "", row.qualifier || "", row.license_name || row.received_license_name || row.license_type_name || "",
     row.number || row.license_number || "", row.type || row.received_license_type || "", row.pure || "", row.assigned_to || "",
@@ -805,7 +900,7 @@ function registrationReportExcelContent(records, params) {
   const report = getRegistrationReportRows(records);
   const parameterRows = [
     ["Report", params.report], ["Generated", params.generated], ["Quick Report", params.preset], ["View", params.view],
-    ["Region", params.region], ["Brand", params.brand], ["Status", params.status], ["Stage", params.stage],
+    ["Region", params.region], ["State", params.state], ["License Scope", params.scope], ["Brand", params.brand], ["Status", params.status], ["Stage", params.stage],
     ["Expiration", params.expiration], ["Alert Filter", params.alertFilter], ["Group By", params.groupBy],
     ["Search", params.search], ["Record Count", records.length]
   ];
@@ -826,14 +921,14 @@ function registrationPdfText(value, maxLength = 80) {
 
 function buildRegistrationReportPdf(records, params) {
   const columns = [
-    { label: "Jurisdiction", x: 32, max: 22, value: row => row.jurisdiction },
-    { label: "State", x: 182, max: 6, value: row => row.state || row.received_license_state },
-    { label: "Region", x: 226, max: 7, value: row => row.region },
-    { label: "Brand", x: 278, max: 20, value: row => row.brand },
-    { label: "Status", x: 420, max: 13, value: row => row.status },
-    { label: "Stage", x: 510, max: 13, value: row => row.stage },
-    { label: "Expiration", x: 600, max: 11, value: row => row.expiration },
-    { label: "Qualifier", x: 680, max: 20, value: row => row.qualifier }
+    { label: "Coverage", x: 32, max: 23, value: registrationCoverage },
+    { label: "State", x: 188, max: 5, value: row => row.state || row.received_license_state },
+    { label: "Scope", x: 228, max: 16, value: registrationScope },
+    { label: "Region", x: 332, max: 7, value: row => row.region },
+    { label: "Brand", x: 384, max: 19, value: row => row.brand },
+    { label: "Status", x: 520, max: 13, value: row => row.status },
+    { label: "Expiration", x: 612, max: 11, value: row => row.expiration },
+    { label: "Qualifier", x: 692, max: 18, value: row => row.qualifier }
   ];
   const rowsPerPage = 34;
   const chunks = [];
@@ -850,8 +945,8 @@ function buildRegistrationReportPdf(records, params) {
     let headerY = 530;
     if (pageIndex === 0) {
       drawText(32, 546, 8, `Generated: ${params.generated} | Quick report: ${params.preset} | Records: ${records.length}`, false, 120);
-      drawText(32, 534, 8, `View: ${params.view} | Region: ${params.region} | Brand: ${params.brand} | Status: ${params.status} | Stage: ${params.stage}`, false, 135);
-      drawText(32, 522, 8, `Expiration: ${params.expiration} | Alerts: ${params.alertFilter} | Group: ${params.groupBy} | Search: ${params.search}`, false, 135);
+      drawText(32, 534, 8, `View: ${params.view} | Region: ${params.region} | State: ${params.state} | Scope: ${params.scope} | Brand: ${params.brand}`, false, 135);
+      drawText(32, 522, 8, `Status: ${params.status} | Stage: ${params.stage} | Expiration: ${params.expiration} | Alerts: ${params.alertFilter} | Group: ${params.groupBy} | Search: ${params.search}`, false, 135);
       headerY = 501;
     }
     commands.push(`0.82 0.87 0.92 RG 32 ${headerY - 5} m 810 ${headerY - 5} l S`);
@@ -906,6 +1001,7 @@ function updateRegistrationReportSummary() {
   modal.querySelector("[data-report-parameters]").innerHTML = `<strong>Report parameters</strong>
     <span>View: ${escapeHtml(params.view)}</span><span>Status: ${escapeHtml(params.status)}</span>
     <span>Stage: ${escapeHtml(params.stage)}</span><span>Region: ${escapeHtml(params.region)}</span>
+    <span>State: ${escapeHtml(params.state)}</span><span>Scope: ${escapeHtml(params.scope)}</span>
     <span>Brand: ${escapeHtml(params.brand)}</span><span>Expiration: ${escapeHtml(params.expiration)}</span>
     <span>Alerts: ${escapeHtml(params.alertFilter)}</span><span>Search: ${escapeHtml(params.search)}</span>`;
 }
@@ -927,7 +1023,7 @@ function resetRegistrationReportModal(modal) {
 
 function applyRegistrationReportPreset(modal, preset) {
   const defaults = {
-    view: "All Records", region: "All regions", brand: "All brands", status: "All statuses", stage: "All stages",
+    view: "All Records", region: "All regions", state: "All states", scope: "All scopes", brand: "All brands", status: "All statuses", stage: "All stages",
     expiration: "Any expiration", alertFilter: "All alerts", groupBy: "No grouping", search: ""
   };
   if (preset === "current") Object.assign(defaults, registrationReportInitialFilters());
@@ -967,6 +1063,8 @@ function openRegistrationReportsModal() {
   const initial = registrationReportInitialFilters();
   const viewOptions = ["All Records", "Open Requests", "Active Registrations", "Archived Registrations"];
   const regionOptions = ["All regions", ...registrationReportOptions(allRecords, ["region", "state"])];
+  const stateOptions = ["All states", ...registrationReportOptions(allRecords, ["state", "received_license_state"])];
+  const scopeOptions = ["All scopes", ...Array.from(new Set(allRecords.map(registrationScope).filter(Boolean))).sort()];
   const brandOptions = ["All brands", ...registrationReportOptions(allRecords, ["brand"])];
   const statusOptions = ["All statuses", ...registrationReportOptions(allRecords, ["status"])];
   const stageOptions = ["All stages", ...registrationReportOptions(allRecords, ["stage"])];
@@ -983,13 +1081,15 @@ function openRegistrationReportsModal() {
     <section class="registration-report-custom"><div class="registration-report-band-head"><strong>Custom Report</strong><span>Filters, grouping, and export format</span></div><div class="registration-report-form-grid">
       <label>View<select data-report-filter="view">${registrationReportOptionHtml(viewOptions, initial.view)}</select></label>
       <label>Region<select data-report-filter="region">${registrationReportOptionHtml(regionOptions, initial.region)}</select></label>
+      <label>State<select data-report-filter="state">${registrationReportOptionHtml(stateOptions, initial.state)}</select></label>
+      <label>License Scope<select data-report-filter="scope">${registrationReportOptionHtml(scopeOptions, initial.scope)}</select></label>
       <label>Brand<select data-report-filter="brand">${registrationReportOptionHtml(brandOptions, initial.brand)}</select></label>
       <label>Status<select data-report-filter="status">${registrationReportOptionHtml(statusOptions, initial.status)}</select></label>
       <label>Stage<select data-report-filter="stage">${registrationReportOptionHtml(stageOptions, initial.stage)}</select></label>
       <label>Expiration<select data-report-filter="expiration">${registrationReportOptionHtml(["Any expiration", "Expired", "Due in 7 days", "Due in 30 days", "Due in 60 days", "Current"], initial.expiration)}</select></label>
       <label>Alert Filter<select data-report-filter="alertFilter">${registrationReportOptionHtml(["All alerts", "Open alerts", "No alert set"], initial.alertFilter)}</select></label>
-      <label>Group By<select data-report-filter="groupBy">${registrationReportOptionHtml(["No grouping", "View", "Region", "Brand", "Status", "Stage"], initial.groupBy)}</select></label>
-      <label class="registration-report-search">Search Text<input data-report-filter="search" placeholder="Requestor, brand, jurisdiction, license" value="${escapeHtml(initial.search)}"></label>
+      <label>Group By<select data-report-filter="groupBy">${registrationReportOptionHtml(["No grouping", "View", "Region", "State", "Scope", "Brand", "Status", "Stage"], initial.groupBy)}</select></label>
+      <label class="registration-report-search">Search Text<input data-report-filter="search" placeholder="Requestor, brand, state, jurisdiction, license" value="${escapeHtml(initial.search)}"></label>
     </div></section>
     <div class="registration-report-summary-row"><div class="registration-report-parameters" data-report-parameters></div><div class="registration-report-total"><strong data-report-count>0 records</strong><span data-report-context>Current View</span><em data-report-detail>0 expiring in 30 days | 0 renewals</em></div></div>
     <div class="registration-report-actions"><button type="button" data-registration-report-reset>Reset</button><span></span><select data-export-format aria-label="Export format"><option>CSV</option><option>Excel</option><option>PDF</option></select><button type="button" data-close-registration-report>Cancel</button><button type="button" class="primary" data-registration-report-export>Export</button></div>
@@ -1190,7 +1290,7 @@ function selectedPanel(row, kind) {
     : ["info", "dates", "research", "notes", "license", "qualifier"];
   if (!tabs.includes(state.workflowTab)) state.workflowTab = "info";
   return `<div class="selected-head">
-      <div><small>Selected registration</small><h3>${escapeHtml(row.jurisdiction || row.license_name || "Registration")}</h3><p>${escapeHtml(row.status || kind)} / ${escapeHtml(row.region || row.state || "")}</p></div>
+      <div><small>Selected registration</small><h3>${escapeHtml(registrationCoverage(row) || row.license_name || "Registration")}</h3><p>${escapeHtml(row.status || kind)} / ${escapeHtml(row.region || row.state || "")}</p></div>
       <div class="selected-meta"><span>Submitted</span><b>${escapeHtml(row.date_submitted || "")}</b><span>Age</span><b>${escapeHtml(submittedAge(row.date_submitted))}</b></div>
     </div>
     <div class="workflow-tabs">${tabs.map(tab => `<button type="button" data-workflow-tab="${tab}" class="${state.workflowTab === tab ? "active" : ""}">${tabLabel(tab)}</button>`).join("")}</div>
@@ -1239,8 +1339,10 @@ function infoPanel(row, kind) {
     <div class="detail-grid">
       ${detail("Requestor", row.requestor_name)}
       ${detail("Brand", row.brand)}
-      ${detail("Region", row.region || row.state)}
-      ${detail("Jurisdiction", row.jurisdiction)}
+      ${detail("Region", row.region)}
+      ${detail("State", row.state || row.received_license_state)}
+      ${detail("License Scope", registrationScope(row) || "Not specified")}
+      ${detail("Jurisdiction", registrationScope(row) === "Statewide" ? "Statewide" : row.jurisdiction)}
       ${detail("Requested", row.date_submitted)}
       ${detail("PURE", row.pure)}
       ${detail("Website", row.website)}
@@ -1475,7 +1577,6 @@ function researchPanel(row, kind) {
 }
 
 function licenseReceivedPanel(row, kind) {
-  const states = ["", "AK", "AL", "AR", "AZ", "CA", "CO", "FL", "GA", "IA", "IL", "IN", "KS", "KY", "MI", "MN", "MO", "NC", "NE", "NM", "OH", "OK", "PA", "SC", "TN", "TX", "WI"];
   return `<h3>License Received</h3>
     <p class="research-hint">Enter final license details, then click License Received to save protected workflow data.</p>
     <div class="license-form">
@@ -1484,7 +1585,7 @@ function licenseReceivedPanel(row, kind) {
       </label>
       <label class="license-field small">State
         <select data-license-field="received_license_state">
-          ${states.map(item => `<option value="${item}" ${item === row.received_license_state ? "selected" : ""}>${item || "-- Select state --"}</option>`).join("")}
+          <option value="">-- Select state --</option>${stateCodes.map(item => `<option value="${item}" ${item === row.received_license_state ? "selected" : ""}>${item}</option>`).join("")}
         </select>
       </label>
       <div class="license-field">Type
@@ -2007,4 +2108,5 @@ async function loadData(showLoading = true) {
 
 els.tabs.forEach(tab => tab.addEventListener("click", () => setPage(tab.dataset.page)));
 els.banners.addEventListener("click", openBannerModal);
+initEmbeddedTheme();
 loadData(true);
