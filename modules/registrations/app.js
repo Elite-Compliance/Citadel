@@ -12,6 +12,7 @@ const state = {
   filters: { status: "All statuses", region: "All regions", brand: "All brands", search: "" },
   loading: false
 };
+let workflowSearchTimer = 0;
 
 const brands = ["Accuserve", "Aspen Exteriors, Inc", "Elite", "Grove Exteriors, LLC dba 123 Exteriors", "Reimagine Roofing & Construction, LLC", "Universal Roofing, LLC", "Wildwood Roofing & Construction, Inc"];
 const regions = ["PHX", "STL", "MIL", "CLE", "CHI", "MIN", "ABQ", "PIT", "IND", "OT"];
@@ -1404,9 +1405,12 @@ function toggleLicenseChoice(event) {
 function filterChanged(event) {
   const control = event.currentTarget;
   const key = control.dataset.filter;
-  const selection = key === "search"
-    ? { start: control.selectionStart, end: control.selectionEnd }
-    : null;
+  if (key === "search") {
+    state.filters.search = control.value;
+    window.clearTimeout(workflowSearchTimer);
+    workflowSearchTimer = window.setTimeout(render, 180);
+    return;
+  }
   if (key === "sort") {
     const value = control.value;
     state.sort = value === "Oldest first" ? { key: "date_submitted", direction: "asc" } : value === "Status A-Z" ? { key: "status", direction: "asc" } : value === "Jurisdiction A-Z" ? { key: "jurisdiction", direction: "asc" } : { key: "date_submitted", direction: "desc" };
@@ -1414,13 +1418,6 @@ function filterChanged(event) {
     state.filters[key] = control.value;
   }
   render();
-  if (selection) {
-    const search = document.querySelector('[data-filter="search"]');
-    if (search) {
-      search.focus({ preventScroll: true });
-      search.setSelectionRange(selection.start, selection.end);
-    }
-  }
 }
 
 function sortBy(key) {
