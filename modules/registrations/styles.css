@@ -140,6 +140,7 @@ p { margin: 0; }
   margin-bottom: 8px;
 }
 .field { display: grid; gap: 5px; }
+.field[hidden] { display: none; }
 .field label, .filter label {
   color: #152a42;
   text-transform: uppercase;
