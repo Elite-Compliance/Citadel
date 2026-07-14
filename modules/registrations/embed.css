@@ -24,6 +24,14 @@
   padding: 6px 12px;
 }
 
+.module-toolbar .banner-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 112px;
+}
+
 @media (max-width: 840px) {
   .module-toolbar { flex-wrap: wrap; }
   .module-toolbar .module-tabs { flex-basis: 100%; }
