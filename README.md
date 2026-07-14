@@ -23,4 +23,4 @@ Keep the app split into separate files. The single-file HTML export is only for 
 
 ## Registrations module
 
-The App Shell loads `modules/registrations/index.html` from the single **Registrations** navigation item. Its copied `app.js` and `styles.css` remain identical to the verified standalone app, while `embed.css` contains only shell-specific presentation adjustments.
+The App Shell loads `modules/registrations/index.html` from the single **Registrations** navigation item. The module owns its workflow, responsive layout, reports, and Google Sheets integration; `embed.css` contains only the small toolbar adjustments needed inside the shell.
