@@ -381,27 +381,25 @@ function requestForm() {
         ${selectField("state", "State *", stateCodes, "-- Select state --", "small", true)}
       </div>
       <div class="form-grid scope-grid">
-        <fieldset class="field scope-field medium">
-          <legend>License Scope *</legend>
-          <div class="scope-options">
+        <div class="field scope-field medium">
+          <label>License Scope *</label>
+          <div class="radio-line">
             <label><input type="radio" name="license_scope" value="Statewide" required> Statewide</label>
-            <label><input type="radio" name="license_scope" value="Local Jurisdiction" required> Local Jurisdiction</label>
+            <label><input type="radio" name="license_scope" value="Local Jurisdiction" required> Local</label>
           </div>
-          <small>Choose whether the license covers the entire state or one city, county, or municipality.</small>
-        </fieldset>
+        </div>
         <div class="field large jurisdiction-field" data-jurisdiction-field hidden>
           <label for="jurisdiction">Jurisdiction *</label>
           <input id="jurisdiction" name="jurisdiction" type="text" placeholder="City, county, or municipality" disabled>
         </div>
-      </div>
-      <div class="form-grid">
-        ${textareaField("requirements", "Requirements *", "Describe registration or license requirements...", "large", true)}
         <div class="field small"><label>PURE *</label><div class="radio-line">
           <label><input type="radio" name="pure" value="Yes" required> Yes</label>
           <label><input type="radio" name="pure" value="No" required> No</label>
         </div></div>
       </div>
-      <div class="info-strip" data-scope-info>Please choose a license scope above.</div>
+      <div class="form-grid">
+        ${textareaField("requirements", "Requirements *", "Describe registration or license requirements...", "large", true)}
+      </div>
       <div class="form-grid">
         ${field("website", "Website", "url", "https://...", "small")}
         ${field("phone", "Phone", "tel", "(000) 000-0000", "medium")}
@@ -435,19 +433,11 @@ function updateScopeFields(form) {
   const scope = selected ? selected.value : "";
   const jurisdictionField = form.querySelector("[data-jurisdiction-field]");
   const jurisdictionInput = form.elements.jurisdiction;
-  const scopeInfo = form.querySelector("[data-scope-info]");
   const isLocal = scope === "Local Jurisdiction";
   jurisdictionField.hidden = !isLocal;
   jurisdictionInput.disabled = !isLocal;
   jurisdictionInput.required = isLocal;
   if (!isLocal) jurisdictionInput.value = "";
-  if (scopeInfo) {
-    scopeInfo.textContent = scope === "Statewide"
-      ? "This request will be recorded as covering the entire selected state."
-      : isLocal
-        ? "Enter the city, county, or municipality covered by this request."
-        : "Please choose a license scope above.";
-  }
 }
 
 function bindRequestHub() {
