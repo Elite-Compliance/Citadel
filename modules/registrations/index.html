@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Citadel Registrations</title>
-  <link rel="stylesheet" href="./styles.css?v=2.1.2.1">
-  <link rel="stylesheet" href="./embed.css?v=2.1.2.1">
+  <link rel="stylesheet" href="./styles.css?v=2.1.2.4">
+  <link rel="stylesheet" href="./embed.css?v=2.1.2.4">
 </head>
 <body>
   <main class="app-shell embedded-shell">
@@ -17,13 +17,13 @@
         <button type="button" data-page="archived">Archived Registrations</button>
       </nav>
       <div class="head-actions">
-        <button type="button" class="primary" id="refreshButton">Refresh</button>
-        <span class="status-pill" id="statusPill"><span></span> Ready</span>
+        <button type="button" class="primary banner-toolbar-button" id="bannerButton"><span aria-hidden="true">&#128227;</span> Banners</button>
+        <span class="sr-only" id="statusPill" role="status" aria-live="polite">Ready</span>
       </div>
     </div>
 
     <section id="app"></section>
   </main>
-  <script src="./app.js?v=2.1.2.3"></script>
+  <script src="./app.js?v=2.1.2.4"></script>
 </body>
 </html>
