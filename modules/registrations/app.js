@@ -10,7 +10,7 @@ const state = {
   workflowTab: "info",
   metricFilter: "",
   sort: { key: "date_submitted", direction: "desc" },
-  filters: { status: "All statuses", region: "All regions", brand: "All brands", search: "" },
+  filters: { status: "All statuses", region: "All regions", brand: "All brands", scope: "All scopes", search: "" },
   loading: false
 };
 let workflowSearchTimer = 0;
@@ -589,6 +589,7 @@ function filters() {
       ${filterSelect("status", "Status", statusOptions)}
       ${filterSelect("region", "Region", ["All regions", ...regions])}
       ${filterSelect("brand", "Brand", ["All brands", ...brands])}
+      ${filterSelect("scope", "License Scope", ["All scopes", "Statewide", "Local Jurisdiction"])}
       ${filterSelect("sort", "Sort", ["Newest first", "Oldest first", "Status A-Z", "Jurisdiction A-Z"])}
       <div class="filter"><label>Search</label><input data-filter="search" placeholder="Search" value="${escapeHtml(state.filters.search)}"></div>
     </div></section>`;
@@ -659,6 +660,7 @@ function filteredRows(kind) {
     return (state.filters.status === "All statuses" || row.status === state.filters.status)
       && (state.filters.region === "All regions" || row.region === state.filters.region || row.state === state.filters.region)
       && (state.filters.brand === "All brands" || row.brand === state.filters.brand)
+      && (state.filters.scope === "All scopes" || registrationScope(row) === state.filters.scope)
       && (!search || haystack.includes(search));
   });
   if (state.metricFilter && state.metricFilter !== "all") {
@@ -1054,7 +1056,7 @@ function openRegistrationReportsModal() {
   const viewOptions = ["All Records", "Open Requests", "Active Registrations", "Archived Registrations"];
   const regionOptions = ["All regions", ...registrationReportOptions(allRecords, ["region", "state"])];
   const stateOptions = ["All states", ...registrationReportOptions(allRecords, ["state", "received_license_state"])];
-  const scopeOptions = ["All scopes", ...Array.from(new Set(allRecords.map(registrationScope).filter(Boolean))).sort()];
+  const scopeOptions = ["All scopes", "Statewide", "Local Jurisdiction"];
   const brandOptions = ["All brands", ...registrationReportOptions(allRecords, ["brand"])];
   const statusOptions = ["All statuses", ...registrationReportOptions(allRecords, ["status"])];
   const stageOptions = ["All stages", ...registrationReportOptions(allRecords, ["stage"])];
