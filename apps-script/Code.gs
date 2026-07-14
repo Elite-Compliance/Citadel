@@ -40,7 +40,8 @@ const SHEETS = {
   activeRegistrations: 'ActiveRegistrations',
   registrationNotes: 'RegistrationNotes',
   registrationAlerts: 'RegistrationAlerts',
-  registrationFollowUps: 'RegistrationFollowUps'
+  registrationFollowUps: 'RegistrationFollowUps',
+  registrationBanners: 'RegistrationBanners'
 };
 
 const CONTRACTOR_RECORD_HEADERS = ['Contractor', 'Phone', 'Email', 'Regions', 'Risk', 'Documents', 'GL Expiry', 'WC Expiry', 'Next Action', 'Address'];
@@ -65,6 +66,7 @@ const ACTIVE_REGISTRATION_HEADERS = ['registration_id', 'request_id', 'brand', '
 const REGISTRATION_NOTE_HEADERS = ['note_id', 'request_id', 'registration_id', 'note_date', 'note_by', 'note_type', 'note_text', 'follow_up_date', 'active'];
 const REGISTRATION_ALERT_HEADERS = ['alert_id', 'request_id', 'registration_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const REGISTRATION_FOLLOWUP_HEADERS = ['followup_id', 'request_id', 'registration_id', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
+const REGISTRATION_BANNER_HEADERS = ['banner_id', 'regions', 'message', 'status', 'active_at', 'active_by', 'removed_at', 'removed_by', 'active'];
 
 function doGet(e) {
   const action = getParam_(e, 'action') || 'getLiens';
@@ -142,6 +144,14 @@ function doGet(e) {
       return output_(e, { ok: true, data: updateRegistrationRequest(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
     }
 
+    if (action === 'saveRegistrationBanner') {
+      return output_(e, { ok: true, data: saveRegistrationBanner(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'removeRegistrationBanner') {
+      return output_(e, { ok: true, data: removeRegistrationBanner(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
     if (action === 'setupContractorsSheet') {
       return output_(e, { ok: true, data: setupContractorsSheet(), version: CITADEL_VERSION });
     }
@@ -181,16 +191,19 @@ function setupRegistrationsSheet() {
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationNotes, REGISTRATION_NOTE_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationAlerts, REGISTRATION_ALERT_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationFollowUps, REGISTRATION_FOLLOWUP_HEADERS);
-  return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.registrationRequests, SHEETS.activeRegistrations, SHEETS.registrationNotes, SHEETS.registrationAlerts, SHEETS.registrationFollowUps] };
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationBanners, REGISTRATION_BANNER_HEADERS);
+  return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.registrationRequests, SHEETS.activeRegistrations, SHEETS.registrationNotes, SHEETS.registrationAlerts, SHEETS.registrationFollowUps, SHEETS.registrationBanners] };
 }
 
 function getRegistrations() {
   const spreadsheetId = getRegistrationsSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationBanners, REGISTRATION_BANNER_HEADERS);
   const requests = sheetExists_(spreadsheetId, SHEETS.registrationRequests) ? readSheetObjects_(spreadsheetId, SHEETS.registrationRequests).map(mapRegistrationRequest_) : [];
   const activeRegistrations = sheetExists_(spreadsheetId, SHEETS.activeRegistrations) ? readSheetObjects_(spreadsheetId, SHEETS.activeRegistrations).map(mapActiveRegistration_) : [];
   const notes = sheetExists_(spreadsheetId, SHEETS.registrationNotes) ? readSheetObjects_(spreadsheetId, SHEETS.registrationNotes) : [];
   const alerts = sheetExists_(spreadsheetId, SHEETS.registrationAlerts) ? readSheetObjects_(spreadsheetId, SHEETS.registrationAlerts).filter(isActiveRow_) : [];
   const followUps = sheetExists_(spreadsheetId, SHEETS.registrationFollowUps) ? readSheetObjects_(spreadsheetId, SHEETS.registrationFollowUps).filter(isActiveRow_) : [];
+  const banners = readSheetObjects_(spreadsheetId, SHEETS.registrationBanners).filter(isActiveBanner_);
   const openRequests = requests.filter(function(row) {
     const status = String(row.status || '').toLowerCase();
     return status !== 'active' && status !== 'archived' && isActiveRow_(row);
@@ -207,6 +220,7 @@ function getRegistrations() {
     notes: notes,
     alerts: alerts,
     followUps: followUps,
+    banners: banners,
     metrics: {
       open_alerts: openAlertCount,
       new_requests: openRequests.filter(function(row) { return String(row.status || '').toLowerCase() === 'new'; }).length,
@@ -215,6 +229,85 @@ function getRegistrations() {
       archived_requests: archivedRequests.length
     }
   };
+}
+
+function saveRegistrationBanner(payload) {
+  payload = payload || {};
+  const message = String(payload.message || '').trim();
+  if (!message) throw new Error('Banner message is required.');
+
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationBanners, REGISTRATION_BANNER_HEADERS);
+  const record = {
+    banner_id: makeId_('banner'),
+    regions: normalizeBannerRegions_(payload.regions),
+    message: message,
+    status: 'Active',
+    active_at: new Date(),
+    active_by: resolveBannerActor_(payload.active_by),
+    removed_at: '',
+    removed_by: '',
+    active: true
+  };
+  appendObject_(spreadsheetId, SHEETS.registrationBanners, record);
+  return record;
+}
+
+function removeRegistrationBanner(payload) {
+  payload = payload || {};
+  if (!payload.banner_id) throw new Error('banner_id is required.');
+
+  const spreadsheetId = getRegistrationsSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.registrationBanners, REGISTRATION_BANNER_HEADERS);
+  const sheet = getRequiredSheet_(spreadsheetId, SHEETS.registrationBanners);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(normalizeHeader_);
+  const idIndex = headers.indexOf('banner_id');
+  if (idIndex < 0) throw new Error('RegistrationBanners is missing banner_id.');
+
+  for (let rowIndex = 1; rowIndex < values.length; rowIndex++) {
+    if (String(values[rowIndex][idIndex]) !== String(payload.banner_id)) continue;
+    const record = {};
+    const updatedRow = values[rowIndex].slice();
+    const changes = {
+      status: 'Removed',
+      removed_at: new Date(),
+      removed_by: resolveBannerActor_(payload.removed_by),
+      active: false
+    };
+    headers.forEach(function(header, columnIndex) {
+      if (Object.prototype.hasOwnProperty.call(changes, header)) updatedRow[columnIndex] = changes[header];
+      record[header] = updatedRow[columnIndex];
+    });
+    sheet.getRange(rowIndex + 1, 1, 1, headers.length).setValues([updatedRow]);
+    return record;
+  }
+  throw new Error('Banner not found: ' + payload.banner_id);
+}
+
+function normalizeBannerRegions_(value) {
+  const regions = String(value || '').split('|').map(function(region) {
+    return String(region || '').trim().toUpperCase();
+  }).filter(Boolean);
+  if (!regions.length || regions.indexOf('ALL') > -1) return 'ALL';
+  const unique = [];
+  regions.forEach(function(region) {
+    const normalized = normalizeCitadelRegion_(region);
+    if (normalized && unique.indexOf(normalized) === -1) unique.push(normalized);
+  });
+  if (!unique.length) throw new Error('Select at least one region.');
+  return unique.join('|');
+}
+
+function resolveBannerActor_(providedActor) {
+  const provided = String(providedActor || '').trim();
+  if (provided) return provided;
+  const activeUser = Session.getActiveUser().getEmail();
+  return activeUser || 'Citadel User';
+}
+
+function isActiveBanner_(row) {
+  return isActiveRow_(row) && String(row.status || '').toLowerCase() !== 'removed';
 }
 
 function saveRegistrationRequest(payload) {
