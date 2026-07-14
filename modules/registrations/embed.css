@@ -18,8 +18,7 @@
   gap: 8px;
 }
 
-.module-toolbar .head-actions .primary,
-.module-toolbar .status-pill {
+.module-toolbar .head-actions .primary {
   min-height: 38px;
   padding: 6px 12px;
 }
