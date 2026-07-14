@@ -218,7 +218,7 @@ p { margin: 0; }
   margin-bottom: 8px;
 }
 .filter-head { display: flex; align-items: start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-.filter-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
+.filter-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
 .filter { min-width: 0; display: grid; gap: 4px; }
 .filter-head h3 { font-size: 18px; }
 .filter-head p { font-size: 12px; line-height: 1.25; }
@@ -1093,6 +1093,7 @@ tr.selected td { background: #e8f3fb; }
 @media (max-width: 1180px) {
   .split-layout { grid-template-columns: minmax(0, 1fr) minmax(390px, 440px); }
   .choice-card strong { font-size: 15px; }
+  .filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 980px) {
