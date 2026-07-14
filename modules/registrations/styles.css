@@ -160,6 +160,24 @@ p { margin: 0; }
 .field textarea { min-height: 46px; resize: vertical; }
 .radio-line { display: flex; align-items: center; gap: 14px; min-height: 34px; }
 .radio-line label { display: inline-flex; align-items: center; gap: 6px; text-transform: none; font-size: 14px; }
+.scope-grid { align-items: stretch; }
+.scope-field {
+  min-width: 290px;
+  margin: 0;
+  padding: 7px 9px;
+  border: 1px solid #bac7d3;
+}
+.scope-field legend {
+  padding: 0 4px;
+  color: #152a42;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.scope-options { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.scope-options label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; text-transform: none; }
+.scope-field small { color: var(--muted); font-size: 11px; line-height: 1.25; }
+.jurisdiction-field { align-self: end; }
 .info-strip {
   border: 1px solid #9fc9ee;
   background: #e2f1ff;
@@ -1123,3 +1141,136 @@ tr.selected td { background: #e8f3fb; }
   box-shadow: 0 18px 35px rgba(0,0,0,.18);
   font-weight: 800;
 }
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --navy: #123b63;
+  --navy-deep: #071826;
+  --blue: #5ba6d6;
+  --line: #34475a;
+  --soft-line: #26394c;
+  --text: #f8fbff;
+  --muted: #b8c7d6;
+  --panel: #0d1b2a;
+  --soft: #101f30;
+  --accent: #2f9b72;
+}
+html[data-theme="dark"] body {
+  background:
+    linear-gradient(rgba(7,24,38,.9), rgba(7,24,38,.96)),
+    repeating-linear-gradient(0deg, rgba(130,174,207,.06) 0 1px, transparent 1px 35px),
+    repeating-linear-gradient(90deg, rgba(130,174,207,.06) 0 1px, transparent 1px 35px),
+    #071826;
+}
+html[data-theme="dark"] .module-tabs button,
+html[data-theme="dark"] .choice-card,
+html[data-theme="dark"] .metric-button,
+html[data-theme="dark"] .workspace,
+html[data-theme="dark"] .choice-wrap,
+html[data-theme="dark"] .request-panel,
+html[data-theme="dark"] .filters,
+html[data-theme="dark"] .table-wrap,
+html[data-theme="dark"] .side-panel,
+html[data-theme="dark"] .workflow-card,
+html[data-theme="dark"] .detail-card,
+html[data-theme="dark"] .note-entry,
+html[data-theme="dark"] .research-section,
+html[data-theme="dark"] .ce-reminder-box {
+  background: #0d1b2a;
+  border-color: var(--line);
+  color: var(--text);
+}
+html[data-theme="dark"] .module-tabs button.active,
+html[data-theme="dark"] .choice-card.active,
+html[data-theme="dark"] .metric-button.active,
+html[data-theme="dark"] tr.selected td {
+  background: #17344d;
+  border-color: #4f8fbd;
+}
+html[data-theme="dark"] .secondary,
+html[data-theme="dark"] .workflow-tabs button,
+html[data-theme="dark"] .registration-quick-report-grid button,
+html[data-theme="dark"] .restart-modal .restart-choice,
+html[data-theme="dark"] .banner-region-chip,
+html[data-theme="dark"] .research-chip {
+  background: #132334;
+  border-color: var(--line);
+  color: var(--text);
+}
+html[data-theme="dark"] .field label,
+html[data-theme="dark"] .filter label,
+html[data-theme="dark"] .scope-field legend,
+html[data-theme="dark"] .alert-modal label,
+html[data-theme="dark"] .registration-report-form-grid label,
+html[data-theme="dark"] .banner-region-fieldset legend,
+html[data-theme="dark"] .banner-actor-field,
+html[data-theme="dark"] .banner-message-field,
+html[data-theme="dark"] .research-section strong,
+html[data-theme="dark"] .research-notes,
+html[data-theme="dark"] .license-field {
+  color: #dce8f3;
+}
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] .field textarea,
+html[data-theme="dark"] .filter input,
+html[data-theme="dark"] .filter select,
+html[data-theme="dark"] .alert-modal textarea,
+html[data-theme="dark"] .alert-modal input,
+html[data-theme="dark"] .registration-report-form-grid input,
+html[data-theme="dark"] .registration-report-form-grid select,
+html[data-theme="dark"] .banner-actor-field input,
+html[data-theme="dark"] .banner-message-field textarea,
+html[data-theme="dark"] .research-notes textarea,
+html[data-theme="dark"] .license-field input,
+html[data-theme="dark"] .license-field select {
+  background: #091522;
+  border-color: #40566b;
+  color: var(--text);
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder { color: #7f93a6; }
+html[data-theme="dark"] .info-strip,
+html[data-theme="dark"] .registration-report-callout {
+  background: #14324b;
+  border-color: #31658c;
+  color: #e4f1fb;
+}
+html[data-theme="dark"] .metric-button span,
+html[data-theme="dark"] .research-group span,
+html[data-theme="dark"] .ce-reminder-box > span { color: #83b7dd; }
+html[data-theme="dark"] th { background: #162638; color: #c5d2df; border-color: var(--line); }
+html[data-theme="dark"] td { background: #0f1e2e; color: var(--text); }
+html[data-theme="dark"] tr:nth-child(even) td { background: #0b1827; }
+html[data-theme="dark"] .workflow-tabs button.active,
+html[data-theme="dark"] .research-chip.selected { background: var(--navy); border-color: #2f6e9f; color: #fff; }
+html[data-theme="dark"] .note-entry strong { color: #8dc0e3; }
+html[data-theme="dark"] .modal-backdrop { background: rgba(1,8,16,.74); }
+html[data-theme="dark"] .alert-modal,
+html[data-theme="dark"] .registration-report-modal,
+html[data-theme="dark"] .banner-modal {
+  background: #0b1827;
+  border-color: var(--line);
+  color: var(--text);
+}
+html[data-theme="dark"] .registration-report-band,
+html[data-theme="dark"] .registration-report-custom,
+html[data-theme="dark"] .registration-report-parameters,
+html[data-theme="dark"] .registration-report-total,
+html[data-theme="dark"] .restart-modal-body,
+html[data-theme="dark"] .restart-research,
+html[data-theme="dark"] .restart-research-grid div,
+html[data-theme="dark"] .new-banner-panel {
+  background: #0f1e2e;
+  border-color: var(--line);
+  color: var(--text);
+}
+html[data-theme="dark"] .registration-report-actions,
+html[data-theme="dark"] .banner-modal-footer { background: #091522; border-color: var(--soft-line); }
+html[data-theme="dark"] .active-banner-card { background: #2b2618; border-color: #806b30; }
+html[data-theme="dark"] .active-banner-card strong,
+html[data-theme="dark"] .active-banner-card span { color: #e5c875; }
+html[data-theme="dark"] .active-banner-card button { background: #24171a; border-color: #74414a; color: #ffb4bf; }
