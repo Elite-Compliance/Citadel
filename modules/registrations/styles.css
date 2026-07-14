@@ -63,20 +63,6 @@ p { margin: 0; }
 .danger { background: #7c2635; border-color: #7c2635; }
 .primary:disabled, .secondary:disabled { opacity: .55; cursor: not-allowed; }
 
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 92px;
-  justify-content: center;
-  background: var(--accent);
-  color: #fff;
-  font-weight: 800;
-  padding: 7px 12px;
-  box-shadow: 0 12px 30px rgba(47,155,114,.22);
-}
-.status-pill span { width: 8px; height: 8px; background: #c9f2df; display: inline-block; }
-
 .module-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
