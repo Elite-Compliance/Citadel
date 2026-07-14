@@ -1558,8 +1558,12 @@ function openRestartModal(row) {
   return new Promise(resolve => {
     const reusableResearch = [
       ["License Category", row.license_category],
+      ["License Action", row.license_action],
       ["Bond Requirement", row.bond_type],
       ["COI Requirement", row.coi_type],
+      ["Payment Status", row.payment_status],
+      ["Payment Method", row.payment_method],
+      ["Documents Included", row.documents_included],
       ["Submission Method", row.submission_method],
       ["Research Notes", row.research_notes]
     ];
@@ -1798,10 +1802,6 @@ function collectProtectedFieldPayload() {
     payload[input.dataset.licenseChoice] = input.dataset.licenseValue;
   });
   return payload;
-}
-
-function dueSoonCount() {
-  return expirationWindowCount(0, 30);
 }
 
 function expiredCount() {
