@@ -46,6 +46,7 @@ const SHEETS = {
   collectionNotes: 'CollectionNotes',
   collectionAlerts: 'CollectionAlerts',
   businessContacts: 'BusinessContacts',
+  collectionAttorneys: 'CollectionAttorneys',
   collectionContactLinks: 'CollectionContactLinks'
 };
 
@@ -72,10 +73,11 @@ const REGISTRATION_NOTE_HEADERS = ['note_id', 'request_id', 'registration_id', '
 const REGISTRATION_ALERT_HEADERS = ['alert_id', 'request_id', 'registration_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const REGISTRATION_FOLLOWUP_HEADERS = ['followup_id', 'request_id', 'registration_id', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const REGISTRATION_BANNER_HEADERS = ['banner_id', 'regions', 'message', 'status', 'active_at', 'active_by', 'removed_at', 'removed_by', 'active'];
-const COLLECTION_RECORD_HEADERS = ['collection_id', 'account_id', 'customer', 'region', 'collection_agency', 'sent_date', 'amount_outstanding', 'amount_collected', 'amount_we_receive', 'date_received', 'status', 'last_updated', 'active'];
+const COLLECTION_RECORD_HEADERS = ['collection_id', 'region', 'sales_rep', 'job_number', 'job_link', 'customer', 'current_stage', 'aging_days', 'total_revenue', 'payments_received', 'balance_sent_to_agency', 'collection_agency', 'date_sent_to_agency', 'amount_outstanding', 'amount_collected', 'amount_we_receive', 'date_received', 'status', 'created_at', 'updated_by', 'last_updated', 'active'];
 const COLLECTION_NOTE_HEADERS = ['note_id', 'collection_id', 'note_date', 'note_by', 'note_type', 'note_text', 'active'];
 const COLLECTION_ALERT_HEADERS = ['alert_id', 'collection_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const BUSINESS_CONTACT_HEADERS = ['contact_id', 'contact_type', 'organization_name', 'contact_name', 'job_title', 'department', 'primary_email', 'secondary_email', 'office_phone', 'phone_extension', 'mobile_phone', 'fax', 'website', 'preferred_contact_method', 'business_address_1', 'business_address_2', 'business_city', 'business_state', 'business_zip', 'business_country', 'mailing_same_as_business', 'mailing_address_1', 'mailing_address_2', 'mailing_city', 'mailing_state', 'mailing_zip', 'mailing_country', 'notes', 'created_at', 'updated_at', 'active'];
+const COLLECTION_ATTORNEY_HEADERS = ['attorney_id', 'firm_name', 'office_name', 'attorney_name', 'job_title', 'bar_number', 'licensed_states', 'practice_areas', 'primary_email', 'secondary_email', 'office_phone', 'phone_extension', 'mobile_phone', 'fax', 'website', 'preferred_contact_method', 'business_address_1', 'business_address_2', 'business_city', 'business_state', 'business_zip', 'business_country', 'mailing_same_as_business', 'mailing_address_1', 'mailing_address_2', 'mailing_city', 'mailing_state', 'mailing_zip', 'mailing_country', 'notes', 'created_at', 'updated_at', 'active'];
 const COLLECTION_CONTACT_LINK_HEADERS = ['link_id', 'collection_id', 'contact_id', 'relationship', 'is_primary', 'created_at', 'updated_at', 'active'];
 
 function doGet(e) {
@@ -124,6 +126,10 @@ function doGet(e) {
 
     if (action === 'saveBusinessContact') {
       return output_(e, { ok: true, data: saveBusinessContact(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'saveCollectionAttorney') {
+      return output_(e, { ok: true, data: saveCollectionAttorney(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
     }
 
     if (action === 'saveLienNote') {
@@ -220,14 +226,18 @@ function doPost(e) {
 
 function setupCollectionsSheet() {
   const spreadsheetId = SPREADSHEETS.commandCenter;
-  ensureSheetWithHeaders_(spreadsheetId, SHEETS.collectionRecords, COLLECTION_RECORD_HEADERS);
+  ensureSheetWithExactHeaders_(spreadsheetId, SHEETS.collectionRecords, COLLECTION_RECORD_HEADERS, {
+    job_number: ['account_id'],
+    date_sent_to_agency: ['sent_date']
+  });
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.collectionNotes, COLLECTION_NOTE_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.collectionAlerts, COLLECTION_ALERT_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.businessContacts, BUSINESS_CONTACT_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.collectionAttorneys, COLLECTION_ATTORNEY_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.collectionContactLinks, COLLECTION_CONTACT_LINK_HEADERS);
   return {
     spreadsheet_id: spreadsheetId,
-    sheets: [SHEETS.collectionRecords, SHEETS.collectionNotes, SHEETS.collectionAlerts, SHEETS.businessContacts, SHEETS.collectionContactLinks]
+    sheets: [SHEETS.collectionRecords, SHEETS.collectionNotes, SHEETS.collectionAlerts, SHEETS.businessContacts, SHEETS.collectionAttorneys, SHEETS.collectionContactLinks]
   };
 }
 
@@ -240,6 +250,7 @@ function getCollections() {
     return isActiveRow_(row) && !/resolved|closed/i.test(String(row.status || ''));
   });
   const contacts = readSheetObjects_(spreadsheetId, SHEETS.businessContacts).filter(isActiveRow_);
+  const attorneys = readSheetObjects_(spreadsheetId, SHEETS.collectionAttorneys).filter(isActiveRow_);
   const contactLinks = readSheetObjects_(spreadsheetId, SHEETS.collectionContactLinks).filter(isActiveRow_);
 
   return {
@@ -255,6 +266,7 @@ function getCollections() {
     notes: notes,
     alerts: alerts,
     contacts: contacts,
+    attorneys: attorneys,
     contactLinks: contactLinks,
     metrics: buildCollectionMetrics_(records, alerts)
   };
@@ -262,32 +274,48 @@ function getCollections() {
 
 function saveCollectionRecord(payload) {
   payload = payload || {};
-  const accountId = String(payload.account_id || '').trim();
+  const jobNumber = String(payload.job_number || payload.account_id || '').trim();
   const customer = String(payload.customer || '').trim();
   const agency = String(payload.collection_agency || '').trim();
-  const sentDate = String(payload.sent_date || '').trim();
-  if (!accountId) throw new Error('Account or job number is required.');
+  const sentDate = String(payload.date_sent_to_agency || payload.sent_date || '').trim();
+  if (!jobNumber) throw new Error('Job number is required.');
   if (!customer) throw new Error('Customer is required.');
   if (!agency) throw new Error('Collection agency is required.');
-  if (!sentDate) throw new Error('Date sent is required.');
+  if (!sentDate) throw new Error('Date sent to agency is required.');
 
   setupCollectionsSheet();
   const collectionId = String(payload.collection_id || '').trim() || makeId_('collection');
+  const existing = readSheetObjects_(SPREADSHEETS.commandCenter, SHEETS.collectionRecords).filter(function(row) {
+    return String(row.collection_id) === collectionId;
+  })[0] || {};
   const amountCollected = parseMoney_(payload.amount_collected);
+  const balanceSent = parseMoney_(payload.balance_sent_to_agency || payload.amount_outstanding);
+  const hasOutstanding = String(payload.amount_outstanding == null ? '' : payload.amount_outstanding).trim() !== '';
+  const amountOutstanding = hasOutstanding ? parseMoney_(payload.amount_outstanding) : Math.max(balanceSent - amountCollected, 0);
   const dateReceived = String(payload.date_received || '').trim();
   const status = dateReceived ? 'Received' : amountCollected > 0 ? 'Partially Collected' : 'Open';
+  const suppliedAging = String(payload.aging_days == null ? '' : payload.aging_days).trim();
   const record = {
     collection_id: collectionId,
-    account_id: accountId,
-    customer: customer,
     region: String(payload.region || '').trim(),
+    sales_rep: String(payload.sales_rep || '').trim(),
+    job_number: jobNumber,
+    job_link: String(payload.job_link || '').trim(),
+    customer: customer,
+    current_stage: String(payload.current_stage || '').trim(),
+    aging_days: suppliedAging === '' ? calculateAgingDays_(sentDate) : Math.max(Number(suppliedAging) || 0, 0),
+    total_revenue: parseMoney_(payload.total_revenue),
+    payments_received: parseMoney_(payload.payments_received),
+    balance_sent_to_agency: balanceSent,
     collection_agency: agency,
-    sent_date: sentDate,
-    amount_outstanding: parseMoney_(payload.amount_outstanding),
+    date_sent_to_agency: sentDate,
+    amount_outstanding: amountOutstanding,
     amount_collected: amountCollected,
     amount_we_receive: parseMoney_(payload.amount_we_receive),
     date_received: dateReceived,
     status: status,
+    created_at: existing.created_at || timestamp_(),
+    updated_by: String(payload.updated_by || 'Amanda').trim(),
     last_updated: timestamp_(),
     active: true
   };
@@ -342,6 +370,58 @@ function saveBusinessContact(payload) {
     active: true
   };
   upsertSheetObject_(SPREADSHEETS.commandCenter, SHEETS.businessContacts, 'contact_id', contactId, record);
+  return record;
+}
+
+function saveCollectionAttorney(payload) {
+  payload = payload || {};
+  const firmName = String(payload.firm_name || payload.organization_name || '').trim();
+  const officeName = String(payload.office_name || '').trim();
+  const attorneyName = String(payload.attorney_name || payload.contact_name || '').trim();
+  if (!attorneyName) throw new Error('Attorney name is required.');
+  if (!firmName && !officeName) throw new Error('Law firm or office name is required.');
+
+  setupCollectionsSheet();
+  const attorneyId = String(payload.attorney_id || payload.contact_id || '').trim() || makeId_('attorney');
+  const existing = readSheetObjects_(SPREADSHEETS.commandCenter, SHEETS.collectionAttorneys).filter(function(row) {
+    return String(row.attorney_id) === attorneyId;
+  })[0] || {};
+  const record = {
+    attorney_id: attorneyId,
+    firm_name: firmName,
+    office_name: officeName,
+    attorney_name: attorneyName,
+    job_title: String(payload.job_title || 'Attorney').trim(),
+    bar_number: String(payload.bar_number || '').trim(),
+    licensed_states: String(payload.licensed_states || '').trim(),
+    practice_areas: String(payload.practice_areas || '').trim(),
+    primary_email: String(payload.primary_email || '').trim(),
+    secondary_email: String(payload.secondary_email || '').trim(),
+    office_phone: String(payload.office_phone || '').trim(),
+    phone_extension: String(payload.phone_extension || '').trim(),
+    mobile_phone: String(payload.mobile_phone || '').trim(),
+    fax: String(payload.fax || '').trim(),
+    website: String(payload.website || '').trim(),
+    preferred_contact_method: String(payload.preferred_contact_method || '').trim(),
+    business_address_1: String(payload.business_address_1 || '').trim(),
+    business_address_2: String(payload.business_address_2 || '').trim(),
+    business_city: String(payload.business_city || '').trim(),
+    business_state: String(payload.business_state || '').trim(),
+    business_zip: String(payload.business_zip || '').trim(),
+    business_country: String(payload.business_country || '').trim(),
+    mailing_same_as_business: String(payload.mailing_same_as_business || '').toLowerCase() === 'true',
+    mailing_address_1: String(payload.mailing_address_1 || '').trim(),
+    mailing_address_2: String(payload.mailing_address_2 || '').trim(),
+    mailing_city: String(payload.mailing_city || '').trim(),
+    mailing_state: String(payload.mailing_state || '').trim(),
+    mailing_zip: String(payload.mailing_zip || '').trim(),
+    mailing_country: String(payload.mailing_country || '').trim(),
+    notes: String(payload.notes || '').trim(),
+    created_at: existing.created_at || timestamp_(),
+    updated_at: timestamp_(),
+    active: true
+  };
+  upsertSheetObject_(SPREADSHEETS.commandCenter, SHEETS.collectionAttorneys, 'attorney_id', attorneyId, record);
   return record;
 }
 
@@ -438,8 +518,8 @@ function buildCollectionMetrics_(records, alerts) {
   const expected = records.reduce(function(sum, row) { return sum + parseMoney_(row.amount_we_receive); }, 0);
   return [
     { metric_key: 'open_alerts', label: 'Open Alerts', value: alerts.length, note: 'Collection follow-up', tone: 'blue', sort_order: 1 },
-    { metric_key: 'accounts', label: 'Accounts', value: records.length, note: 'Sent to collections', tone: 'blue', sort_order: 2 },
-    { metric_key: 'outstanding', label: 'Outstanding', value: formatMoney_(outstanding), note: 'Amount placed', tone: 'amber', sort_order: 3 },
+    { metric_key: 'accounts', label: 'Jobs', value: records.length, note: 'Sent to collections', tone: 'blue', sort_order: 2 },
+    { metric_key: 'outstanding', label: 'Outstanding', value: formatMoney_(outstanding), note: 'Still due', tone: 'amber', sort_order: 3 },
     { metric_key: 'collected', label: 'Collected', value: formatMoney_(collected), note: 'Agency recovery', tone: 'blue', sort_order: 4 },
     { metric_key: 'expected', label: 'Expected Receipt', value: formatMoney_(expected), note: 'Amount due to Elite', tone: 'blue', sort_order: 5 }
   ];
@@ -1478,6 +1558,41 @@ function ensureSheetWithHeaders_(spreadsheetId, sheetName, headers) {
   if (missing.length) sheet.getRange(1, existing.length + 1, 1, missing.length).setValues([missing]);
 }
 
+function ensureSheetWithExactHeaders_(spreadsheetId, sheetName, headers, aliases) {
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) sheet = ss.insertSheet(sheetName);
+  if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return;
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const existingHeaders = values[0].map(normalizeHeader_);
+  const schemaMatches = existingHeaders.length === headers.length && headers.every(function(header, index) {
+    return existingHeaders[index] === normalizeHeader_(header);
+  });
+  if (schemaMatches) return;
+
+  aliases = aliases || {};
+  const remappedRows = values.slice(1)
+    .filter(function(row) { return row.some(function(cell) { return cell !== '' && cell !== null; }); })
+    .map(function(row) {
+      return headers.map(function(header) {
+        const candidates = [header].concat(aliases[header] || []).map(normalizeHeader_);
+        for (let index = 0; index < candidates.length; index++) {
+          const existingIndex = existingHeaders.indexOf(candidates[index]);
+          if (existingIndex > -1) return row[existingIndex];
+        }
+        return '';
+      });
+    });
+
+  sheet.clearContents();
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  if (remappedRows.length) sheet.getRange(2, 1, remappedRows.length, headers.length).setValues(remappedRows);
+}
+
 function isActiveRow_(row) {
   return row.active === '' || row.active === true || String(row.active).toUpperCase() === 'TRUE';
 }
@@ -1884,6 +1999,18 @@ function today_() {
 
 function timestamp_() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd h:mm a');
+}
+
+function calculateAgingDays_(value) {
+  if (!value) return 0;
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const start = match
+    ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : new Date(value).getTime();
+  if (isNaN(start)) return 0;
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.max(Math.floor((today - start) / 86400000), 0);
 }
 
 function buildLienMetrics_(records) {
