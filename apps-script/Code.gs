@@ -73,7 +73,7 @@ const REGISTRATION_NOTE_HEADERS = ['note_id', 'request_id', 'registration_id', '
 const REGISTRATION_ALERT_HEADERS = ['alert_id', 'request_id', 'registration_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const REGISTRATION_FOLLOWUP_HEADERS = ['followup_id', 'request_id', 'registration_id', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const REGISTRATION_BANNER_HEADERS = ['banner_id', 'regions', 'message', 'status', 'active_at', 'active_by', 'removed_at', 'removed_by', 'active'];
-const COLLECTION_RECORD_HEADERS = ['collection_id', 'region', 'sales_rep', 'job_number', 'job_link', 'customer', 'current_stage', 'aging_days', 'total_revenue', 'payments_received', 'balance_sent_to_agency', 'collection_agency', 'date_sent_to_agency', 'amount_outstanding', 'amount_collected', 'amount_we_receive', 'date_received', 'status', 'created_at', 'updated_by', 'last_updated', 'active'];
+const COLLECTION_RECORD_HEADERS = ['collection_id', 'lien_id', 'collection_agency', 'date_sent_to_agency', 'amount_outstanding', 'amount_collected', 'amount_we_receive', 'date_received', 'tracking_status', 'created_at', 'updated_by', 'last_updated', 'active'];
 const COLLECTION_NOTE_HEADERS = ['note_id', 'collection_id', 'note_date', 'note_by', 'note_type', 'note_text', 'active'];
 const COLLECTION_ALERT_HEADERS = ['alert_id', 'collection_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const BUSINESS_CONTACT_HEADERS = ['contact_id', 'contact_type', 'organization_name', 'contact_name', 'job_title', 'department', 'primary_email', 'secondary_email', 'office_phone', 'phone_extension', 'mobile_phone', 'fax', 'website', 'preferred_contact_method', 'business_address_1', 'business_address_2', 'business_city', 'business_state', 'business_zip', 'business_country', 'mailing_same_as_business', 'mailing_address_1', 'mailing_address_2', 'mailing_city', 'mailing_state', 'mailing_zip', 'mailing_country', 'notes', 'created_at', 'updated_at', 'active'];
@@ -227,8 +227,9 @@ function doPost(e) {
 function setupCollectionsSheet() {
   const spreadsheetId = SPREADSHEETS.commandCenter;
   ensureSheetWithExactHeaders_(spreadsheetId, SHEETS.collectionRecords, COLLECTION_RECORD_HEADERS, {
-    job_number: ['account_id'],
-    date_sent_to_agency: ['sent_date']
+    lien_id: ['source_lien_id'],
+    date_sent_to_agency: ['sent_date'],
+    tracking_status: ['status']
   });
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.collectionNotes, COLLECTION_NOTE_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.collectionAlerts, COLLECTION_ALERT_HEADERS);
@@ -244,7 +245,10 @@ function setupCollectionsSheet() {
 function getCollections() {
   setupCollectionsSheet();
   const spreadsheetId = SPREADSHEETS.commandCenter;
-  const records = readSheetObjects_(spreadsheetId, SHEETS.collectionRecords).filter(isActiveRow_);
+  const sourceRecords = readSheetObjects_(SPREADSHEETS.liens, SHEETS.lienRecords).filter(function(row) {
+    return isActiveRow_(row) && isCollectionAgencyLien_(row);
+  });
+  const trackingRows = readSheetObjects_(spreadsheetId, SHEETS.collectionRecords).filter(isActiveRow_);
   const notes = readSheetObjects_(spreadsheetId, SHEETS.collectionNotes).filter(isActiveRow_);
   const alerts = readSheetObjects_(spreadsheetId, SHEETS.collectionAlerts).filter(function(row) {
     return isActiveRow_(row) && !/resolved|closed/i.test(String(row.status || ''));
@@ -252,68 +256,66 @@ function getCollections() {
   const contacts = readSheetObjects_(spreadsheetId, SHEETS.businessContacts).filter(isActiveRow_);
   const attorneys = readSheetObjects_(spreadsheetId, SHEETS.collectionAttorneys).filter(isActiveRow_);
   const contactLinks = readSheetObjects_(spreadsheetId, SHEETS.collectionContactLinks).filter(isActiveRow_);
+  const trackingByLienId = {};
+  trackingRows.forEach(function(row) {
+    trackingByLienId[String(row.lien_id || '')] = row;
+  });
+  const records = sourceRecords.map(function(source) {
+    const lienId = String(source.lien_id || '').trim();
+    const record = mergeCollectionSource_(source, trackingByLienId[lienId] || {});
+    record.notes_count = notes.filter(function(item) {
+      return String(item.collection_id) === String(record.collection_id);
+    }).length;
+    record.alerts_count = alerts.filter(function(item) {
+      return String(item.collection_id) === String(record.collection_id);
+    }).length;
+    return record;
+  });
+  const currentCollectionIds = {};
+  records.forEach(function(record) { currentCollectionIds[String(record.collection_id)] = true; });
+  const currentNotes = notes.filter(function(item) { return currentCollectionIds[String(item.collection_id)]; });
+  const currentAlerts = alerts.filter(function(item) { return currentCollectionIds[String(item.collection_id)]; });
+  const currentContactLinks = contactLinks.filter(function(item) { return currentCollectionIds[String(item.collection_id)]; });
 
   return {
-    records: records.map(function(record) {
-      record.notes_count = notes.filter(function(item) {
-        return String(item.collection_id) === String(record.collection_id);
-      }).length;
-      record.alerts_count = alerts.filter(function(item) {
-        return String(item.collection_id) === String(record.collection_id);
-      }).length;
-      return record;
-    }),
-    notes: notes,
-    alerts: alerts,
+    records: records,
+    notes: currentNotes,
+    alerts: currentAlerts,
     contacts: contacts,
     attorneys: attorneys,
-    contactLinks: contactLinks,
-    metrics: buildCollectionMetrics_(records, alerts)
+    contactLinks: currentContactLinks,
+    metrics: buildCollectionMetrics_(records, currentAlerts),
+    source: 'LienRecords / Collection Agency'
   };
 }
 
 function saveCollectionRecord(payload) {
   payload = payload || {};
-  const jobNumber = String(payload.job_number || payload.account_id || '').trim();
-  const customer = String(payload.customer || '').trim();
-  const agency = String(payload.collection_agency || '').trim();
-  const sentDate = String(payload.date_sent_to_agency || payload.sent_date || '').trim();
-  if (!jobNumber) throw new Error('Job number is required.');
-  if (!customer) throw new Error('Customer is required.');
-  if (!agency) throw new Error('Collection agency is required.');
-  if (!sentDate) throw new Error('Date sent to agency is required.');
-
+  const lienId = String(payload.lien_id || '').trim();
+  if (!lienId) throw new Error('lien_id is required.');
   setupCollectionsSheet();
-  const collectionId = String(payload.collection_id || '').trim() || makeId_('collection');
-  const existing = readSheetObjects_(SPREADSHEETS.commandCenter, SHEETS.collectionRecords).filter(function(row) {
-    return String(row.collection_id) === collectionId;
+  const source = readSheetObjects_(SPREADSHEETS.liens, SHEETS.lienRecords).filter(function(row) {
+    return isActiveRow_(row) && String(row.lien_id || '') === lienId && isCollectionAgencyLien_(row);
   })[0] || {};
+  if (!source.lien_id) throw new Error('This Liens record is not currently in Collection Agency status.');
+  const existing = readSheetObjects_(SPREADSHEETS.commandCenter, SHEETS.collectionRecords).filter(function(row) {
+    return String(row.lien_id || '') === lienId;
+  })[0] || {};
+  const collectionId = String(existing.collection_id || payload.collection_id || '').trim() || makeIdFromText_('COL', lienId);
   const amountCollected = parseMoney_(payload.amount_collected);
-  const balanceSent = parseMoney_(payload.balance_sent_to_agency || payload.amount_outstanding);
   const hasOutstanding = String(payload.amount_outstanding == null ? '' : payload.amount_outstanding).trim() !== '';
-  const amountOutstanding = hasOutstanding ? parseMoney_(payload.amount_outstanding) : Math.max(balanceSent - amountCollected, 0);
+  const amountOutstanding = hasOutstanding ? parseMoney_(payload.amount_outstanding) : Math.max(parseMoney_(source.balance) - amountCollected, 0);
   const dateReceived = String(payload.date_received || '').trim();
-  const status = dateReceived ? 'Received' : amountCollected > 0 ? 'Partially Collected' : 'Open';
-  const suppliedAging = String(payload.aging_days == null ? '' : payload.aging_days).trim();
   const record = {
     collection_id: collectionId,
-    region: String(payload.region || '').trim(),
-    sales_rep: String(payload.sales_rep || '').trim(),
-    job_number: jobNumber,
-    job_link: String(payload.job_link || '').trim(),
-    customer: customer,
-    current_stage: String(payload.current_stage || '').trim(),
-    aging_days: suppliedAging === '' ? calculateAgingDays_(sentDate) : Math.max(Number(suppliedAging) || 0, 0),
-    total_revenue: parseMoney_(payload.total_revenue),
-    payments_received: parseMoney_(payload.payments_received),
-    balance_sent_to_agency: balanceSent,
-    collection_agency: agency,
-    date_sent_to_agency: sentDate,
+    lien_id: lienId,
+    collection_agency: String(payload.collection_agency || '').trim(),
+    date_sent_to_agency: String(payload.date_sent_to_agency || payload.sent_date || '').trim(),
     amount_outstanding: amountOutstanding,
     amount_collected: amountCollected,
     amount_we_receive: parseMoney_(payload.amount_we_receive),
     date_received: dateReceived,
-    status: status,
+    tracking_status: collectionTrackingStatus_(dateReceived, amountCollected, String(payload.collection_agency || '').trim()),
     created_at: existing.created_at || timestamp_(),
     updated_by: String(payload.updated_by || 'Amanda').trim(),
     last_updated: timestamp_(),
@@ -322,6 +324,51 @@ function saveCollectionRecord(payload) {
   upsertSheetObject_(SPREADSHEETS.commandCenter, SHEETS.collectionRecords, 'collection_id', collectionId, record);
   syncCollectionContactLinks_(collectionId, payload.contact_links);
   return record;
+}
+
+function isCollectionAgencyLien_(row) {
+  return String(row.status || '').trim().toLowerCase() === 'collection agency';
+}
+
+function collectionTrackingStatus_(dateReceived, amountCollected, agency) {
+  if (dateReceived) return 'Received';
+  if (amountCollected > 0) return 'Partially Collected';
+  return agency ? 'Placed' : 'Needs Assignment';
+}
+
+function mergeCollectionSource_(source, tracking) {
+  const lienId = String(source.lien_id || '').trim();
+  const amountCollected = parseMoney_(tracking.amount_collected);
+  const hasOutstanding = String(tracking.amount_outstanding == null ? '' : tracking.amount_outstanding).trim() !== '';
+  const agency = String(tracking.collection_agency || '').trim();
+  const dateReceived = String(tracking.date_received || '').trim();
+  return {
+    collection_id: String(tracking.collection_id || '').trim() || makeIdFromText_('COL', lienId),
+    lien_id: lienId,
+    region: source.region || '',
+    sales_rep: source.owner || '',
+    job_number: source.job_number || source.source_record_id || source.account_name || lienId,
+    job_link: source.blaze_url || source.job_link || '',
+    customer: source.customer || source.account_name || '',
+    current_stage: source.stage || '',
+    aging_days: Math.max(Number(source.days_past_due) || 0, 0),
+    source_balance: parseMoney_(source.balance),
+    payments_received: parseMoney_(source.payment_received || source.payments_received),
+    first_invoice_date: source.first_invoice_date || '',
+    latest_invoice_date: source.latest_invoice_date || '',
+    invoice_count: source.invoice_count || '',
+    collection_agency: agency,
+    date_sent_to_agency: tracking.date_sent_to_agency || '',
+    amount_outstanding: hasOutstanding ? parseMoney_(tracking.amount_outstanding) : Math.max(parseMoney_(source.balance) - amountCollected, 0),
+    amount_collected: amountCollected,
+    amount_we_receive: parseMoney_(tracking.amount_we_receive),
+    date_received: dateReceived,
+    tracking_status: tracking.tracking_status || collectionTrackingStatus_(dateReceived, amountCollected, agency),
+    source_status: source.status || '',
+    created_at: tracking.created_at || '',
+    updated_by: tracking.updated_by || '',
+    last_updated: tracking.last_updated || ''
+  };
 }
 
 function saveBusinessContact(payload) {
