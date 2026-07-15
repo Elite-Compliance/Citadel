@@ -1,6 +1,5 @@
 var CITADEL_VERSION="2.1.2";
 var CITADEL_API_URL="https://script.google.com/macros/s/AKfycbzKIMMrIFdmS3xKUHzSzwR-Y-Z4FebDLBod1OWmORqDC-_J9pXH2azFVrONruv1djvIhw/exec";
-var commandCenterSource="Loading modules";
 var COMMAND_FOCUS_NOTE_PREFIX="citadel_command_focus_note_";
 var selectedCommandModule="liens";
 var liensWorkspaceStatus="";
@@ -48,6 +47,10 @@ var activeFleetMetric="all";
 var fleetVehicleFilters={status:"All statuses",service:"All service",region:"All regions",sort:"Unit A-Z",search:""};
 var fleetDriverFilters={status:"All statuses",credential:"All credentials",region:"All regions",sort:"Driver A-Z",search:""};
 var fleetSearchTimer=null;
+var registrationsSummary={openRequests:[],activeRegistrations:[],archivedRequests:[],alerts:[],followUps:[],metrics:{}};
+var registrationsSummaryLoading=!!CITADEL_API_URL;
+var registrationsSummaryError="";
+var registrationsSummaryUpdated="";
 var pricingPageEventsBound=false;
 var pricingSearchTimer=null;
 var pricingRequestId=0;
@@ -135,12 +138,113 @@ function renderSubTabs(){var fleet=pages.find(function(page){return page.id==="f
 
 
 function getLienAttentionCount(row){return Number(row.alerts_count||0)+Number(row.followups_count||0)}
-function buildCommandCenterFromLiens(){var records=liensData.records||[];var attention=records.filter(function(row){return getLienAttentionCount(row)>0});var total=records.reduce(function(sum,row){return sum+moneyNumber(row.balance)},0);return {summary:{label:"Liens",fileCount:records.length,balance:total,alertCount:attention.length,updated:liensLastUpdated||"Live"}}}
-function getCommandCenterViewData(){return buildCommandCenterFromLiens()}
-function renderCommandCenter(){var viewData=getCommandCenterViewData();var summary=viewData.summary;var source=liensData.records&&liensData.records.length?"Live modules":commandCenterSource;var modules=[{id:"liens",label:"Liens",files:summary.fileCount,balance:moneyLabel(summary.balance),alerts:summary.alertCount,live:true},{id:"collections",label:"Collections",files:"--",balance:"--",alerts:"--"},{id:"registrations",label:"Registrations",files:"--",balance:"--",alerts:"--"},{id:"contractors",label:"Contractors",files:"--",balance:"--",alerts:"--"},{id:"tasks",label:"Tasks",files:"--",balance:"--",alerts:"--"},{id:"legal",label:"Legal",files:"--",balance:"--",alerts:"--"},{id:"reviews",label:"Reviews",files:"--",balance:"--",alerts:"--"},{id:"pricing",label:"Pricing",files:"--",balance:"--",alerts:"--"},{id:"fleet",label:"Fleet",files:"--",balance:"--",alerts:"--"},{id:"region-health",label:"Region Health",files:"--",balance:"--",alerts:"--"},{id:"data-connections",label:"Data Connections",files:"--",balance:"--",alerts:"--"},{id:"inbox",label:"Inbox",files:"--",balance:"--",alerts:"--"}];var selected=modules.find(function(module){return module.id===selectedCommandModule})||modules[0];function moduleRow(module){var note=getCommandFocusNote(module.id);return '<article class="command-row '+(module.id===selected.id?'is-selected ':'')+(module.live?'is-live':'')+'" data-command-module="'+escapeHtml(module.id)+'"><div class="command-row-summary"><strong>'+escapeHtml(module.label)+'</strong><span>'+escapeHtml(module.files)+' Files -- '+escapeHtml(module.balance)+' Outstanding -- '+escapeHtml(module.alerts)+' Alerts</span></div><div class="command-row-focus"><textarea data-command-note="'+escapeHtml(module.id)+'" rows="1" placeholder="Focus note for Carlynn">'+escapeHtml(note)+'</textarea><label class="done-control"><span>Done</span><input type="checkbox" data-command-done="'+escapeHtml(module.id)+'"'+(note?'':' disabled')+'></label></div></article>'}pagePanel.className="page-panel command-page";pagePanel.innerHTML='<div class="panel-header"><div><p class="section-label">Live overview</p><h2>Command Center</h2></div><div class="status-pill"><span></span>'+escapeHtml(source)+'</div></div><p class="command-intro">Command Center gives leadership one thin container for each Citadel workspace. Click a row to view that module alerts on the right.</p><div class="command-two-column"><section class="command-module-list">'+modules.map(moduleRow).join('')+'</section><aside class="work-card command-summary-panel"><div class="card-heading"><h3>'+escapeHtml(selected.label)+' Alerts</h3><span>'+(selected.live?escapeHtml(summary.updated):'Pending')+'</span></div>'+renderCommandAlerts(selected.id)+'</aside></div>'}
+function workflowItemIsOpen(item){
+  if(!item)return false;
+  var active=String(item.active==null?'':item.active).toLowerCase();
+  if(active==='false'||active==='0'||active==='no'||active==='inactive')return false;
+  return !/completed|closed|resolved|removed|inactive/i.test(String(item.status||''));
+}
+function workflowRowsForModule(moduleId){
+  var source={
+    liens:{label:'Liens',alerts:liensData.alerts,followUps:liensData.followUps},
+    registrations:{label:'Registrations',alerts:registrationsSummary.alerts,followUps:registrationsSummary.followUps},
+    contractors:{label:'Contractors',alerts:contractorsData.alerts,followUps:contractorsData.followUps},
+    reviews:{label:'Reviews',alerts:reviewsData.alerts,followUps:reviewsData.followUps},
+    fleet:{label:'Fleet',alerts:fleetData.alerts,followUps:fleetData.followUps}
+  }[moduleId];
+  if(!source)return [];
+  var alertRows=(source.alerts||[]).filter(workflowItemIsOpen).map(function(item){
+    return {source:source.label,text:item.alert_text||item.alert_type||'Alert',meta:[item.owner||'Team',item.due_date||item.created_date||'No due date'].join(' - ')};
+  });
+  var followRows=(source.followUps||[]).filter(workflowItemIsOpen).map(function(item){
+    return {source:source.label,text:item.followup_text||item.followup_type||'Follow-up',meta:[item.assigned_to||item.created_by||'Team',item.due_date||item.created_date||'No due date'].join(' - ')};
+  });
+  return alertRows.concat(followRows);
+}
+function allOpenWorkflowRows(){
+  return ['liens','registrations','contractors','reviews','fleet'].reduce(function(rows,moduleId){
+    return rows.concat(workflowRowsForModule(moduleId));
+  },[]);
+}
+function moduleConnectionState(loading,error,updated,hasData){
+  if(loading&&!updated&&!hasData)return {key:'loading',label:'Loading live data',live:false};
+  if(error&&!updated&&!hasData)return {key:'unavailable',label:'Unavailable',live:false};
+  return {key:'live',label:updated?'Updated '+updated:'Live',live:true};
+}
+function disconnectedCommandModule(id,label){
+  return {id:id,label:label,primary:'Not connected',secondary:'No live source is configured',alerts:null,state:'not-connected',statusLabel:'Not connected',live:false};
+}
+function liveCommandModule(id,label,connection,primary,secondary,alerts,error){
+  if(!connection.live){
+    return {id:id,label:label,primary:connection.label,secondary:error||'Waiting for a live response',alerts:null,state:connection.key,statusLabel:connection.label,live:false};
+  }
+  return {id:id,label:label,primary:primary,secondary:secondary,alerts:alerts,state:connection.key,statusLabel:connection.label,live:true};
+}
+function getCommandCenterModules(){
+  var lienRecords=liensData.records||[];
+  var contractorRecords=contractorsData.records||[];
+  var reviewRecords=reviewsData.records||[];
+  var fleetVehicles=fleetData.vehicles||[];
+  var fleetDrivers=fleetData.drivers||[];
+  var registrationMetrics=registrationsSummary.metrics||{};
+  var lienState=moduleConnectionState(liensLoading,liensLoadError,liensLastUpdated,lienRecords.length>0);
+  var registrationState=moduleConnectionState(registrationsSummaryLoading,registrationsSummaryError,registrationsSummaryUpdated,Object.keys(registrationMetrics).length>0);
+  var contractorState=moduleConnectionState(contractorsLoading,contractorsLoadError,contractorsLastUpdated,contractorRecords.length>0);
+  var reviewState=moduleConnectionState(reviewsLoading,reviewsLoadError,reviewsLastUpdated,reviewRecords.length>0);
+  var fleetState=moduleConnectionState(fleetLoading,fleetLoadError,fleetLastUpdated,fleetVehicles.length>0||fleetDrivers.length>0||fleetData.sourceRows.length>0);
+  var pricingRows=Number(pricingState.total||pricingState.allRows.length||0);
+  var pricingLive=pricingState.cacheReady||pricingRows>0;
+  var sourceModules=[
+    liveCommandModule('liens','Liens',lienState,lienRecords.length+' lien records',moneyLabel(lienRecords.reduce(function(sum,row){return sum+moneyNumber(row.balance)},0))+' exposure',workflowRowsForModule('liens').length,liensLoadError),
+    liveCommandModule('registrations','Registrations',registrationState,Number(registrationMetrics.open_requests||0)+' open / '+Number(registrationMetrics.active_registrations||0)+' active',Number(registrationMetrics.archived_requests||0)+' archived',workflowRowsForModule('registrations').length,registrationsSummaryError),
+    liveCommandModule('contractors','Contractors',contractorState,contractorRecords.length+' contractor records',contractorRecords.filter(function(row){return /expired/i.test(row.documents)}).length+' with expired documents',workflowRowsForModule('contractors').length,contractorsLoadError),
+    liveCommandModule('reviews','Reviews',reviewState,reviewRecords.length+' review records',reviewRecords.filter(function(row){return Number(row.rating||0)>0&&Number(row.rating)<4}).length+' below 4 stars',workflowRowsForModule('reviews').length,reviewsLoadError),
+    liveCommandModule('pricing','Pricing',{key:pricingLive?'live':'unavailable',label:pricingLive?'Snapshot ready':'Pricing snapshot unavailable',live:pricingLive},pricingRows+' pricing rows',(pricingState.states||[]).length+' states represented',null,pricingState.error),
+    liveCommandModule('fleet','Fleet',fleetState,fleetVehicles.length+' vehicles / '+fleetDrivers.length+' drivers',fleetVehicles.filter(fleetVehicleServiceDue).length+' service items due',workflowRowsForModule('fleet').length,fleetLoadError)
+  ];
+  var connected=sourceModules.filter(function(module){return module.live}).length;
+  var aggregateAlerts=allOpenWorkflowRows().length;
+  var liveRegions=getRegionHealthRows().filter(function(row){return row.score!=null}).length;
+  var byId={};
+  sourceModules.forEach(function(module){byId[module.id]=module});
+  return [
+    byId.liens,
+    disconnectedCommandModule('collections','Collections'),
+    byId.registrations,
+    byId.contractors,
+    disconnectedCommandModule('tasks','Tasks'),
+    disconnectedCommandModule('legal','Legal'),
+    byId.reviews,
+    byId.pricing,
+    byId.fleet,
+    {id:'region-health',label:'Region Health',primary:liveRegions+' regions with live signals',secondary:'Derived from mapped module records',alerts:aggregateAlerts,state:'derived',statusLabel:'Live derived view',live:true},
+    {id:'data-connections',label:'Data Connections',primary:connected+' of '+sourceModules.length+' sources live',secondary:(sourceModules.length-connected)+' unavailable or loading',alerts:null,state:'derived',statusLabel:'Connection summary',live:true},
+    {id:'inbox',label:'Inbox',primary:aggregateAlerts+' open workflow items',secondary:'Across connected workspaces',alerts:aggregateAlerts,state:'derived',statusLabel:'Live alert rollup',live:true}
+  ];
+}
+function renderCommandCenter(){
+  var modules=getCommandCenterModules();
+  var sourceModules=modules.filter(function(module){return ['liens','registrations','contractors','reviews','pricing','fleet'].indexOf(module.id)>-1});
+  var connected=sourceModules.filter(function(module){return module.live}).length;
+  var selected=modules.find(function(module){return module.id===selectedCommandModule})||modules[0];
+  function moduleRow(module){
+    var note=getCommandFocusNote(module.id);
+    var alertText=module.alerts==null?'No alert workflow':module.alerts+' open alert'+(module.alerts===1?'':'s');
+    return '<article class="command-row '+(module.id===selected.id?'is-selected ':'')+(module.live?'is-live':'')+'" data-command-module="'+escapeHtml(module.id)+'"><div class="command-row-summary"><strong>'+escapeHtml(module.label)+'</strong><span>'+escapeHtml(module.primary)+' - '+escapeHtml(module.secondary)+' - '+escapeHtml(alertText)+'</span></div><div class="command-row-focus"><textarea data-command-note="'+escapeHtml(module.id)+'" rows="1" placeholder="Focus note for Carlynn">'+escapeHtml(note)+'</textarea><label class="done-control"><span>Done</span><input type="checkbox" data-command-done="'+escapeHtml(module.id)+'"'+(note?'':' disabled')+'></label></div></article>';
+  }
+  pagePanel.className='page-panel command-page';
+  pagePanel.innerHTML='<div class="panel-header"><div><p class="section-label">Live overview</p><h2>Command Center</h2></div><div class="status-pill"><span></span>'+escapeHtml(connected+' / '+sourceModules.length+' live sources')+'</div></div><p class="command-intro">Every connected workspace shows live values. Unavailable workspaces are labeled clearly and are never filled with placeholder numbers.</p><div class="command-two-column"><section class="command-module-list">'+modules.map(moduleRow).join('')+'</section><aside class="work-card command-summary-panel"><div class="card-heading"><h3>'+escapeHtml(selected.label)+' Alerts</h3><span>'+escapeHtml(selected.statusLabel)+'</span></div>'+renderCommandAlerts(selected.id,selected)+'</aside></div>';
+}
 function getCommandFocusNote(moduleId){try{return localStorage.getItem(COMMAND_FOCUS_NOTE_PREFIX+moduleId)||""}catch(error){return ""}}
 function setCommandFocusNote(moduleId,value){try{localStorage.setItem(COMMAND_FOCUS_NOTE_PREFIX+moduleId,value)}catch(error){}}
-function renderCommandAlerts(moduleId){if(moduleId!=="liens")return '<div class="command-alert-list"><p class="command-empty-alerts">Alerts will show here when this module is live.</p></div>';var alertRows=(liensData.alerts||[]).filter(function(item){return item.active===""||item.active===true||String(item.active).toUpperCase()==="TRUE"}).map(function(item){return {text:item.alert_text||"Alert",meta:[item.owner||"Carlynn",item.due_date||"No due date"].join(" - ")}});var followRows=(liensData.followUps||[]).filter(function(item){return item.active===""||item.active===true||String(item.active).toUpperCase()==="TRUE"}).map(function(item){return {text:item.followup_text||"Follow-up",meta:[item.assigned_to||"Carlynn",item.due_date||"No due date"].join(" - ")}});var rows=alertRows.concat(followRows).slice(0,8);if(!rows.length)return '<div class="command-alert-list"><p class="command-empty-alerts">No open alerts.</p></div>';return '<div class="command-alert-list">'+rows.map(function(row){return '<article><strong>'+escapeHtml(row.text)+'</strong><span>'+escapeHtml(row.meta)+'</span></article>'}).join('')+'</div>'}
+function renderCommandAlerts(moduleId,module){
+  if(module&&module.state==='not-connected')return '<div class="command-alert-list"><p class="command-empty-alerts">This workspace is not connected to a live source.</p></div>';
+  if(module&&!module.live)return '<div class="command-alert-list"><p class="command-empty-alerts">Live data is currently unavailable for this workspace.</p></div>';
+  if(moduleId==='pricing'||moduleId==='data-connections')return '<div class="command-alert-list"><p class="command-empty-alerts">This view does not use workflow alerts.</p></div>';
+  var rows=(moduleId==='inbox'||moduleId==='region-health'?allOpenWorkflowRows():workflowRowsForModule(moduleId)).slice(0,8);
+  if(!rows.length)return '<div class="command-alert-list"><p class="command-empty-alerts">No open alerts.</p></div>';
+  return '<div class="command-alert-list">'+rows.map(function(row){return '<article><strong>'+escapeHtml(row.text)+'</strong><span>'+escapeHtml((moduleId==='inbox'||moduleId==='region-health'?row.source+' - ':'')+row.meta)+'</span></article>'}).join('')+'</div>';
+}
 function bindCommandCenter(){pagePanel.addEventListener("click",function(event){var row=event.target.closest("[data-command-module]");if(!row)return;if(event.target.closest("textarea")||event.target.closest("input"))return;selectedCommandModule=row.getAttribute("data-command-module");renderCommandCenter();bindCommandCenter()});pagePanel.addEventListener("input",function(event){var target=event.target.closest("[data-command-note]");if(!target)return;var moduleId=target.getAttribute("data-command-note");setCommandFocusNote(moduleId,target.value);var row=target.closest(".command-row");var done=row&&row.querySelector("[data-command-done]");if(done)done.disabled=!target.value.trim()});pagePanel.addEventListener("change",function(event){var done=event.target.closest("[data-command-done]");if(!done||!done.checked)return;var moduleId=done.getAttribute("data-command-done");setCommandFocusNote(moduleId,"");selectedCommandModule=moduleId;renderCommandCenter();bindCommandCenter()})}
 function isNoPaymentRecord(row){var direct=String(row.no_payment_received||row.noPaymentReceived||"").toLowerCase();if(/^(true|yes|y|1|x|no payment|none)$/i.test(direct))return true;if(/^(false|no|n|0)$/i.test(direct))return false;var paid=moneyNumber(row.payment_received||row.payments_received||row.amount_paid||row.paid_amount||row.total_paid);if(paid>0)return false;var lastPayment=String(row.last_payment_date||row.lastPaymentDate||"").trim();if(lastPayment)return false;return /no payment|no payments|no deposit|missing deposit/i.test([row.status,row.stage,row.note,row.alert,row.payment_status].join(" "))}
 function getLienMetricStats(records){records=records||[];var total=records.reduce(function(sum,row){return sum+moneyNumber(row.balance)},0);var openAlerts=records.filter(function(row){return Number(row.alerts_count||0)>0||Number(row.followups_count||0)>0}).length;var noDeposit=records.filter(isNoPaymentRecord).length;var sixty=records.filter(function(row){return Number(row.days||0)>=60}).length;var agency=records.filter(function(row){return /agency/i.test([row.status,row.stage,row.release_status,row.note,row.alert].join(" "))}).length;return [{key:"open_alerts",label:"Open Alerts",value:openAlerts,note:"Alerts + follow-ups"},{key:"active_accounts",label:"Active Accounts",value:records.length,note:"Current source records"},{key:"total_balance",label:"Total Balance",value:moneyLabel(total),note:"Active lien exposure"},{key:"no_deposit",label:"No Deposit",value:noDeposit,note:"Missing deposit"},{key:"sixty_days",label:"60+ Days",value:sixty,note:"Past due aging"},{key:"sent_to_agency",label:"Sent to Agency",value:agency,note:"Escalated accounts"}]}
@@ -615,8 +719,159 @@ function regionMarketCatalog(){return [
   {code:'OT',label:'Other',terms:[]}
 ]}
 function normalizeRegionMarket(value){var text=(' '+String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ')+' ');var markets=regionMarketCatalog();for(var i=0;i<markets.length;i++){if(markets[i].code==='OT')continue;for(var j=0;j<markets[i].terms.length;j++){var term=' '+markets[i].terms[j].toLowerCase().replace(/[^a-z0-9]+/g,' ')+' ';if(text.indexOf(term)>-1)return markets[i].code}}return 'OT'}
-function createRegionHealthMap(){var map={};regionMarketCatalog().forEach(function(market){map[market.code]={code:market.code,region:market.code,label:market.label,score:86,status:'Healthy',liens:0,contractors:0,reviews:0,fleet:'Good',action:'Monitor cross-module signals and keep workflow moving.'}});map.OT.score=78;map.OT.fleet='Review';map.OT.action='Review unassigned or unmapped regions and clean source labels.';return map}
-function getRegionHealthRows(){var map=createRegionHealthMap();(liensData.records||[]).forEach(function(record){var code=normalizeRegionMarket(record.region);var row=map[code]||map.OT;row.liens+=1;row.score-=moneyNumber(record.balance)>50000?4:moneyNumber(record.balance)>10000?2:1;row.score-=String(record.stage||'').toLowerCase()==='critical'?5:0});(contractorsData.records||[]).forEach(function(record){var touched={};String(record.region||'').split(/[,;]/).forEach(function(region){var code=normalizeRegionMarket(region);if(touched[code])return;touched[code]=true;var row=map[code]||map.OT;row.contractors+=1;row.score-=contractorRiskScore(record)>=70?3:contractorRiskScore(record)>=50?1:0})});var fallback={PHX:{liens:8,contractors:7,reviews:1,fleet:'Good'},STL:{liens:44,contractors:9,reviews:2,fleet:'Review'},MIL:{liens:38,contractors:14,reviews:3,fleet:'Good'},CLE:{liens:12,contractors:6,reviews:1,fleet:'Monitor'},CHI:{liens:18,contractors:8,reviews:2,fleet:'Good'},MIN:{liens:10,contractors:7,reviews:1,fleet:'Good'},ABQ:{liens:6,contractors:4,reviews:2,fleet:'Thin'},PIT:{liens:9,contractors:5,reviews:1,fleet:'Monitor'},IND:{liens:17,contractors:12,reviews:1,fleet:'Good'},OT:{liens:5,contractors:3,reviews:1,fleet:'Review'}};Object.keys(map).forEach(function(code){var row=map[code];if(row.liens===0&&row.contractors===0){Object.assign(row,fallback[code]);row.score-=Math.min(row.liens,30)*.45+Math.min(row.reviews,5)*4+(row.contractors<5?8:0)}row.score=Math.max(35,Math.min(96,Math.round(row.score)));row.status=row.score<62?'Critical':row.score<74?'Watch':row.score<84?'Monitor':'Healthy';if(row.status==='Critical')row.action='Leadership focus: resolve liens, review contractor coverage, and check low-rating jobs.';else if(row.status==='Watch')row.action='Watchlist: confirm coverage, aging accounts, and open operational blockers.';else if(row.status==='Monitor')row.action='Monitor: stable enough, but keep an eye on source signals.';else row.action='Healthy: no immediate escalation needed.'});return regionMarketCatalog().map(function(market){return map[market.code]})}
+function createRegionHealthMap(){
+  var map={};
+  regionMarketCatalog().forEach(function(market){
+    map[market.code]={
+      code:market.code,
+      region:market.code,
+      label:market.label,
+      score:null,
+      status:'No live signals',
+      action:'No region-tagged records are currently available.',
+      liens:0,
+      lienExposure:0,
+      criticalLiens:0,
+      highBalanceLiens:0,
+      contractors:0,
+      highRiskContractors:0,
+      expiredContractors:0,
+      registrations:0,
+      openRegistrations:0,
+      expiredRegistrations:0,
+      expiringRegistrations:0,
+      fleet:0,
+      fleetDue:0,
+      alerts:0
+    };
+  });
+  return map;
+}
+function addRegionWorkflowItems(map,items,lookup,idFields){
+  (items||[]).filter(workflowItemIsOpen).forEach(function(item){
+    var id='';
+    for(var i=0;i<idFields.length;i++){
+      if(item[idFields[i]]){id=String(item[idFields[i]]);break;}
+    }
+    var code=lookup[id]||'OT';
+    (map[code]||map.OT).alerts+=1;
+  });
+}
+function registrationRegionValue(record){
+  return record.region||record.state||record.received_license_state||'';
+}
+function getRegionHealthConnections(){
+  return {
+    liens:moduleConnectionState(liensLoading,liensLoadError,liensLastUpdated,(liensData.records||[]).length>0).live,
+    contractors:moduleConnectionState(contractorsLoading,contractorsLoadError,contractorsLastUpdated,(contractorsData.records||[]).length>0).live,
+    registrations:moduleConnectionState(registrationsSummaryLoading,registrationsSummaryError,registrationsSummaryUpdated,Object.keys(registrationsSummary.metrics||{}).length>0).live,
+    fleet:moduleConnectionState(fleetLoading,fleetLoadError,fleetLastUpdated,(fleetData.vehicles||[]).length>0||(fleetData.drivers||[]).length>0||(fleetData.sourceRows||[]).length>0).live
+  };
+}
+function getRegionHealthRows(){
+  var map=createRegionHealthMap();
+  var lienRegions={};
+  var contractorRegions={};
+  var registrationRegions={};
+  var fleetRegions={};
+
+  (liensData.records||[]).forEach(function(record){
+    var code=normalizeRegionMarket(record.region);
+    var row=map[code]||map.OT;
+    row.liens+=1;
+    row.lienExposure+=moneyNumber(record.balance);
+    if(String(record.stage||'').toLowerCase()==='critical')row.criticalLiens+=1;
+    if(moneyNumber(record.balance)>=50000)row.highBalanceLiens+=1;
+    lienRegions[String(record.id||'')]=code;
+  });
+
+  (contractorsData.records||[]).forEach(function(record){
+    var recordCodes=[];
+    String(record.region||'').split(/[,;]/).forEach(function(region){
+      var code=normalizeRegionMarket(region);
+      if(recordCodes.indexOf(code)>-1)return;
+      recordCodes.push(code);
+      var row=map[code]||map.OT;
+      row.contractors+=1;
+      if(contractorRiskScore(record)>=70)row.highRiskContractors+=1;
+      if(/expired/i.test(record.documents))row.expiredContractors+=1;
+    });
+    contractorRegions[String(record.id||'')]=recordCodes[0]||'OT';
+  });
+
+  (registrationsSummary.openRequests||[]).forEach(function(record){
+    var code=normalizeRegionMarket(registrationRegionValue(record));
+    var row=map[code]||map.OT;
+    row.registrations+=1;
+    row.openRegistrations+=1;
+    registrationRegions[String(record.request_id||record.registration_id||'')]=code;
+  });
+  (registrationsSummary.activeRegistrations||[]).forEach(function(record){
+    var code=normalizeRegionMarket(registrationRegionValue(record));
+    var row=map[code]||map.OT;
+    row.registrations+=1;
+    var expirationDays=daysUntil(record.expiration);
+    if(expirationDays<0)row.expiredRegistrations+=1;
+    else if(expirationDays<=30)row.expiringRegistrations+=1;
+    registrationRegions[String(record.request_id||'')]=code;
+    registrationRegions[String(record.registration_id||'')]=code;
+  });
+
+  (fleetData.vehicles||[]).forEach(function(record){
+    var code=normalizeRegionMarket(record.region||record.deviceGroup);
+    var row=map[code]||map.OT;
+    row.fleet+=1;
+    if(fleetVehicleServiceDue(record))row.fleetDue+=1;
+    fleetRegions[String(record.id||'')]=code;
+  });
+  (fleetData.drivers||[]).forEach(function(record){
+    var code=normalizeRegionMarket(record.region);
+    var row=map[code]||map.OT;
+    row.fleet+=1;
+    if(fleetDriverDocsDue(record))row.fleetDue+=1;
+    fleetRegions[String(record.id||'')]=code;
+  });
+
+  addRegionWorkflowItems(map,liensData.alerts,lienRegions,['lien_id']);
+  addRegionWorkflowItems(map,liensData.followUps,lienRegions,['lien_id']);
+  addRegionWorkflowItems(map,contractorsData.alerts,contractorRegions,['contractor_id']);
+  addRegionWorkflowItems(map,contractorsData.followUps,contractorRegions,['contractor_id']);
+  addRegionWorkflowItems(map,registrationsSummary.alerts,registrationRegions,['request_id','registration_id']);
+  addRegionWorkflowItems(map,registrationsSummary.followUps,registrationRegions,['request_id','registration_id']);
+  addRegionWorkflowItems(map,fleetData.alerts,fleetRegions,['fleet_record_id']);
+  addRegionWorkflowItems(map,fleetData.followUps,fleetRegions,['fleet_record_id']);
+
+  Object.keys(map).forEach(function(code){
+    var row=map[code];
+    var signalCount=row.liens+row.contractors+row.registrations+row.fleet+row.alerts;
+    if(!signalCount)return;
+    var lienPressure=Math.min(30,row.criticalLiens*5+row.highBalanceLiens*2+Math.max(0,row.liens-20)*0.3);
+    var contractorPressure=Math.min(20,row.highRiskContractors*3+row.expiredContractors*2);
+    var registrationPressure=Math.min(16,row.openRegistrations*0.5+row.expiredRegistrations*4+row.expiringRegistrations*2);
+    var fleetPressure=Math.min(16,row.fleetDue*3);
+    var workflowPressure=Math.min(18,row.alerts*2);
+    row.score=Math.max(35,Math.round(100-lienPressure-contractorPressure-registrationPressure-fleetPressure-workflowPressure));
+    row.status=row.score<62?'Critical':row.score<74?'Watch':row.score<84?'Monitor':'Healthy';
+    var pressures=[
+      {value:lienPressure,text:'resolve lien exposure'},
+      {value:contractorPressure,text:'review contractor compliance'},
+      {value:registrationPressure,text:'work registration and renewal items'},
+      {value:fleetPressure,text:'address fleet service or driver documents'},
+      {value:workflowPressure,text:'close open alerts'}
+    ].sort(function(a,b){return b.value-a.value});
+    if(row.status==='Critical')row.action='Leadership focus: '+pressures[0].text+'.';
+    else if(row.status==='Watch')row.action='Watchlist: '+pressures[0].text+'.';
+    else if(row.status==='Monitor')row.action='Monitor live signals and '+pressures[0].text+'.';
+    else row.action='Healthy: live signals show no immediate escalation.';
+  });
+
+  return regionMarketCatalog().map(function(market){return map[market.code];}).sort(function(a,b){
+    if(a.score==null&&b.score==null)return a.region.localeCompare(b.region);
+    if(a.score==null)return 1;
+    if(b.score==null)return -1;
+    return a.score-b.score||a.region.localeCompare(b.region);
+  });
+}
 
 function normalizeFleetSource(row){return {device:row.device||'',deviceGroup:row.device_group||'',firstName:row.first_name||'',lastName:row.last_name||'',currentDriver:row.current_driver||'',workTime:row.work_time||'',currentActivity:row.current_activity||'',privacyMode:row.in_privacy_mode||'',lastStopAddress:row.last_stop_address||'',lastStopZoneTypes:row.last_stop_zone_types||'',currentOdometer:row.current_odometer||'',currentEngineHours:row.current_engine_hours||'',activeFrom:row.active_from||'',activeTo:row.active_to||'',isArchived:row.is_archived||'',plan:row.plan||'',deviceType:row.device_type||'',firmwareVersion:row.firmware_version||'',serialNo:row.serial_no||'',licensePlate:row.license_plate||'',licenseState:row.license_state||'',vin:row.vin||'',timeZone:row.time_zone||'',deviceComment:row.device_comment||'',downloadStatus:row.download_status||'',lastTrip:row.last_trip||'',lastCommunicationDate:row.last_communication_date||''}}
 function normalizeFleetVehicle(row){return {id:row.vehicle_id||row.id||'',unit:row.unit_number||row.unit||row.vehicle_id||'',deviceGroup:row.device_group||'',region:row.region||'',status:row.status||'Active',serviceStatus:row.service_status||'',registrationStatus:row.registration_status||'',vin:row.vin||'',plate:row.plate||'',licenseState:row.license_state||'',make:row.make||'',model:row.model||'',year:row.year||'',assignedDriver:row.assigned_driver||'',currentActivity:row.current_activity||'',lastStopAddress:row.last_stop_address||'',currentOdometer:row.current_odometer||'',currentEngineHours:row.current_engine_hours||'',activeFrom:row.active_from||'',activeTo:row.active_to||'',isArchived:row.is_archived||'',plan:row.plan||'',deviceType:row.device_type||'',firmwareVersion:row.firmware_version||'',serialNo:row.serial_no||'',timeZone:row.time_zone||'',deviceComment:row.device_comment||'',downloadStatus:row.download_status||'',lastTrip:row.last_trip||'',lastCommunicationDate:row.last_communication_date||'',nextServiceDate:row.next_service_date||'',lastUpdated:row.last_updated||''}}
@@ -642,22 +897,75 @@ function openFleetReportsModal(){var isDrivers=activePage==='fleet-drivers';var 
 function exportFleetReport(format,isDrivers){var isOverview=activePage==='fleet';var rows=isOverview?getVisibleFleetSourceRows():(isDrivers?getVisibleFleetDrivers():getVisibleFleetVehicles());var table=isOverview?[['Device','Device Group','First Name','Last Name','Current Driver','Work Time','Current Activity','Privacy Mode','Last Stop Address','Last Stop Zone Types','Current Odometer','Current Engine Hours','Active From','Active To','Archived','Plan','Device Type','Firmware Version','Serial No.','License Plate','License State','VIN','Time Zone','Device Comment','Download Status','Last Trip','Last Communication Date']].concat(rows.map(function(row){return [row.device,row.deviceGroup,row.firstName,row.lastName,row.currentDriver,row.workTime,row.currentActivity,row.privacyMode,row.lastStopAddress,row.lastStopZoneTypes,row.currentOdometer,row.currentEngineHours,row.activeFrom,row.activeTo,row.isArchived,row.plan,row.deviceType,row.firmwareVersion,row.serialNo,row.licensePlate,row.licenseState,row.vin,row.timeZone,row.deviceComment,row.downloadStatus,row.lastTrip,row.lastCommunicationDate]})):isDrivers?[['Driver','Region','Status','Phone','Email','License Expiry','Medical Expiry','Insurance Expiry','Assigned Vehicle','Next Action']].concat(rows.map(function(row){return [row.name,row.region,row.status,row.phone,row.email,row.licenseExpiry,row.medicalExpiry,row.insuranceExpiry,row.assignedVehicle,row.nextAction]})):[['Unit','Region','Status','Service Status','Registration Status','VIN','Plate','Make','Model','Year','Assigned Driver','Next Service Date']].concat(rows.map(function(row){return [row.unit,row.region,row.status,row.serviceStatus,row.registrationStatus,row.vin,row.plate,row.make,row.model,row.year,row.assignedDriver,row.nextServiceDate]}));reportDownloadTable(table,format,isOverview?'citadel-fleet-geotab-report':isDrivers?'citadel-fleet-drivers-report':'citadel-fleet-vehicles-report')}
 function loadFleetData(){if(!CITADEL_API_URL){fleetLoading=false;return}if(!fleetData.sourceRows.length&&!fleetData.vehicles.length&&!fleetData.drivers.length)hydrateFleetFromCache();fleetLoading=true;fleetLoadError='';if((activePage==='fleet'||activePage==='fleet-vehicles'||activePage==='fleet-drivers')&&!fleetData.sourceRows.length&&!fleetData.vehicles.length&&!fleetData.drivers.length)renderContent();jsonp(CITADEL_API_URL+'?action=getFleet').then(function(response){if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:'No fleet data returned');applyFleetPayload(response.data);saveFleetCache(response.data);fleetLoading=false;if(activePage==='fleet'||activePage==='fleet-vehicles'||activePage==='fleet-drivers'||activePage==='command-center'||activePage==='region-health')renderContent()}).catch(function(error){fleetLoading=false;fleetLoadError='Fleet sheet not connected yet';console.warn('Fleet sheet load failed',error);if(activePage==='fleet'||activePage==='fleet-vehicles'||activePage==='fleet-drivers')renderContent()})}
 
-function regionHealthClass(score){return score<62?'critical':score<74?'watch':score<84?'monitor':'healthy'}
-function renderRegionHealthPage(){var rows=getRegionHealthRows();var critical=rows.filter(function(row){return row.score<62}).length;var watch=rows.filter(function(row){return row.score>=62&&row.score<74}).length;var healthy=rows.filter(function(row){return row.score>=84}).length;var avg=Math.round(rows.reduce(function(sum,row){return sum+row.score},0)/(rows.length||1));var topFocus=rows[0]||{};pagePanel.className='page-panel region-health-page';pagePanel.innerHTML=renderModuleStatusLine('Scoring snapshot')+'<section class="region-hero"><div><p class="section-label">Executive scorecard</p><h2>Region Health</h2><p>Fast read on which markets need attention based on liens, contractor coverage, reviews, fleet readiness, and operational pressure.</p></div><div class="region-score-dial '+regionHealthClass(avg)+'"><strong>'+escapeHtml(avg)+'</strong><span>Overall</span></div></section><div class="region-health-metrics"><article><span>Open Alerts</span><strong>0</strong><em>Alerts + follow-ups</em></article><article><span>Regions</span><strong>'+escapeHtml(rows.length)+'</strong><em>tracked markets</em></article><article><span>Healthy</span><strong>'+escapeHtml(healthy)+'</strong><em>operating well</em></article><article><span>Watchlist</span><strong>'+escapeHtml(watch)+'</strong><em>needs follow-up</em></article><article><span>Critical</span><strong>'+escapeHtml(critical)+'</strong><em>leadership focus</em></article></div><div class="region-health-layout"><section class="region-list-panel"><div class="region-panel-head"><div><h3>Region Scores</h3><p>Lowest score appears first so the boss can see risk immediately.</p></div><button type="button" data-standard-report>Reports</button></div><div class="region-score-list">'+rows.map(function(row){return '<article class="region-score-row '+regionHealthClass(row.score)+'"><div class="region-score-main"><strong>'+escapeHtml(row.region)+'</strong><span>'+escapeHtml(row.status)+' - '+escapeHtml(row.action)+'</span><div class="region-score-bar"><i style="width:'+escapeHtml(row.score)+'%"></i></div></div><div class="region-score-number">'+escapeHtml(row.score)+'</div><div class="region-signal-grid"><span>Liens <b>'+escapeHtml(row.liens)+'</b></span><span>Contractors <b>'+escapeHtml(row.contractors)+'</b></span><span>1-3 Reviews <b>'+escapeHtml(row.reviews)+'</b></span><span>Fleet <b>'+escapeHtml(row.fleet)+'</b></span></div></article>'}).join('')+'</div></section><aside class="region-focus-panel"><div class="card-heading"><h3>Leadership Focus</h3><span>Today</span></div><h4>'+escapeHtml(topFocus.region||'No region selected')+'</h4><p>'+escapeHtml(topFocus.action||'No action needed.')+'</p><ul class="queue-list"><li><span>Health score</span><strong>'+escapeHtml(topFocus.score||'--')+'</strong></li><li><span>Status</span><strong>'+escapeHtml(topFocus.status||'--')+'</strong></li><li><span>Open liens</span><strong>'+escapeHtml(topFocus.liens||0)+'</strong></li><li><span>Contractor count</span><strong>'+escapeHtml(topFocus.contractors||0)+'</strong></li></ul></aside></div>'}
+function regionHealthClass(score){
+  if(score==null)return 'unavailable';
+  return score<62?'critical':score<74?'watch':score<84?'monitor':'healthy';
+}
+function renderRegionHealthPage(){
+  var rows=getRegionHealthRows();
+  var connections=getRegionHealthConnections();
+  var connectedSources=Object.keys(connections).filter(function(key){return connections[key];}).length;
+  var scoredRows=rows.filter(function(row){return row.score!=null;});
+  var critical=scoredRows.filter(function(row){return row.score<62;}).length;
+  var watch=scoredRows.filter(function(row){return row.score>=62&&row.score<74;}).length;
+  var healthy=scoredRows.filter(function(row){return row.score>=84;}).length;
+  var avg=scoredRows.length?Math.round(scoredRows.reduce(function(sum,row){return sum+row.score;},0)/scoredRows.length):null;
+  var topFocus=scoredRows[0]||rows[0]||{};
+  var openAlerts=allOpenWorkflowRows().length;
+  pagePanel.className='page-panel region-health-page';
+  pagePanel.innerHTML=renderModuleStatusLine(connectedSources+' / 4 mapped sources live - Reviews excluded until a region field is connected')+
+    '<section class="region-hero"><div><p class="section-label">Executive scorecard</p><h2>Region Health</h2><p>Live region-tagged signals from Liens, Contractors, Registrations, and Fleet. Sources without a reliable region value are excluded rather than estimated.</p></div><div class="region-score-dial '+regionHealthClass(avg)+'"><strong>'+escapeHtml(avg==null?'--':avg)+'</strong><span>Overall</span></div></section>'+
+    '<div class="region-health-metrics"><article><span>Open Alerts</span><strong>'+escapeHtml(openAlerts)+'</strong><em>live alerts + follow-ups</em></article><article><span>Regions</span><strong>'+escapeHtml(scoredRows.length)+'</strong><em>with live signals</em></article><article><span>Healthy</span><strong>'+escapeHtml(healthy)+'</strong><em>operating well</em></article><article><span>Watchlist</span><strong>'+escapeHtml(watch)+'</strong><em>needs follow-up</em></article><article><span>Critical</span><strong>'+escapeHtml(critical)+'</strong><em>leadership focus</em></article></div>'+
+    '<div class="region-health-layout"><section class="region-list-panel"><div class="region-panel-head"><div><h3>Region Scores</h3><p>Lowest live score appears first. Empty markets remain clearly marked as unavailable.</p></div><button type="button" data-standard-report>Reports</button></div><div class="region-score-list">'+rows.map(function(row){
+      var scoreLabel=row.score==null?'--':row.score;
+      var scoreWidth=row.score==null?0:row.score;
+      return '<article class="region-score-row '+regionHealthClass(row.score)+'"><div class="region-score-main"><strong>'+escapeHtml(row.region)+'</strong><span>'+escapeHtml(row.status)+' - '+escapeHtml(row.action)+'</span><div class="region-score-bar"><i style="width:'+escapeHtml(scoreWidth)+'%"></i></div></div><div class="region-score-number">'+escapeHtml(scoreLabel)+'</div><div class="region-signal-grid"><span>Liens <b>'+escapeHtml(connections.liens?row.liens:'--')+'</b></span><span>Contractors <b>'+escapeHtml(connections.contractors?row.contractors:'--')+'</b></span><span>Registrations <b>'+escapeHtml(connections.registrations?row.registrations:'--')+'</b></span><span>Fleet <b>'+escapeHtml(connections.fleet?row.fleet:'--')+'</b></span></div></article>';
+    }).join('')+'</div></section><aside class="region-focus-panel"><div class="card-heading"><h3>Leadership Focus</h3><span>Live</span></div><h4>'+escapeHtml(topFocus.region||'No region selected')+'</h4><p>'+escapeHtml(topFocus.action||'No live region signals are available.')+'</p><ul class="queue-list"><li><span>Health score</span><strong>'+escapeHtml(topFocus.score==null?'--':topFocus.score)+'</strong></li><li><span>Status</span><strong>'+escapeHtml(topFocus.status||'Unavailable')+'</strong></li><li><span>Open alerts</span><strong>'+escapeHtml(topFocus.alerts||0)+'</strong></li><li><span>Lien exposure</span><strong>'+escapeHtml(moneyLabel(topFocus.lienExposure||0))+'</strong></li><li><span>Registrations</span><strong>'+escapeHtml(topFocus.registrations||0)+'</strong></li><li><span>Fleet records</span><strong>'+escapeHtml(topFocus.fleet||0)+'</strong></li></ul></aside></div>';
+}
 
 function renderStandardFilterCard(pageId){var filters=STANDARD_FILTERS[pageId]||STANDARD_FILTERS.tasks;return '<section class="standard-filter-card"><div><h3>Filters + Sort + Search</h3><p>Refine and find records the same way on every page</p></div><button type="button" data-standard-report>Reports</button><div class="standard-filters">'+filters.map(function(item){return '<label>'+escapeHtml(item[0])+'<select>'+renderSelectOptions(item[1],item[2],item[1])+'</select></label>'}).join('')+'<label>Search<input type="search" placeholder="Search this view"></label></div></section>'}
 
 function bindStandardPage(){if(standardPageEventsBound)return;standardPageEventsBound=true;pagePanel.addEventListener("click",function(event){if(activePage==="command-center"||activePage==="liens"||activePage==="contractors")return;var metric=event.target.closest("[data-standard-metric]");if(metric){activeStandardMetric=metric.getAttribute("data-standard-metric")||"";renderStandardContent();return}if(event.target.closest("[data-standard-report]")){openStandardReportsModal();return}})}
 function renderStandardContent(){var details=pageDetails[activePage]||pageDetails.tasks;var label=getPageLabel(activePage);pagePanel.className="page-panel standard-page";pagePanel.innerHTML=renderModuleStatusLine('Stable')+'<div id="subTabs" class="sub-tabs" hidden></div><div class="metric-grid">'+([["Open Alerts","0","Alerts + follow-ups"]].concat(details.metrics)).map(function(item){return '<button type="button" class="metric-card standard-metric-button '+(activeStandardMetric===item[0]?'active':'')+'" data-standard-metric="'+escapeHtml(item[0])+'"><div class="metric-label">'+escapeHtml(item[0])+'</div><div class="metric-value">'+escapeHtml(item[1])+'</div><div class="metric-note">'+escapeHtml(item[2])+'</div></button>'}).join('')+'</div>'+renderStandardFilterCard(activePage)+'<div class="content-grid"><article class="work-card"><div class="card-heading"><h3>'+escapeHtml(label)+' Focus</h3><span>'+(activePage.indexOf("fleet")===0?"Fleet":"Today")+'</span></div><p id="focusCopy">'+escapeHtml(details.focus)+'</p></article><article class="work-card compact"><div class="card-heading"><h3>Queue Snapshot</h3><span>Priority</span></div><ul class="queue-list">'+details.queue.map(function(item){return '<li><span>'+escapeHtml(item[0])+'</span><strong>'+escapeHtml(item[1])+'</strong></li>'}).join('')+'</ul></article></div>';subTabs=document.querySelector("#subTabs");renderSubTabs()}
 
-function loadLiensData(){if(!CITADEL_API_URL){liensLoading=false;return}if(!liensData.records.length)hydrateLiensFromCache();liensLoading=true;liensLoadError="";if(activePage==="liens"&&!liensData.records.length)renderContent();jsonp(CITADEL_API_URL+"?action=getLiens").then(function(response){if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:"No liens data returned");applyLiensPayload(response.data);saveLiensCache(response.data);liensLoading=false;if(activePage==="liens"||activePage==="command-center")renderContent()}).catch(function(error){liensLoading=false;liensLoadError="Unable to refresh lien records";console.warn("Liens sheet load failed",error);if(activePage==="liens")renderContent()})}
+function loadLiensData(){if(!CITADEL_API_URL){liensLoading=false;return}if(!liensData.records.length)hydrateLiensFromCache();liensLoading=true;liensLoadError="";if(activePage==="liens"&&!liensData.records.length)renderContent();jsonp(CITADEL_API_URL+"?action=getLiens").then(function(response){if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:"No liens data returned");applyLiensPayload(response.data);saveLiensCache(response.data);liensLoading=false;if(activePage==="liens"||activePage==="command-center"||activePage==="region-health")renderContent()}).catch(function(error){liensLoading=false;liensLoadError="Unable to refresh lien records";console.warn("Liens sheet load failed",error);if(activePage==="liens"||activePage==="command-center"||activePage==="region-health")renderContent()})}
 function jsonp(url){return new Promise(function(resolve,reject){var callback="citadelCallback"+Date.now()+Math.floor(Math.random()*10000);var script=document.createElement("script");var timeout=window.setTimeout(function(){cleanup();reject(new Error("Sheet request timed out"))},45000);function cleanup(){window.clearTimeout(timeout);delete window[callback];if(script.parentNode)script.parentNode.removeChild(script)}window[callback]=function(payload){cleanup();resolve(payload)};script.onerror=function(){cleanup();reject(new Error("Sheet request failed"))};script.src=url+"&callback="+callback;document.head.appendChild(script)})}
-function loadContractorsData(){if(!CITADEL_API_URL){contractorsLoading=false;return}if(!contractorsData.records.length)hydrateContractorsFromCache();contractorsLoading=true;contractorsLoadError="";if(activePage==="contractors"&&!contractorsData.records.length)renderContent();jsonp(CITADEL_API_URL+"?action=getContractors").then(function(response){if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:"No contractor data returned");applyContractorsPayload(response.data);saveContractorsCache(response.data);contractorsLoading=false;if(activePage==="contractors"||activePage==="command-center")renderContent()}).catch(function(error){contractorsLoading=false;contractorsLoadError="Contractors sheet not connected yet";console.warn("Contractors sheet load failed",error);if(activePage==="contractors")renderContent()})}
+function loadContractorsData(){if(!CITADEL_API_URL){contractorsLoading=false;return}if(!contractorsData.records.length)hydrateContractorsFromCache();contractorsLoading=true;contractorsLoadError="";if(activePage==="contractors"&&!contractorsData.records.length)renderContent();jsonp(CITADEL_API_URL+"?action=getContractors").then(function(response){if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:"No contractor data returned");applyContractorsPayload(response.data);saveContractorsCache(response.data);contractorsLoading=false;if(activePage==="contractors"||activePage==="command-center"||activePage==="region-health")renderContent()}).catch(function(error){contractorsLoading=false;contractorsLoadError="Contractors sheet not connected yet";console.warn("Contractors sheet load failed",error);if(activePage==="contractors"||activePage==="command-center"||activePage==="region-health")renderContent()})}
+
+function loadRegistrationsSummary(){
+  if(!CITADEL_API_URL){
+    registrationsSummaryLoading=false;
+    registrationsSummaryError='Registrations sheet not connected yet';
+    return;
+  }
+  registrationsSummaryLoading=true;
+  registrationsSummaryError='';
+  jsonp(CITADEL_API_URL+'?action=getRegistrations').then(function(response){
+    if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:'No registrations data returned');
+    var data=response.data;
+    registrationsSummary={
+      openRequests:Array.isArray(data.openRequests)?data.openRequests:[],
+      activeRegistrations:Array.isArray(data.activeRegistrations)?data.activeRegistrations:[],
+      archivedRequests:Array.isArray(data.archivedRequests)?data.archivedRequests:[],
+      alerts:Array.isArray(data.alerts)?data.alerts:[],
+      followUps:Array.isArray(data.followUps)?data.followUps:[],
+      metrics:data.metrics||{}
+    };
+    registrationsSummaryLoading=false;
+    registrationsSummaryUpdated=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+    if(activePage==='command-center'||activePage==='region-health')renderContent();
+  }).catch(function(error){
+    registrationsSummaryLoading=false;
+    registrationsSummaryError=error.message||'Registrations sheet not connected yet';
+    console.warn('Registrations summary load failed',error);
+    if(activePage==='command-center'||activePage==='region-health')renderContent();
+  });
+}
 
 function renderRegistrationsModule(){pagePanel.className="page-panel registrations-module-page";pagePanel.innerHTML='<iframe class="registrations-module-frame" title="Registrations workspace" src="./modules/registrations/index.html?v=2.1.2.10"></iframe>'}
 
 function renderContent(){var label=getPageLabel(activePage);pageTitle.textContent=label;if(activePage==="command-center"){renderCommandCenter();bindCommandCenter();return}if(activePage==="region-health"){renderRegionHealthPage();bindStandardPage();return}if(activePage==="liens"){renderLiensPage();bindLiensPage();return}if(activePage==="contractors"){renderContractorsPage();bindContractorsPage();return}if(activePage==="registrations"){renderRegistrationsModule();return}if(activePage==="reviews"){renderReviewsPage();bindReviewsPage();if(!reviewsData.records.length&&!reviewsLoading&&!reviewsLoadError)loadReviewsData();return}if(activePage==="pricing"){renderPricingPage();bindPricingPage();if(!pricingState.rows.length&&!pricingState.loading&&!pricingState.error)loadPricingData();return}if(activePage==="fleet"||activePage==="fleet-vehicles"||activePage==="fleet-drivers"){renderFleetPage();bindFleetPage();if(!fleetData.sourceRows.length&&!fleetData.vehicles.length&&!fleetData.drivers.length&&!fleetLoading&&!fleetLoadError)loadFleetData();return}renderStandardContent();bindStandardPage()}
 function setActivePage(pageId){activePage=pageId;renderNavigation();renderContent()}
 
-initSettingsMenu();initForceRefreshButton();checkForCitadelUpdate();hydrateLiensFromCache();hydrateContractorsFromCache();hydrateReviewsFromCache();hydrateFleetFromCache();setActivePage(activePage);loadLiensData();loadContractorsData();loadReviewsData();loadFleetData();
+initSettingsMenu();initForceRefreshButton();checkForCitadelUpdate();hydrateLiensFromCache();hydrateContractorsFromCache();hydrateReviewsFromCache();hydrateFleetFromCache();loadPricingStaticData();setActivePage(activePage);loadLiensData();loadContractorsData();loadRegistrationsSummary();loadReviewsData();loadFleetData();
 
