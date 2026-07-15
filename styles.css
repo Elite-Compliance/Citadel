@@ -438,9 +438,10 @@ body[data-theme="dark"] .liens-row .record-link{
 .collection-tracking-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .collection-tracking-form-grid label{display:grid;gap:4px}
 .collection-tracking-form-grid label>span{color:var(--silver-300);font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
-.collection-tracking-form-grid input{width:100%;min-width:0;height:36px;border:1px solid var(--line);background:var(--field-bg);color:var(--text);padding:0 10px;font:inherit;font-size:11px}
-.collection-tracking-form-grid input:hover{border-color:var(--blue-300)}
-.collection-tracking-form-grid input:focus{border-color:var(--blue-300);outline:2px solid color-mix(in srgb,var(--blue-300) 28%,transparent);outline-offset:1px}
+.collection-tracking-form-grid input,.collection-tracking-form-grid select{width:100%;min-width:0;height:36px;border:1px solid var(--line);background:var(--field-bg);color:var(--text);padding:0 10px;font:inherit;font-size:11px}
+.collection-tracking-form-grid input:hover,.collection-tracking-form-grid select:hover{border-color:var(--blue-300)}
+.collection-tracking-form-grid input:focus,.collection-tracking-form-grid select:focus{border-color:var(--blue-300);outline:2px solid color-mix(in srgb,var(--blue-300) 28%,transparent);outline-offset:1px}
+.collection-tracking-form-grid select option{color:#102033}
 .collection-assignment-panel{display:grid;gap:7px;border-top:1px solid var(--line);padding-top:9px}
 .collection-assignment-panel h4{margin:0;color:var(--text);font-size:12px}
 .collection-assignment-panel p{margin:2px 0 0;color:var(--muted);font-size:10px;line-height:1.35}
