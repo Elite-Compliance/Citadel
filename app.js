@@ -52,7 +52,7 @@ var registrationsSummaryLoading=!!CITADEL_API_URL;
 var registrationsSummaryError="";
 var registrationsSummaryUpdated="";
 var COLLECTIONS_CACHE_KEY="citadel_collections_cache_v1";
-var collectionsData={records:[],notes:[],alerts:[],contacts:[],attorneys:[],contactLinks:[],metrics:[],selectedIndex:0,selectedContactIndex:0};
+var collectionsData={records:[],notes:[],alerts:[],contacts:[],attorneys:[],metrics:[],selectedIndex:0,selectedContactIndex:0};
 var collectionsLoading=!!CITADEL_API_URL;
 var collectionsLoadError="";
 var collectionsLastUpdated="";
@@ -60,7 +60,7 @@ var collectionsWorkspaceStatus="";
 var collectionsPageEventsBound=false;
 var activeCollectionMetric="accounts";
 var collectionView="accounts";
-var collectionFilters={agency:"All agencies",stage:"All stages",region:"All regions",sort:"Highest outstanding",search:""};
+var collectionFilters={attorney:"All attorneys",stage:"All stages",region:"All regions",sort:"Highest outstanding",search:""};
 var contactFilters={type:"All contact types",state:"All states",sort:"Organization A-Z",search:""};
 var collectionSearchTimer=null;
 var pricingPageEventsBound=false;
@@ -979,7 +979,8 @@ function normalizeCollectionRecord(record){
     firstInvoice:record.first_invoice_date||'',
     latestInvoice:record.latest_invoice_date||'',
     invoiceCount:record.invoice_count||'',
-    agency:record.collection_agency||'',
+    assignedAttorneyId:record.assigned_attorney_id||'',
+    assignedAttorneyName:record.assigned_attorney_name||'',
     sentDate:record.date_sent_to_agency||record.sent_date||'',
     amountOutstanding:record.amount_outstanding||0,
     amountCollected:record.amount_collected||0,
@@ -1077,7 +1078,6 @@ function applyCollectionsPayload(data){
   collectionsData.alerts=data.alerts||[];
   collectionsData.attorneys=attorneys;
   collectionsData.contacts=contacts.concat(attorneys);
-  collectionsData.contactLinks=data.contactLinks||[];
   collectionsData.metrics=data.metrics||[];
   collectionsData.selectedIndex=0;
   collectionsData.selectedContactIndex=0;
@@ -1104,16 +1104,24 @@ function loadCollectionsData(){
     if(activePage==='collections'||activePage==='command-center')renderContent()
   })
 }
-function getCollectionAgencies(){
-  var values=(collectionsData.records||[]).map(function(row){return row.agency}).concat((collectionsData.contacts||[]).filter(function(row){return row.contactType==='Collection Agency'}).map(function(row){return row.organizationName})).filter(Boolean);
-  return Array.from(new Set(values)).sort()
+function getCollectionAttorneys(){return (collectionsData.contacts||[]).filter(function(contact){return contact.contactType==='Attorney'}).slice().sort(function(left,right){return String(left.organizationName||left.contactName).localeCompare(String(right.organizationName||right.contactName))})}
+function getAssignedAttorneyNames(){
+  var values=(collectionsData.records||[]).map(function(row){return row.assignedAttorneyName}).concat(getCollectionAttorneys().map(function(contact){return contact.organizationName||contact.contactName})).filter(Boolean);
+  return Array.from(new Set(values)).sort(function(left,right){return left.localeCompare(right)})
 }
-function renderCollectionAgencyOptions(selectedAgency){
-  var selected=String(selectedAgency||'').trim();
-  var values=(collectionsData.contacts||[]).filter(function(contact){return contact.contactType==='Collection Agency'}).map(function(contact){return String(contact.organizationName||contact.contactName||'').trim()}).filter(Boolean);
-  if(selected&&values.indexOf(selected)<0)values.push(selected);
-  values=Array.from(new Set(values)).sort(function(left,right){return left.localeCompare(right)});
-  return '<option value=""'+(!selected?' selected':'')+'>Select collection agency</option>'+values.map(function(value){return '<option value="'+escapeHtml(value)+'"'+(value===selected?' selected':'')+'>'+escapeHtml(value)+'</option>'}).join('')
+function renderAssignedAttorneyOptions(selectedId,selectedName){
+  var selected=String(selectedId||'');
+  var attorneys=getCollectionAttorneys();
+  var organizationCounts={};
+  attorneys.forEach(function(contact){var name=String(contact.organizationName||contact.contactName||'').trim();organizationCounts[name]=(organizationCounts[name]||0)+1});
+  var options=attorneys.map(function(contact){
+    var organization=String(contact.organizationName||contact.contactName||'').trim();
+    var label=organization;
+    if(organizationCounts[organization]>1&&contact.contactName&&contact.contactName!==organization)label+=' — '+contact.contactName;
+    return '<option value="'+escapeHtml(contact.id)+'"'+(String(contact.id)===selected?' selected':'')+'>'+escapeHtml(label)+'</option>'
+  }).join('');
+  if(selected&&!attorneys.some(function(contact){return String(contact.id)===selected}))options='<option value="'+escapeHtml(selected)+'" selected>'+escapeHtml((selectedName||'Previously assigned attorney')+' (inactive)')+'</option>'+options;
+  return '<option value=""'+(!selected?' selected':'')+'>Select assigned attorney</option>'+options
 }
 function getCollectionRegions(){return Array.from(new Set((collectionsData.records||[]).map(function(row){return row.region}).filter(Boolean))).sort()}
 function getCollectionStages(){return Array.from(new Set((collectionsData.records||[]).map(function(row){return row.currentStage}).filter(Boolean))).sort()}
@@ -1139,11 +1147,11 @@ function getVisibleCollectionRecords(){
   if(activeCollectionMetric==='outstanding')rows=rows.filter(function(row){return moneyNumber(row.amountOutstanding)>0});
   if(activeCollectionMetric==='collected')rows=rows.filter(function(row){return moneyNumber(row.amountCollected)>0});
   if(activeCollectionMetric==='expected')rows=rows.filter(function(row){return moneyNumber(row.amountWeReceive)>0});
-  if(collectionFilters.agency!=='All agencies')rows=rows.filter(function(row){return row.agency===collectionFilters.agency});
+  if(collectionFilters.attorney!=='All attorneys')rows=rows.filter(function(row){return row.assignedAttorneyName===collectionFilters.attorney});
   if(collectionFilters.stage!=='All stages')rows=rows.filter(function(row){return row.currentStage===collectionFilters.stage});
   if(collectionFilters.region!=='All regions')rows=rows.filter(function(row){return row.region===collectionFilters.region});
   var query=collectionFilters.search.trim().toLowerCase();
-  if(query)rows=rows.filter(function(row){return [row.jobNumber,row.jobLink,row.customer,row.region,row.salesRep,row.currentStage,row.agency,row.status,row.sentDate,row.dateReceived].join(' ').toLowerCase().indexOf(query)>-1});
+  if(query)rows=rows.filter(function(row){return [row.jobNumber,row.jobLink,row.customer,row.region,row.salesRep,row.currentStage,row.assignedAttorneyName,row.status,row.sentDate,row.dateReceived].join(' ').toLowerCase().indexOf(query)>-1});
   if(collectionFilters.sort==='Highest outstanding')rows.sort(function(a,b){return moneyNumber(b.amountOutstanding)-moneyNumber(a.amountOutstanding)});
   if(collectionFilters.sort==='Highest collected')rows.sort(function(a,b){return moneyNumber(b.amountCollected)-moneyNumber(a.amountCollected)});
   if(collectionFilters.sort==='Highest expected')rows.sort(function(a,b){return moneyNumber(b.amountWeReceive)-moneyNumber(a.amountWeReceive)});
@@ -1163,8 +1171,6 @@ function getVisibleBusinessContacts(){
   return rows
 }
 function getCollectionWorkspaceItems(kind,collectionId){return (collectionsData[kind]||[]).filter(function(item){return String(item.collection_id)===String(collectionId)}).slice().reverse()}
-function getCollectionLinks(collectionId){return (collectionsData.contactLinks||[]).filter(function(link){return String(link.collection_id)===String(collectionId)&&workflowItemIsOpen(link)})}
-function getBusinessContact(contactId){return (collectionsData.contacts||[]).find(function(contact){return String(contact.id)===String(contactId)})}
 function formatBusinessAddress(contact,mailing){
   if(!contact)return '';
   if(mailing&&contact.mailingSameAsBusiness)return formatBusinessAddress(contact,false);
@@ -1178,23 +1184,16 @@ function collectionJobNumberLinkHtml(record){
   if(/^https?:\/\//i.test(url))return '<a class="record-link" href="'+escapeHtml(url)+'" target="_blank" rel="noopener">'+escapeHtml(label)+'</a>';
   return '<a class="record-link record-link-disabled" href="#" title="Job URL not included in the Liens source report">'+escapeHtml(label)+'</a>'
 }
-function renderCollectionRelatedContacts(record){
-  var links=getCollectionLinks(record.id);
-  if(!links.length)return '<p class="liens-empty">No contacts or attorneys linked yet.</p>';
-  var grouped={};
-  links.forEach(function(link){var role=link.relationship||'Other';var contact=getBusinessContact(link.contact_id);if(!contact)return;(grouped[role]||(grouped[role]=[])).push(contact)});
-  return '<div class="collection-related-contacts">'+Object.keys(grouped).sort().map(function(role){return '<section><h5>'+escapeHtml(role)+'</h5>'+grouped[role].map(function(contact){return '<article><strong>'+escapeHtml(contact.organizationName||contact.contactName)+'</strong><span>'+escapeHtml([contact.contactName,contact.jobTitle].filter(Boolean).join(' - '))+'</span><span>'+escapeHtml([contact.officePhone,contact.mobilePhone,contact.primaryEmail].filter(Boolean).join(' | '))+'</span></article>'}).join('')+'</section>'}).join('')+'</div>'
-}
 function renderCollectionFilters(){
   if(collectionView==='contacts')return '<div class="liens-filters collections-contact-filters"><label>Contact Type<select data-contact-filter="type">'+renderSelectOptions('All contact types',getCollectionContactTypes(),contactFilters.type)+'</select></label><label>State<select data-contact-filter="state">'+renderSelectOptions('All states',getCollectionContactStates(),contactFilters.state)+'</select></label><label>Sort<select data-contact-filter="sort"><option'+(contactFilters.sort==='Organization A-Z'?' selected':'')+'>Organization A-Z</option><option'+(contactFilters.sort==='Contact A-Z'?' selected':'')+'>Contact A-Z</option><option'+(contactFilters.sort==='Recently updated'?' selected':'')+'>Recently updated</option></select></label><label>Search<input data-contact-filter="search" type="search" placeholder="Attorney, firm, agency, contact" value="'+escapeHtml(contactFilters.search)+'"></label></div>';
-  return '<div class="liens-filters"><label>Agency<select data-collection-filter="agency">'+renderSelectOptions('All agencies',getCollectionAgencies(),collectionFilters.agency)+'</select></label><label>Current Stage<select data-collection-filter="stage">'+renderSelectOptions('All stages',getCollectionStages(),collectionFilters.stage)+'</select></label><label>Region<select data-collection-filter="region">'+renderSelectOptions('All regions',getCollectionRegions(),collectionFilters.region)+'</select></label><label>Sort<select data-collection-filter="sort"><option'+(collectionFilters.sort==='Highest outstanding'?' selected':'')+'>Highest outstanding</option><option'+(collectionFilters.sort==='Highest collected'?' selected':'')+'>Highest collected</option><option'+(collectionFilters.sort==='Highest expected'?' selected':'')+'>Highest expected</option><option'+(collectionFilters.sort==='Newest sent'?' selected':'')+'>Newest sent</option><option'+(collectionFilters.sort==='Oldest aging'?' selected':'')+'>Oldest aging</option></select></label><label>Search<input data-collection-filter="search" type="search" placeholder="Job, customer, rep, agency" value="'+escapeHtml(collectionFilters.search)+'"></label></div>'
+  return '<div class="liens-filters"><label>Assigned Attorney<select data-collection-filter="attorney">'+renderSelectOptions('All attorneys',getAssignedAttorneyNames(),collectionFilters.attorney)+'</select></label><label>Current Stage<select data-collection-filter="stage">'+renderSelectOptions('All stages',getCollectionStages(),collectionFilters.stage)+'</select></label><label>Region<select data-collection-filter="region">'+renderSelectOptions('All regions',getCollectionRegions(),collectionFilters.region)+'</select></label><label>Sort<select data-collection-filter="sort"><option'+(collectionFilters.sort==='Highest outstanding'?' selected':'')+'>Highest outstanding</option><option'+(collectionFilters.sort==='Highest collected'?' selected':'')+'>Highest collected</option><option'+(collectionFilters.sort==='Highest expected'?' selected':'')+'>Highest expected</option><option'+(collectionFilters.sort==='Newest sent'?' selected':'')+'>Newest sent</option><option'+(collectionFilters.sort==='Oldest aging'?' selected':'')+'>Oldest aging</option></select></label><label>Search<input data-collection-filter="search" type="search" placeholder="Job, customer, rep, attorney" value="'+escapeHtml(collectionFilters.search)+'"></label></div>'
 }
 function renderCollectionAccountsWorkspace(){
   var rows=getVisibleCollectionRecords();
   var current=collectionsData.records[collectionsData.selectedIndex];
   var selected=rows.find(function(record){return current&&record.id===current.id})||rows[0]||null;
   if(selected)collectionsData.selectedIndex=collectionsData.records.indexOf(selected);
-  var table='<div class="collections-table" role="table"><div class="collections-table-head" role="row"><span>Job / Customer</span><span>Region / Rep</span><span>Stage / Aging</span><span>Agency / Date</span><span>Outstanding</span><span>We Receive</span></div>'+(rows.length?rows.map(function(record){var index=collectionsData.records.indexOf(record);return '<div class="collections-row'+(index===collectionsData.selectedIndex?' active':'')+'" data-collection-index="'+index+'" role="row" tabindex="0"><span>'+collectionJobNumberLinkHtml(record)+'<em>'+escapeHtml(record.customer)+'</em></span><span><strong>'+escapeHtml(record.region||'-')+'</strong><em>'+escapeHtml(record.salesRep||'-')+'</em></span><span><strong>'+escapeHtml(record.currentStage||'-')+'</strong><em>'+escapeHtml(record.agingDays+' days')+'</em></span><span><strong>'+escapeHtml(record.agency||'-')+'</strong><em>'+escapeHtml(record.sentDate||'-')+'</em></span><span>'+escapeHtml(moneyLabel(record.amountOutstanding))+'</span><span>'+escapeHtml(moneyLabel(record.amountWeReceive))+'</span></div>'}).join(''):'<p class="collections-empty-table">No collection jobs match this view.</p>')+'</div>';
+  var table='<div class="collections-table" role="table"><div class="collections-table-head" role="row"><span>Job / Customer</span><span>Region / Rep</span><span>Stage / Aging</span><span>Attorney / Date</span><span>Outstanding</span><span>We Receive</span></div>'+(rows.length?rows.map(function(record){var index=collectionsData.records.indexOf(record);return '<div class="collections-row'+(index===collectionsData.selectedIndex?' active':'')+'" data-collection-index="'+index+'" role="row" tabindex="0"><span>'+collectionJobNumberLinkHtml(record)+'<em>'+escapeHtml(record.customer)+'</em></span><span><strong>'+escapeHtml(record.region||'-')+'</strong><em>'+escapeHtml(record.salesRep||'-')+'</em></span><span><strong>'+escapeHtml(record.currentStage||'-')+'</strong><em>'+escapeHtml(record.agingDays+' days')+'</em></span><span><strong>'+escapeHtml(record.assignedAttorneyName||'-')+'</strong><em>'+escapeHtml(record.sentDate||'-')+'</em></span><span>'+escapeHtml(moneyLabel(record.amountOutstanding))+'</span><span>'+escapeHtml(moneyLabel(record.amountWeReceive))+'</span></div>'}).join(''):'<p class="collections-empty-table">No collection jobs match this view.</p>')+'</div>';
   var detail=selected?renderCollectionRecordDetail(selected):'<aside class="liens-detail collections-detail"><div class="collections-empty-detail"><h3>No Collection Agency records</h3><p>Records appear here automatically when their Liens status is set to Collection Agency.</p></div></aside>';
   return '<div class="liens-workspace"><section class="liens-records"><div class="liens-section-head"><div><h3>Collection Jobs</h3><p>Track source job details, agency placement, recovery, and receipt.</p></div><strong>'+escapeHtml(rows.length)+' showing</strong></div>'+table+'</section>'+detail+'</div>'
 }
@@ -1210,21 +1209,20 @@ function renderCollectionTrackingForm(selected){
     '<input type="hidden" name="lien_id" value="'+escapeHtml(selected.lienId)+'">'+
     '<p class="collection-tracking-help">Enter or update these collection details at any time, then save your changes.</p>'+
     '<div class="collection-tracking-form-grid">'+
-      '<label><span>Collection Agency</span><select data-collection-tracking-field name="collection_agency">'+renderCollectionAgencyOptions(selected.agency)+'</select></label>'+ 
+      '<label><span>Assigned Attorney</span><select data-collection-tracking-field name="assigned_attorney_id">'+renderAssignedAttorneyOptions(selected.assignedAttorneyId,selected.assignedAttorneyName)+'</select></label>'+ 
       renderCollectionTrackingInput('Date Sent to Agency','date_sent_to_agency','date',selected.sentDate,'')+
       renderCollectionTrackingInput('Amount Outstanding','amount_outstanding','number',selected.amountOutstanding,'0.00')+
       renderCollectionTrackingInput('Amount Collected','amount_collected','number',selected.amountCollected||'','0.00')+
       renderCollectionTrackingInput('Amount We Will Receive','amount_we_receive','number',selected.amountWeReceive||'','0.00')+
       renderCollectionTrackingInput('Date Received','date_received','date',selected.dateReceived,'')+
-    '</div>'+
-    '<section class="collection-assignment-panel"><div><h4>Assigned Contacts & Attorneys</h4><p>Select one or more saved attorneys, agencies, company, office, or customer contacts.</p></div>'+renderCollectionContactChoices(selected)+'</section>'+
+    '</div>'+ 
     '<button type="submit" class="collection-save-tracking">Save Tracking Changes</button>'+
   '</form>'
 }
 
 function renderCollectionRecordDetail(selected){
   var tracking=renderCollectionTrackingForm(selected);
-  return '<aside class="liens-detail collections-detail"><div class="liens-detail-head"><div><span>Selected record</span><h3>'+escapeHtml(selected.jobNumber||selected.id)+' - '+escapeHtml(selected.customer)+'</h3><p>Collections / '+escapeHtml(selected.status)+'</p></div></div><div class="liens-detail-grid"><article><span>Region</span><strong>'+escapeHtml(selected.region||'-')+'</strong></article><article><span>Sales Rep</span><strong>'+escapeHtml(selected.salesRep||'-')+'</strong></article><article><span>Source Balance</span><strong>'+escapeHtml(moneyLabel(selected.sourceBalance))+'</strong></article><article><span>Days Past Due</span><strong>'+escapeHtml(selected.agingDays)+'</strong></article><article><span>Payments</span><strong>'+escapeHtml(moneyLabel(selected.paymentsReceived))+'</strong></article><article><span>Current Stage</span><strong>'+escapeHtml(selected.currentStage||'-')+'</strong></article><article><span>First Invoice</span><strong>'+escapeHtml(selected.firstInvoice||'-')+'</strong></article><article><span>Latest Invoice</span><strong>'+escapeHtml(selected.latestInvoice||'-')+'</strong></article><article><span>Invoice Count</span><strong>'+escapeHtml(selected.invoiceCount||'-')+'</strong></article></div><section class="collection-tracking-panel"><div class="card-heading"><h3>Collection Tracking</h3><span>Protected from Liens imports</span></div><div class="workspace-status">'+escapeHtml(collectionsWorkspaceStatus)+'</div>'+tracking+'</section><section class="collection-contact-panel"><div class="card-heading"><h3>Assigned Directory Records</h3><span>Current selections</span></div>'+renderCollectionRelatedContacts(selected)+'</section><section class="liens-workflow"><div class="card-heading"><h3>Citadel Workflow</h3><span>Protected from source imports</span></div><div class="workflow-entry-actions"><button type="button" data-workspace-entry="note">Add Note</button><button type="button" data-workspace-entry="alert">Set Alert</button></div><div class="liens-workspace-feed"><h4>Recent Notes</h4>'+renderLienWorkspaceList(getCollectionWorkspaceItems('notes',selected.id),'No notes yet.',[{key:'note_text',strong:true},{key:'note_by',fallback:'Team'},{key:'note_date'}])+'<h4>Open Alerts</h4>'+renderLienWorkspaceList(getCollectionWorkspaceItems('alerts',selected.id),'No alerts yet.',[{key:'alert_text',strong:true},{key:'owner',fallback:'Carlynn'},{key:'due_date'}])+'</div></section></aside>'
+  return '<aside class="liens-detail collections-detail"><div class="liens-detail-head"><div><span>Selected record</span><h3>'+escapeHtml(selected.jobNumber||selected.id)+' - '+escapeHtml(selected.customer)+'</h3><p>Collections / '+escapeHtml(selected.status)+'</p></div></div><div class="liens-detail-grid"><article><span>Region</span><strong>'+escapeHtml(selected.region||'-')+'</strong></article><article><span>Sales Rep</span><strong>'+escapeHtml(selected.salesRep||'-')+'</strong></article><article><span>Source Balance</span><strong>'+escapeHtml(moneyLabel(selected.sourceBalance))+'</strong></article><article><span>Days Past Due</span><strong>'+escapeHtml(selected.agingDays)+'</strong></article><article><span>Payments</span><strong>'+escapeHtml(moneyLabel(selected.paymentsReceived))+'</strong></article><article><span>Current Stage</span><strong>'+escapeHtml(selected.currentStage||'-')+'</strong></article><article><span>First Invoice</span><strong>'+escapeHtml(selected.firstInvoice||'-')+'</strong></article><article><span>Latest Invoice</span><strong>'+escapeHtml(selected.latestInvoice||'-')+'</strong></article><article><span>Invoice Count</span><strong>'+escapeHtml(selected.invoiceCount||'-')+'</strong></article></div><section class="collection-tracking-panel"><div class="card-heading"><h3>Collection Tracking</h3><span>Protected from Liens imports</span></div><div class="workspace-status">'+escapeHtml(collectionsWorkspaceStatus)+'</div>'+tracking+'</section><section class="liens-workflow"><div class="card-heading"><h3>Citadel Workflow</h3><span>Protected from source imports</span></div><div class="workflow-entry-actions"><button type="button" data-workspace-entry="note">Add Note</button><button type="button" data-workspace-entry="alert">Set Alert</button></div><div class="liens-workspace-feed"><h4>Recent Notes</h4>'+renderLienWorkspaceList(getCollectionWorkspaceItems('notes',selected.id),'No notes yet.',[{key:'note_text',strong:true},{key:'note_by',fallback:'Team'},{key:'note_date'}])+'<h4>Open Alerts</h4>'+renderLienWorkspaceList(getCollectionWorkspaceItems('alerts',selected.id),'No alerts yet.',[{key:'alert_text',strong:true},{key:'owner',fallback:'Carlynn'},{key:'due_date'}])+'</div></section></aside>'
 }
 function renderBusinessContactsWorkspace(){
   var rows=getVisibleBusinessContacts();
@@ -1309,12 +1307,6 @@ function openBusinessContactModal(contact){
   });
   document.body.appendChild(modal);syncAttorneyFields();syncMailing();modal.querySelector('[data-contact-type-select]').focus()
 }
-function renderCollectionContactChoices(record){
-  if(!collectionsData.contacts.length)return '<p class="collections-contact-empty">No contacts or attorneys have been saved yet. Add them to the directory, then select them on this job.</p>';
-  var selected={};if(record)getCollectionLinks(record.id).forEach(function(link){selected[String(link.contact_id)+'|'+String(link.relationship||'Other')]=true});
-  var grouped={};collectionsData.contacts.forEach(function(contact){(grouped[contact.contactType]||(grouped[contact.contactType]=[])).push(contact)});
-  return '<label class="collection-contact-search">Find a saved contact or attorney<input type="search" data-related-contact-search placeholder="Attorney, firm, agency, company, office, customer..."></label><div class="collection-contact-chooser">'+Object.keys(grouped).sort().map(function(role){return '<fieldset data-contact-choice-group><legend>'+escapeHtml(role)+'</legend>'+grouped[role].map(function(contact){var key=String(contact.id)+'|'+role;var search=[role,contact.organizationName,contact.officeName,contact.contactName,contact.officePhone,contact.primaryEmail,contact.licensedStates].join(' ').toLowerCase();return '<label data-contact-choice-row data-contact-search-text="'+escapeHtml(search)+'"><input type="checkbox" data-related-contact="'+escapeHtml(contact.id)+'" data-contact-relationship="'+escapeHtml(role)+'" '+(selected[key]?'checked':'')+'><span><strong>'+escapeHtml(contact.organizationName||contact.contactName)+'</strong><em>'+escapeHtml([contact.contactName,contact.officePhone,contact.primaryEmail].filter(Boolean).join(' | '))+'</em></span></label>'}).join('')+'</fieldset>'}).join('')+'</div>'
-}
 function saveCollectionApiAction(action,payload,successMessage){
   collectionsWorkspaceStatus='Saving...';if(activePage==='collections')renderCollectionsPage();
   var params=Object.keys(payload).map(function(key){return encodeURIComponent(key)+'='+encodeURIComponent(payload[key]==null?'':payload[key])}).join('&');
@@ -1338,8 +1330,6 @@ function bindCollectionsPage(){
   pagePanel.addEventListener('change',function(event){if(activePage!=='collections')return;var collectionField=event.target.closest('select[data-collection-filter]');var contactField=event.target.closest('select[data-contact-filter]');if(collectionField){collectionFilters[collectionField.getAttribute('data-collection-filter')]=collectionField.value;collectionsData.selectedIndex=0;renderCollectionsPage()}if(contactField){contactFilters[contactField.getAttribute('data-contact-filter')]=contactField.value;collectionsData.selectedContactIndex=0;renderCollectionsPage()}});
   pagePanel.addEventListener('input',function(event){
     if(activePage!=='collections')return;
-    var relatedSearch=event.target.closest('[data-related-contact-search]');
-    if(relatedSearch){var query=relatedSearch.value.trim().toLowerCase();var form=relatedSearch.closest('[data-collection-tracking-form]');form.querySelectorAll('[data-contact-choice-row]').forEach(function(row){row.hidden=!!query&&String(row.getAttribute('data-contact-search-text')||'').indexOf(query)<0});form.querySelectorAll('[data-contact-choice-group]').forEach(function(group){group.hidden=!Array.from(group.querySelectorAll('[data-contact-choice-row]')).some(function(row){return !row.hidden})});return}
     var collectionSearch=event.target.closest('input[data-collection-filter="search"]');var contactSearch=event.target.closest('input[data-contact-filter="search"]');if(!collectionSearch&&!contactSearch)return;if(collectionSearch)collectionFilters.search=collectionSearch.value;if(contactSearch)contactFilters.search=contactSearch.value;window.clearTimeout(collectionSearchTimer);collectionSearchTimer=window.setTimeout(function(){if(collectionSearch)collectionsData.selectedIndex=0;if(contactSearch)collectionsData.selectedContactIndex=0;renderCollectionsPage();var next=pagePanel.querySelector(collectionSearch?'input[data-collection-filter="search"]':'input[data-contact-filter="search"]');if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length)}},180)
   });
   pagePanel.addEventListener('submit',function(event){
@@ -1347,8 +1337,6 @@ function bindCollectionsPage(){
     if(activePage!=='collections'||!form)return;
     event.preventDefault();
     var payload={};new FormData(form).forEach(function(value,key){payload[key]=value});
-    payload.contact_links=JSON.stringify(Array.from(form.querySelectorAll('[data-related-contact]:checked')).map(function(input){return {contact_id:input.getAttribute('data-related-contact'),relationship:input.getAttribute('data-contact-relationship'),is_primary:false}}));
-    if(!payload.collection_agency){var agencyInput=form.querySelector('[data-contact-relationship="Collection Agency"]:checked');var agencyContact=agencyInput&&getBusinessContact(agencyInput.getAttribute('data-related-contact'));payload.collection_agency=agencyContact?agencyContact.organizationName:''}
     saveCollectionApiAction('saveCollectionRecord',payload,'Collection tracking saved')
   })
 }
@@ -1356,9 +1344,9 @@ function collectionReportRows(modal){
   var contacts=modal.getAttribute('data-collection-report-view')==='contacts';
   var rows=contacts?(collectionsData.contacts||[]).slice():(collectionsData.records||[]).slice();
   function value(name){var field=modal.querySelector('[data-collection-report-filter="'+name+'"]');return field?field.value:''}
-  var type=value('type'),state=value('state'),agency=value('agency'),status=value('status'),stage=value('stage'),region=value('region'),search=value('search').toLowerCase(),dateFrom=value('dateFrom'),dateTo=value('dateTo'),alertFilter=value('alertFilter');
+  var type=value('type'),state=value('state'),attorney=value('attorney'),status=value('status'),stage=value('stage'),region=value('region'),search=value('search').toLowerCase(),dateFrom=value('dateFrom'),dateTo=value('dateTo'),alertFilter=value('alertFilter');
   if(contacts)rows=rows.filter(function(row){if(type&&type!=='All contact types'&&row.contactType!==type)return false;if(state&&state!=='All states'&&row.businessState!==state)return false;if(search&&[row.contactType,row.organizationName,row.officeName,row.contactName,row.barNumber,row.licensedStates,row.primaryEmail,row.officePhone,row.businessCity,row.businessState].join(' ').toLowerCase().indexOf(search)<0)return false;return true});
-  else rows=rows.filter(function(row){if(agency&&agency!=='All agencies'&&row.agency!==agency)return false;if(status&&status!=='All statuses'&&row.status!==status)return false;if(stage&&stage!=='All stages'&&row.currentStage!==stage)return false;if(region&&region!=='All regions'&&row.region!==region)return false;if(dateFrom&&String(row.sentDate)<dateFrom)return false;if(dateTo&&String(row.sentDate)>dateTo)return false;if(alertFilter==='Open alerts'&&row.alertsCount<1)return false;if(alertFilter==='No alert set'&&row.alertsCount>0)return false;if(search&&[row.jobNumber,row.customer,row.region,row.salesRep,row.currentStage,row.agency,row.status].join(' ').toLowerCase().indexOf(search)<0)return false;return true});
+  else rows=rows.filter(function(row){if(attorney&&attorney!=='All attorneys'&&row.assignedAttorneyName!==attorney)return false;if(status&&status!=='All statuses'&&row.status!==status)return false;if(stage&&stage!=='All stages'&&row.currentStage!==stage)return false;if(region&&region!=='All regions'&&row.region!==region)return false;if(dateFrom&&String(row.sentDate)<dateFrom)return false;if(dateTo&&String(row.sentDate)>dateTo)return false;if(alertFilter==='Open alerts'&&row.alertsCount<1)return false;if(alertFilter==='No alert set'&&row.alertsCount>0)return false;if(search&&[row.jobNumber,row.customer,row.region,row.salesRep,row.currentStage,row.assignedAttorneyName,row.status].join(' ').toLowerCase().indexOf(search)<0)return false;return true});
   return rows
 }
 function updateCollectionsReportSummary(modal){var rows=collectionReportRows(modal);var contacts=modal.getAttribute('data-collection-report-view')==='contacts';var count=modal.querySelector('[data-collection-report-count]');var totals=modal.querySelector('[data-collection-report-totals]');if(count)count.textContent=rows.length+' '+(contacts?'directory entries':'jobs');if(totals)totals.textContent=contacts?rows.filter(function(row){return row.contactType==='Attorney'}).length+' attorneys':moneyLabel(rows.reduce(function(sum,row){return sum+moneyNumber(row.amountOutstanding)},0))+' outstanding | '+moneyLabel(rows.reduce(function(sum,row){return sum+moneyNumber(row.amountCollected)},0))+' collected | '+moneyLabel(rows.reduce(function(sum,row){return sum+moneyNumber(row.amountWeReceive)},0))+' expected'}
@@ -1368,7 +1356,7 @@ function setQuickCollectionsReport(modal,type){
   modal.querySelectorAll('select').forEach(function(field){field.selectedIndex=0});
   if(type==='current'){
     if(contacts){modal.querySelector('[data-collection-report-filter="type"]').value=contactFilters.type;modal.querySelector('[data-collection-report-filter="state"]').value=contactFilters.state;modal.querySelector('[data-collection-report-filter="search"]').value=contactFilters.search}
-    else{modal.querySelector('[data-collection-report-filter="agency"]').value=collectionFilters.agency;modal.querySelector('[data-collection-report-filter="stage"]').value=collectionFilters.stage;modal.querySelector('[data-collection-report-filter="region"]').value=collectionFilters.region;modal.querySelector('[data-collection-report-filter="search"]').value=collectionFilters.search}
+    else{modal.querySelector('[data-collection-report-filter="attorney"]').value=collectionFilters.attorney;modal.querySelector('[data-collection-report-filter="stage"]').value=collectionFilters.stage;modal.querySelector('[data-collection-report-filter="region"]').value=collectionFilters.region;modal.querySelector('[data-collection-report-filter="search"]').value=collectionFilters.search}
   }
   if(contacts&&type==='attorneys')modal.querySelector('[data-collection-report-filter="type"]').value='Attorney';
   if(contacts&&type==='agencies')modal.querySelector('[data-collection-report-filter="type"]').value='Collection Agency';
@@ -1382,14 +1370,14 @@ function setQuickCollectionsReport(modal,type){
 function collectionReportTable(rows,contacts){
   return contacts
     ?[['Contact Type','Firm / Organization','Office','Contact / Attorney','Job Title','Bar Number','Licensed States','Practice Areas','Primary Email','Secondary Email','Office Phone','Extension','Mobile Phone','Fax','Website','Preferred Contact','Business Address','Mailing Address','Notes']].concat(rows.map(function(row){return [row.contactType,row.organizationName,row.officeName||'',row.contactName,row.jobTitle,row.barNumber||'',row.licensedStates||'',row.practiceAreas||'',row.primaryEmail,row.secondaryEmail,row.officePhone,row.phoneExtension,row.mobilePhone,row.fax,row.website,row.preferredContactMethod,formatBusinessAddress(row,false),formatBusinessAddress(row,true),row.notes]}))
-    :[['Region','Sales Rep','Job Number','Job Link','Customer','Source Status','Current Stage','Aging Days','Source Balance','Payments Received','First Invoice','Latest Invoice','Invoice Count','Collection Agency','Date Sent to Agency','Amount Outstanding','Amount Collected','Amount We Will Receive','Date Received','Tracking Status','Updated By','Last Updated']].concat(rows.map(function(row){return [row.region,row.salesRep,row.jobNumber,row.jobLink,row.customer,row.sourceStatus,row.currentStage,row.agingDays,moneyNumber(row.sourceBalance),moneyNumber(row.paymentsReceived),row.firstInvoice,row.latestInvoice,row.invoiceCount,row.agency,row.sentDate,moneyNumber(row.amountOutstanding),moneyNumber(row.amountCollected),moneyNumber(row.amountWeReceive),row.dateReceived,row.status,row.updatedBy,row.lastUpdated]}))
+    :[['Region','Sales Rep','Job Number','Job Link','Customer','Source Status','Current Stage','Aging Days','Source Balance','Payments Received','First Invoice','Latest Invoice','Invoice Count','Assigned Attorney','Date Sent to Agency','Amount Outstanding','Amount Collected','Amount We Will Receive','Date Received','Tracking Status','Updated By','Last Updated']].concat(rows.map(function(row){return [row.region,row.salesRep,row.jobNumber,row.jobLink,row.customer,row.sourceStatus,row.currentStage,row.agingDays,moneyNumber(row.sourceBalance),moneyNumber(row.paymentsReceived),row.firstInvoice,row.latestInvoice,row.invoiceCount,row.assignedAttorneyName,row.sentDate,moneyNumber(row.amountOutstanding),moneyNumber(row.amountCollected),moneyNumber(row.amountWeReceive),row.dateReceived,row.status,row.updatedBy,row.lastUpdated]}))
 }
 function openCollectionsReportsModal(){
   closeLiensReportsModal();
   var contacts=collectionView==='contacts';
   var modal=document.createElement('div');modal.className='citadel-modal-backdrop';modal.setAttribute('data-collection-report-view',contacts?'contacts':'accounts');
   var quick=contacts?'<button data-collection-quick="all">All Contacts</button><button data-collection-quick="attorneys">Attorneys</button><button data-collection-quick="agencies">Collection Agencies</button><button data-collection-quick="current">Current View</button>':'<button data-collection-quick="alerts">Open Alerts</button><button data-collection-quick="needs">Needs Assignment</button><button data-collection-quick="placed">Placed</button><button data-collection-quick="partial">Partially Collected</button><button data-collection-quick="received">Received</button><button data-collection-quick="current">Current View</button>';
-  var filters=contacts?'<label>Contact Type<select data-collection-report-filter="type">'+renderSelectOptions('All contact types',getCollectionContactTypes(),'All contact types')+'</select></label><label>State<select data-collection-report-filter="state">'+renderSelectOptions('All states',getCollectionContactStates(),'All states')+'</select></label><label>Search Text<input data-collection-report-filter="search" placeholder="Attorney, firm, contact, phone, email"></label>':'<label>Agency<select data-collection-report-filter="agency">'+renderSelectOptions('All agencies',getCollectionAgencies(),'All agencies')+'</select></label><label>Tracking Status<select data-collection-report-filter="status">'+renderSelectOptions('All statuses',['Needs Assignment','Placed','Partially Collected','Received'],'All statuses')+'</select></label><label>Current Stage<select data-collection-report-filter="stage">'+renderSelectOptions('All stages',getCollectionStages(),'All stages')+'</select></label><label>Region<select data-collection-report-filter="region">'+renderSelectOptions('All regions',getCollectionRegions(),'All regions')+'</select></label><label>Date Sent From<input data-collection-report-filter="dateFrom" type="date"></label><label>Date Sent To<input data-collection-report-filter="dateTo" type="date"></label><label>Alert Filter<select data-collection-report-filter="alertFilter"><option>All alerts</option><option>Open alerts</option><option>No alert set</option></select></label><label>Search Text<input data-collection-report-filter="search" placeholder="Job, customer, sales rep, agency"></label>';
+  var filters=contacts?'<label>Contact Type<select data-collection-report-filter="type">'+renderSelectOptions('All contact types',getCollectionContactTypes(),'All contact types')+'</select></label><label>State<select data-collection-report-filter="state">'+renderSelectOptions('All states',getCollectionContactStates(),'All states')+'</select></label><label>Search Text<input data-collection-report-filter="search" placeholder="Attorney, firm, contact, phone, email"></label>':'<label>Assigned Attorney<select data-collection-report-filter="attorney">'+renderSelectOptions('All attorneys',getAssignedAttorneyNames(),'All attorneys')+'</select></label><label>Tracking Status<select data-collection-report-filter="status">'+renderSelectOptions('All statuses',['Needs Assignment','Placed','Partially Collected','Received'],'All statuses')+'</select></label><label>Current Stage<select data-collection-report-filter="stage">'+renderSelectOptions('All stages',getCollectionStages(),'All stages')+'</select></label><label>Region<select data-collection-report-filter="region">'+renderSelectOptions('All regions',getCollectionRegions(),'All regions')+'</select></label><label>Date Sent From<input data-collection-report-filter="dateFrom" type="date"></label><label>Date Sent To<input data-collection-report-filter="dateTo" type="date"></label><label>Alert Filter<select data-collection-report-filter="alertFilter"><option>All alerts</option><option>Open alerts</option><option>No alert set</option></select></label><label>Search Text<input data-collection-report-filter="search" placeholder="Job, customer, sales rep, attorney"></label>';
   modal.innerHTML='<section class="citadel-report-modal" role="dialog" aria-modal="true" aria-label="Collections Reports"><div class="modal-head"><div><h3>Collections Reports</h3><p>'+(contacts?'Export business contacts and the protected attorney directory.':'Report on jobs sent to collections and recovery progress.')+'</p></div><button type="button" data-close-modal aria-label="Close">x</button></div><div class="report-callout">'+(contacts?'Attorney exports include bar, licensed-state, practice-area, firm, address, and communication fields.':'Job exports include source job data, agency placement, recovery, and receipt fields.')+'</div><section class="report-band"><div class="report-band-head"><strong>Quick Reports</strong><span>Common exports</span></div><div class="quick-report-grid">'+quick+'</div></section><section class="report-custom"><div class="report-band-head"><strong>Custom Report</strong><span>Filters and export format</span></div><div class="report-form-grid">'+filters+'</div></section><div class="report-summary-row"><div class="report-parameters"><strong>Report Parameters</strong><span>View: <b>'+(contacts?'Business Contacts & Attorneys':'Collection Jobs')+'</b></span><span>Generated: <b>'+escapeHtml(new Date().toLocaleString())+'</b></span></div><div class="report-total"><strong data-collection-report-count>0</strong><span>Matching records</span><em data-collection-report-totals></em></div></div><div class="modal-actions"><button type="button" data-collection-report-reset>Reset</button><span></span><select data-collection-report-format><option value="csv">CSV</option><option value="excel">Excel</option><option value="pdf">PDF</option></select><button type="button" data-close-modal>Cancel</button><button type="button" data-collection-report-export>Export</button></div></section>';
   modal.addEventListener('click',function(event){var quickButton=event.target.closest('[data-collection-quick]');if(quickButton){setQuickCollectionsReport(modal,quickButton.getAttribute('data-collection-quick'));return}if(event.target.closest('[data-collection-report-reset]')){setQuickCollectionsReport(modal,'all');return}if(event.target.closest('[data-collection-report-export]')){var rows=collectionReportRows(modal);var format=modal.querySelector('[data-collection-report-format]').value;reportDownloadTable(collectionReportTable(rows,contacts),format,contacts?'citadel-collection-directory':'citadel-collection-jobs');return}if(event.target===modal||event.target.closest('[data-close-modal]'))closeLiensReportsModal()});
   modal.addEventListener('input',function(){updateCollectionsReportSummary(modal)});
