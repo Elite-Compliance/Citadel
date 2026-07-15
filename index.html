@@ -4,6 +4,45 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Citadel App Shell</title>
+  <link rel="stylesheet" href="./styles.css?v=2.1.2.17" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img"><path d="M24 4 40 11v13c0 10.6-6.8 16.9-16 20-9.2-3.1-16-9.4-16-20V11L24 4Z"/><path d="M17 29V18l7-4 7 4v11h-4v-8h-6v8h-4Z"/></svg>
+        </div>
+        <div><div class="brand-name">Citadel</div><div class="version">v2.1.2</div></div>
+      </div>
+      <nav class="nav-list" id="primaryNav"></nav>
+    </aside>
+    <main class="workspace">
+      <header class="topbar">
+        <div><p class="eyebrow">Operations Platform</p><h1 id="pageTitle">Command Center</h1></div>
+        <div class="topbar-actions"><button class="refresh-button" id="forceRefreshButton" type="button">Refresh</button><div class="settings-wrap"><button class="settings-button" id="settingsButton" type="button" aria-label="Settings" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a7.8 7.8 0 0 0 .1-1l2-1.6-2-3.5-2.4 1a7.4 7.4 0 0 0-1.7-1l-.4-2.6h-4l-.4 2.6c-.6.2-2.1.0-1.7 1l-2.4-1-2 3.5 2 1.6a7.8 7.8 0 0 0 0 2l-2 1.6 2 3.5 2.4-1c.5.4 1.1.8 1.7 1l.4 2.6h4l.4-2.6c.6-.2 1.2-.6 1.7-1l2.4 1 2-3.5-2-1.6Z"/></svg></button><div class="settings-menu" id="settingsMenu" hidden><div class="settings-title">Settings</div><div class="settings-row"><span>Theme</span><div class="theme-toggle" role="group" aria-label="Theme"><button type="button" data-theme-choice="dark">Dark</button><button type="button" data-theme-choice="light">Light</button></div></div></div></div></div>
+      </header>
+      <section class="page-panel" aria-live="polite">
+        <div class="panel-header"><div><p class="section-label" id="sectionLabel">Live overview</p><h2 id="panelTitle">Command Center</h2></div><div class="status-pill"><span></span>Stable</div></div>
+        <div id="subTabs" class="sub-tabs" hidden></div>
+        <div class="metric-grid" id="metricGrid"></div>
+        <div class="content-grid">
+          <article class="work-card"><div class="card-heading"><h3 id="focusTitle">Operational Focus</h3><span id="focusBadge">Today</span></div><p id="focusCopy"></p></article>
+          <article class="work-card compact"><div class="card-heading"><h3>Queue Snapshot</h3><span>Priority</span></div><ul id="queueList" class="queue-list"></ul></article>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./data/pricing-data.js?v=2.1.2"></script>
+  <script src="./app.js?v=2.1.2.17"></script>
+</body>
+</html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Citadel App Shell</title>
   <link rel="stylesheet" href="./styles.css?v=2.1.2.16" />
 </head>
 <body>
