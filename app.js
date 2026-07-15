@@ -1108,6 +1108,13 @@ function getCollectionAgencies(){
   var values=(collectionsData.records||[]).map(function(row){return row.agency}).concat((collectionsData.contacts||[]).filter(function(row){return row.contactType==='Collection Agency'}).map(function(row){return row.organizationName})).filter(Boolean);
   return Array.from(new Set(values)).sort()
 }
+function renderCollectionAgencyOptions(selectedAgency){
+  var selected=String(selectedAgency||'').trim();
+  var values=(collectionsData.contacts||[]).filter(function(contact){return contact.contactType==='Collection Agency'}).map(function(contact){return String(contact.organizationName||contact.contactName||'').trim()}).filter(Boolean);
+  if(selected&&values.indexOf(selected)<0)values.push(selected);
+  values=Array.from(new Set(values)).sort(function(left,right){return left.localeCompare(right)});
+  return '<option value=""'+(!selected?' selected':'')+'>Select collection agency</option>'+values.map(function(value){return '<option value="'+escapeHtml(value)+'"'+(value===selected?' selected':'')+'>'+escapeHtml(value)+'</option>'}).join('')
+}
 function getCollectionRegions(){return Array.from(new Set((collectionsData.records||[]).map(function(row){return row.region}).filter(Boolean))).sort()}
 function getCollectionStages(){return Array.from(new Set((collectionsData.records||[]).map(function(row){return row.currentStage}).filter(Boolean))).sort()}
 function getCollectionContactTypes(){return Array.from(new Set((collectionsData.contacts||[]).map(function(row){return row.contactType}).filter(Boolean).concat(['Attorney']))).sort()}
@@ -1198,13 +1205,12 @@ function renderCollectionTrackingInput(label,name,type,value,placeholder){
 }
 
 function renderCollectionTrackingForm(selected){
-  var agencyOptions=getCollectionAgencies().map(function(value){return '<option value="'+escapeHtml(value)+'">'}).join('');
-  return '<form class="collection-tracking-form" data-collection-tracking-form>'+
+  return '<form class="collection-tracking-form" data-collection-tracking-form>'+ 
     '<input type="hidden" name="collection_id" value="'+escapeHtml(selected.id)+'">'+
     '<input type="hidden" name="lien_id" value="'+escapeHtml(selected.lienId)+'">'+
     '<p class="collection-tracking-help">Enter or update these collection details at any time, then save your changes.</p>'+
     '<div class="collection-tracking-form-grid">'+
-      '<label><span>Collection Agency</span><input data-collection-tracking-field name="collection_agency" list="collection-agency-options" value="'+escapeHtml(selected.agency)+'" placeholder="Agency name"><datalist id="collection-agency-options">'+agencyOptions+'</datalist></label>'+
+      '<label><span>Collection Agency</span><select data-collection-tracking-field name="collection_agency">'+renderCollectionAgencyOptions(selected.agency)+'</select></label>'+ 
       renderCollectionTrackingInput('Date Sent to Agency','date_sent_to_agency','date',selected.sentDate,'')+
       renderCollectionTrackingInput('Amount Outstanding','amount_outstanding','number',selected.amountOutstanding,'0.00')+
       renderCollectionTrackingInput('Amount Collected','amount_collected','number',selected.amountCollected||'','0.00')+
