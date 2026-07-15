@@ -425,6 +425,7 @@ body[data-theme="dark"] .liens-row .record-link{
 .collections-row:hover,.collections-row.active,.business-contact-row:hover,.business-contact-row.active{background:rgba(131,183,221,.12)}
 .collections-row>span,.business-contact-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .collections-row strong,.business-contact-row strong{display:block;font-size:12px}
+.collections-row .record-link{max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
 .collections-row em,.business-contact-row em{display:block;margin-top:2px;color:var(--muted);font-size:10px;font-style:normal;overflow:hidden;text-overflow:ellipsis}
 .collections-empty-table{margin:0;padding:28px 14px;color:var(--muted);font-size:12px;text-align:center}
 .collections-detail .liens-detail-head{align-items:flex-start}
