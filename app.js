@@ -379,12 +379,85 @@ function exportLienReportExcel(){
   var html='<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif}h1{font-size:18px;margin:0 0 8px}table{border-collapse:collapse}td,th{border:1px solid #b8c2cc;padding:6px 8px;font-size:12px}th{background:#12375f;color:#fff;text-align:left}.params td:first-child{font-weight:bold;background:#eef3f8}.params{margin-bottom:14px}</style></head><body><h1>Citadel Liens Report</h1><table class="params">'+paramRows.map(function(row){return '<tr><td>'+escapeHtml(row[0])+'</td><td>'+escapeHtml(row[1])+'</td></tr>'}).join('')+'</table><table><thead><tr>'+report.headers.map(function(header){return '<th>'+escapeHtml(header)+'</th>'}).join('')+'</tr></thead><tbody>'+report.rows.map(function(row){return '<tr>'+row.map(function(cell){return '<td>'+escapeHtml(cell)+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></body></html>';
   downloadReportBlob('\uFEFF'+html,'application/vnd.ms-excel;charset=utf-8','citadel-liens-report.xls');
 }
+function lienPdfText(value,maxLength){
+  var text=String(value==null?'':value).replace(/[\r\n]+/g,' ').replace(/[\u2013\u2014]/g,'-');
+  if(text.normalize)text=text.normalize('NFKD');
+  text=text.replace(/[^\x20-\x7E]/g,'').replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
+  maxLength=maxLength||80;
+  return text.length>maxLength?text.slice(0,Math.max(0,maxLength-3))+'...':text;
+}
+function buildLienReportPdf(records,params){
+  var columns=[
+    {label:'Account',x:30,max:14,value:function(row){return row.jobNumber||row.id}},
+    {label:'Customer',x:118,max:21,value:function(row){return row.customer}},
+    {label:'Region',x:250,max:16,value:function(row){return row.region}},
+    {label:'Sales Rep',x:352,max:14,value:function(row){return row.owner}},
+    {label:'Status',x:440,max:10,value:function(row){return row.status}},
+    {label:'Stage',x:505,max:10,value:function(row){return row.stage}},
+    {label:'Balance',x:570,max:13,value:function(row){return moneyLabel(row.balance)}},
+    {label:'Days',x:646,max:5,value:function(row){return row.days}},
+    {label:'First Invoice',x:684,max:15,value:function(row){return row.firstInvoice}},
+    {label:'Latest Invoice',x:780,max:15,value:function(row){return row.latestInvoice}},
+    {label:'Blaze URL',x:876,max:18,value:function(row){return row.blazeUrl||''}}
+  ];
+  var rowsPerPage=34;
+  var pages=[];
+  var index;
+  for(index=0;index<records.length;index+=rowsPerPage)pages.push(records.slice(index,index+rowsPerPage));
+  if(!pages.length)pages.push([]);
+  var total=records.reduce(function(sum,row){return sum+moneyNumber(row.balance)},0);
+  var pageStreams=pages.map(function(rows,pageIndex){
+    var commands=[];
+    var drawText=function(x,y,size,value,bold,max){commands.push('BT /'+(bold?'F2':'F1')+' '+size+' Tf '+x+' '+y+' Td ('+lienPdfText(value,max||120)+') Tj ET')};
+    drawText(30,578,16,'Citadel Liens Report',true);
+    drawText(934,578,8,'Page '+(pageIndex+1)+' of '+pages.length,false,30);
+    var headerY=550;
+    if(pageIndex===0){
+      drawText(30,562,8,'Generated: '+params.generated+' | View: '+params.view+' | Records: '+records.length+' | Total: '+moneyLabel(total),false,155);
+      drawText(30,548,8,'Region: '+params.region+' | Sales Rep: '+params.salesRep+' | Status: '+params.status+' | Stage: '+params.stage,false,155);
+      drawText(30,534,8,'Min days: '+params.minDays+' | Alerts: '+params.alertFilter+' | Group: '+params.groupBy+' | Search: '+params.search,false,155);
+      headerY=512;
+    }
+    commands.push('0.82 0.87 0.92 RG 30 '+(headerY-5)+' m 978 '+(headerY-5)+' l S');
+    columns.forEach(function(column){drawText(column.x,headerY,7,column.label,true,column.max)});
+    rows.forEach(function(row,rowIndex){
+      var y=headerY-18-rowIndex*13;
+      columns.forEach(function(column){drawText(column.x,y,7,column.value(row)||'',false,column.max)});
+      commands.push('0.9 0.92 0.94 RG 30 '+(y-4)+' m 978 '+(y-4)+' l S');
+    });
+    return commands.join('\n');
+  });
+  var objects=[null];
+  objects[1]='<< /Type /Catalog /Pages 2 0 R >>';
+  var pageIds=pageStreams.map(function(_,pageIndex){return 5+pageIndex*2});
+  objects[2]='<< /Type /Pages /Kids ['+pageIds.map(function(id){return id+' 0 R'}).join(' ')+'] /Count '+pageIds.length+' >>';
+  objects[3]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+  objects[4]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>';
+  pageStreams.forEach(function(stream,pageIndex){
+    var pageId=5+pageIndex*2;
+    var contentId=pageId+1;
+    objects[pageId]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1008 612] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents '+contentId+' 0 R >>';
+    objects[contentId]='<< /Length '+stream.length+' >>\nstream\n'+stream+'\nendstream';
+  });
+  var pdf='%PDF-1.4\n%Citadel\n';
+  var offsets=[0];
+  for(index=1;index<objects.length;index+=1){offsets[index]=pdf.length;pdf+=index+' 0 obj\n'+objects[index]+'\nendobj\n'}
+  var xrefOffset=pdf.length;
+  pdf+='xref\n0 '+objects.length+'\n0000000000 65535 f \n';
+  for(index=1;index<objects.length;index+=1)pdf+=String(offsets[index]).padStart(10,'0')+' 00000 n \n';
+  pdf+='trailer\n<< /Size '+objects.length+' /Root 1 0 R >>\nstartxref\n'+xrefOffset+'\n%%EOF';
+  return new TextEncoder().encode(pdf);
+}
+function exportLienReportPdf(){
+  var records=getReportFilteredLienRecords();
+  downloadReportBlob(buildLienReportPdf(records,getReportParameters()),'application/pdf','citadel-liens-report.pdf');
+}
 function exportLienReport(){
   var format=(document.querySelector('[data-export-format]')||{}).value||'CSV';
-  if(format==='Excel')exportLienReportExcel();else exportLienReportCsv();
+  if(format==='Excel')exportLienReportExcel();else if(format==='PDF')exportLienReportPdf();else exportLienReportCsv();
 }
 
-function openLiensReportsModal(){closeLiensReportsModal();var modal=document.createElement("div");modal.className="citadel-modal-backdrop";modal.innerHTML='<section class="citadel-report-modal" role="dialog" aria-modal="true" aria-label="Liens Reports"><div class="modal-head"><div><h3>Liens Reports</h3><p>Build daily lien reports from Blaze data, notes, alerts, and workflow fields.</p></div><button type="button" data-close-modal aria-label="Close reports">x</button></div><div class="report-callout">This report includes source lien records plus protected Citadel notes, alerts, and follow-ups.</div><section class="report-band"><div class="report-band-head"><strong>Quick Reports</strong><span>Common exports</span></div><div class="quick-report-grid"><button data-quick-report="open_alerts">Open Alerts</button><button data-quick-report="sixty_days">60+ Days</button><button data-quick-report="no_deposit">No Deposit</button><button data-quick-report="sent_to_agency">Sent to Agency</button><button data-quick-report="critical">Critical Accounts</button><button data-quick-report="current">Current View</button></div></section><section class="report-custom"><div class="report-band-head"><strong>Custom Report</strong><span>Filters, grouping, and export format</span></div><div class="report-form-grid"><label>Region<select data-report-filter="region">'+renderSelectOptions('All regions',getLienRegions(),'All regions')+'</select></label><label>Sales Rep<select data-report-filter="owner">'+renderSelectOptions('All sales reps',getLienOwners(),'All sales reps')+'</select></label><label>Status<select data-report-filter="status">'+renderSelectOptions('All statuses',LIEN_STATUS_OPTIONS,'All statuses')+'</select></label><label>Stage<select data-report-filter="stage">'+renderSelectOptions('All stages',LIEN_STAGE_OPTIONS,'All stages')+'</select></label><label>Min Days Past Due<input data-report-filter="minDays" placeholder="Any" type="number"></label><label>Alert Filter<select data-report-filter="alertFilter"><option>All alerts</option><option>Open alerts</option><option>No alert set</option></select></label><label>Group By<select data-report-filter="groupBy"><option>No grouping</option><option>Region</option><option>Sales Rep</option><option>Stage</option></select></label><label>Search Text<input data-report-filter="search" placeholder="Name, lien, region"></label></div></section><div class="report-summary-row"><div class="report-parameters" data-report-parameters></div><div class="report-total"><strong data-report-count>'+escapeHtml(getVisibleLienRecords().length)+' records</strong><span>Current Liens view</span><em data-report-balance>View total '+escapeHtml(moneyLabel(getVisibleLienRecords().reduce(function(sum,row){return sum+moneyNumber(row.balance)},0)))+'</em></div></div><div class="modal-actions"><button type="button" data-report-reset>Reset</button><span></span><select data-export-format><option>CSV</option><option>Excel</option></select><button type="button" data-close-modal>Cancel</button><button type="button" data-report-export>Export</button></div></section>';modal.addEventListener("click",function(event){var quick=event.target.closest('[data-quick-report]');if(quick){setQuickLienReport(quick.getAttribute('data-quick-report'));return}if(event.target.closest('[data-report-reset]')){closeLiensReportsModal();openLiensReportsModal();return}if(event.target.closest('[data-report-export]')){exportLienReport();return}if(event.target===modal||event.target.closest("[data-close-modal]"))closeLiensReportsModal()});modal.addEventListener('input',updateReportSummary);modal.addEventListener('change',updateReportSummary);document.body.appendChild(modal);updateReportSummary()}
+function openLiensReportsModal(){closeLiensReportsModal();var modal=document.createElement("div");modal.className="citadel-modal-backdrop";modal.innerHTML='<section class="citadel-report-modal" role="dialog" aria-modal="true" aria-label="Liens Reports"><div class="modal-head"><div><h3>Liens Reports</h3><p>Build daily lien reports from Blaze data, notes, alerts, and workflow fields.</p></div><button type="button" data-close-modal aria-label="Close reports">x</button></div><div class="report-callout">This report includes source lien records plus protected Citadel notes, alerts, and follow-ups.</div><section class="report-band"><div class="report-band-head"><strong>Quick Reports</strong><span>Common exports</span></div><div class="quick-report-grid"><button data-quick-report="open_alerts">Open Alerts</button><button data-quick-report="sixty_days">60+ Days</button><button data-quick-report="no_deposit">No Deposit</button><button data-quick-report="sent_to_agency">Sent to Agency</button><button data-quick-report="critical">Critical Accounts</button><button data-quick-report="current">Current View</button></div></section><section class="report-custom"><div class="report-band-head"><strong>Custom Report</strong><span>Filters, grouping, and export format</span></div><div class="report-form-grid"><label>Region<select data-report-filter="region">'+renderSelectOptions('All regions',getLienRegions(),'All regions')+'</select></label><label>Sales Rep<select data-report-filter="owner">'+renderSelectOptions('All sales reps',getLienOwners(),'All sales reps')+'</select></label><label>Status<select data-report-filter="status">'+renderSelectOptions('All statuses',LIEN_STATUS_OPTIONS,'All statuses')+'</select></label><label>Stage<select data-report-filter="stage">'+renderSelectOptions('All stages',LIEN_STAGE_OPTIONS,'All stages')+'</select></label><label>Min Days Past Due<input data-report-filter="minDays" placeholder="Any" type="number"></label><label>Alert Filter<select data-report-filter="alertFilter"><option>All alerts</option><option>Open alerts</option><option>No alert set</option></select></label><label>Group By<select data-report-filter="groupBy"><option>No grouping</option><option>Region</option><option>Sales Rep</option><option>Stage</option></select></label><label>Search Text<input data-report-filter="search" placeholder="Name, lien, region"></label></div></section><div class="report-summary-row"><div class="report-parameters" data-report-parameters></div><div class="report-total"><strong data-report-count>'+escapeHtml(getVisibleLienRecords().length)+' records</strong><span>Current Liens view</span><em data-report-balance>View total '+escapeHtml(moneyLabel(getVisibleLienRecords().reduce(function(sum,row){return sum+moneyNumber(row.balance)},0)))+'</em></div></div><div class="modal-actions"><button type="button" data-report-reset>Reset</button><span></span><select data-export-format aria-label="Export format"><option>CSV</option><option>Excel</option><option>PDF</option></select><button type="button" data-close-modal>Cancel</button><button type="button" data-report-export>Export</button></div></section>';modal.addEventListener("click",function(event){var quick=event.target.closest('[data-quick-report]');if(quick){setQuickLienReport(quick.getAttribute('data-quick-report'));return}if(event.target.closest('[data-report-reset]')){closeLiensReportsModal();openLiensReportsModal();return}if(event.target.closest('[data-report-export]')){exportLienReport();return}if(event.target===modal||event.target.closest("[data-close-modal]"))closeLiensReportsModal()});modal.addEventListener('input',updateReportSummary);modal.addEventListener('change',updateReportSummary);document.body.appendChild(modal);updateReportSummary()}
 function closeLiensReportsModal(){document.querySelectorAll(".citadel-modal-backdrop").forEach(function(item){item.remove()})}
 
 
