@@ -1170,6 +1170,12 @@ function collectionJobLinkHtml(record){
   if(!/^https?:\/\//i.test(url))return escapeHtml(url||'-');
   return '<a class="collection-job-link" href="'+escapeHtml(url)+'" target="_blank" rel="noopener noreferrer">Open job</a>'
 }
+function collectionJobNumberLinkHtml(record){
+  var label=record.jobNumber||record.id;
+  var url=String(record.jobLink||'').trim();
+  if(/^https?:\/\//i.test(url))return '<a class="record-link" href="'+escapeHtml(url)+'" target="_blank" rel="noopener">'+escapeHtml(label)+'</a>';
+  return '<a class="record-link record-link-disabled" href="#" title="Job URL not included in the Liens source report">'+escapeHtml(label)+'</a>'
+}
 function renderCollectionRelatedContacts(record){
   var links=getCollectionLinks(record.id);
   if(!links.length)return '<p class="liens-empty">No contacts or attorneys linked yet.</p>';
@@ -1186,7 +1192,7 @@ function renderCollectionAccountsWorkspace(){
   var current=collectionsData.records[collectionsData.selectedIndex];
   var selected=rows.find(function(record){return current&&record.id===current.id})||rows[0]||null;
   if(selected)collectionsData.selectedIndex=collectionsData.records.indexOf(selected);
-  var table='<div class="collections-table" role="table"><div class="collections-table-head" role="row"><span>Job / Customer</span><span>Region / Rep</span><span>Stage / Aging</span><span>Agency / Date</span><span>Outstanding</span><span>We Receive</span></div>'+(rows.length?rows.map(function(record){var index=collectionsData.records.indexOf(record);return '<div class="collections-row'+(index===collectionsData.selectedIndex?' active':'')+'" data-collection-index="'+index+'" role="row" tabindex="0"><span><strong>'+escapeHtml(record.jobNumber||record.id)+'</strong><em>'+escapeHtml(record.customer)+'</em></span><span><strong>'+escapeHtml(record.region||'-')+'</strong><em>'+escapeHtml(record.salesRep||'-')+'</em></span><span><strong>'+escapeHtml(record.currentStage||'-')+'</strong><em>'+escapeHtml(record.agingDays+' days')+'</em></span><span><strong>'+escapeHtml(record.agency||'-')+'</strong><em>'+escapeHtml(record.sentDate||'-')+'</em></span><span>'+escapeHtml(moneyLabel(record.amountOutstanding))+'</span><span>'+escapeHtml(moneyLabel(record.amountWeReceive))+'</span></div>'}).join(''):'<p class="collections-empty-table">No collection jobs match this view.</p>')+'</div>';
+  var table='<div class="collections-table" role="table"><div class="collections-table-head" role="row"><span>Job / Customer</span><span>Region / Rep</span><span>Stage / Aging</span><span>Agency / Date</span><span>Outstanding</span><span>We Receive</span></div>'+(rows.length?rows.map(function(record){var index=collectionsData.records.indexOf(record);return '<div class="collections-row'+(index===collectionsData.selectedIndex?' active':'')+'" data-collection-index="'+index+'" role="row" tabindex="0"><span>'+collectionJobNumberLinkHtml(record)+'<em>'+escapeHtml(record.customer)+'</em></span><span><strong>'+escapeHtml(record.region||'-')+'</strong><em>'+escapeHtml(record.salesRep||'-')+'</em></span><span><strong>'+escapeHtml(record.currentStage||'-')+'</strong><em>'+escapeHtml(record.agingDays+' days')+'</em></span><span><strong>'+escapeHtml(record.agency||'-')+'</strong><em>'+escapeHtml(record.sentDate||'-')+'</em></span><span>'+escapeHtml(moneyLabel(record.amountOutstanding))+'</span><span>'+escapeHtml(moneyLabel(record.amountWeReceive))+'</span></div>'}).join(''):'<p class="collections-empty-table">No collection jobs match this view.</p>')+'</div>';
   var detail=selected?renderCollectionRecordDetail(selected):'<aside class="liens-detail collections-detail"><div class="collections-empty-detail"><h3>No Collection Agency records</h3><p>Records appear here automatically when their Liens status is set to Collection Agency.</p></div></aside>';
   return '<div class="liens-workspace"><section class="liens-records"><div class="liens-section-head"><div><h3>Collection Jobs</h3><p>Track source job details, agency placement, recovery, and receipt.</p></div><strong>'+escapeHtml(rows.length)+' showing</strong></div>'+table+'</section>'+detail+'</div>'
 }
@@ -1324,6 +1330,7 @@ function bindCollectionsPage(){
     if(event.target.closest('[data-edit-contact]')){openBusinessContactModal(collectionsData.contacts[collectionsData.selectedContactIndex]);return}
     if(event.target.closest('[data-collection-reports]')){openCollectionsReportsModal();return}
     var entry=event.target.closest('[data-workspace-entry]');if(entry){openWorkspaceEntryModal('collections',entry.getAttribute('data-workspace-entry'));return}
+    var recordLink=event.target.closest('a.record-link');if(recordLink&&!recordLink.classList.contains('record-link-disabled'))return;if(recordLink)event.preventDefault();
     var collectionRow=event.target.closest('[data-collection-index]');if(collectionRow){collectionsData.selectedIndex=Number(collectionRow.getAttribute('data-collection-index'));renderCollectionsPage();return}
     var contactRow=event.target.closest('[data-contact-index]');if(contactRow){collectionsData.selectedContactIndex=Number(contactRow.getAttribute('data-contact-index'));renderCollectionsPage()}
   });
