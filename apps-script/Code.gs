@@ -981,10 +981,29 @@ function runPaymentImport(options) {
   }
 }
 
+function readPaymentImportLogs_() {
+  const sheet = getRequiredSheet_(getPaymentsSpreadsheetId_(), SHEETS.paymentImportLog);
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return [];
+
+  const headers = values[0].map(normalizeHeader_);
+  return values.slice(1)
+    .filter(function(row) { return row.some(function(cell) { return cell !== '' && cell !== null; }); })
+    .map(function(row) {
+      return headers.reduce(function(record, header, index) {
+        if (!header) return record;
+        const value = row[index];
+        record[header] = header === 'imported_at' && value instanceof Date
+          ? Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd h:mm a')
+          : normalizeValue_(value);
+        return record;
+      }, {});
+    });
+}
 function getPaymentImportStatus() {
   const spreadsheetId = getPaymentsSpreadsheetId_();
   setupPaymentsSheet();
-  const logs = readSheetObjects_(spreadsheetId, SHEETS.paymentImportLog);
+  const logs = readPaymentImportLogs_();
   const status = {
     staging_rows: readSheetObjects_(spreadsheetId, SHEETS.paymentImport).length,
     transactions: readSheetObjects_(spreadsheetId, SHEETS.paymentTransactions).length,
