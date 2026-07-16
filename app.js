@@ -9,7 +9,7 @@ var lienSearchTimer=null;
 var liensPageEventsBound=false;
 var LIEN_STATUS_OPTIONS=["Attorney","Attorney - Customer","Attorney - Elite","Bankruptcy","Collection Agency","Foreclosure","Lien","Lien Released","Paid In Full with Lien","Small Claims","Receivable"];
 var LIEN_STAGE_OPTIONS=["Monitor","Review","High","Critical"];
-var pages=[{id:"command-center",label:"Command Center"},{id:"region-health",label:"Region Health"},{id:"data-connections",label:"Data Connections"},{id:"inbox",label:"Inbox"},{id:"tasks",label:"Tasks"},{id:"legal",label:"Legal"},{id:"reviews",label:"Reviews"},{id:"pricing",label:"Pricing"},{id:"fleet",label:"Fleet",children:[{id:"fleet-vehicles",label:"Vehicles"},{id:"fleet-drivers",label:"Drivers"}]},{id:"contractors",label:"Contractors"},{id:"registrations",label:"Registrations"},{id:"liens",label:"Liens"},{id:"collections",label:"Collections"}];
+var pages=[{id:"command-center",label:"Command Center"},{id:"region-health",label:"Region Health"},{id:"data-connections",label:"Data Connections"},{id:"inbox",label:"Inbox"},{id:"tasks",label:"Tasks"},{id:"legal",label:"Legal"},{id:"reviews",label:"Reviews"},{id:"pricing",label:"Pricing"},{id:"fleet",label:"Fleet",children:[{id:"fleet-vehicles",label:"Vehicles"},{id:"fleet-drivers",label:"Drivers"}]},{id:"contractors",label:"Contractors"},{id:"registrations",label:"Registrations"},{id:"liens",label:"Liens"},{id:"suppliers",label:"Suppliers"},{id:"collections",label:"Collections"}];
 
 
 var LIENS_CACHE_KEY="citadel_liens_cache_v1";
@@ -64,6 +64,18 @@ var collectionView="accounts";
 var collectionFilters={attorney:"All collection agencies",stage:"All stages",region:"All regions",sort:"Highest outstanding",search:""};
 var contactFilters={type:"All contact types",state:"All states",sort:"Organization A-Z",search:""};
 var collectionSearchTimer=null;
+
+var SUPPLIERS_CACHE_KEY='citadel_suppliers_cache_v1';
+var suppliersData={records:[],contacts:[],documents:[],notes:[],alerts:[],audit:[],metrics:[],selectedIndex:0};
+var suppliersLoading=!!CITADEL_API_URL;
+var suppliersLoadError='';
+var suppliersLastUpdated='';
+var supplierWorkspaceStatus='';
+var suppliersPageEventsBound=false;
+var activeSupplierMetric='all';
+var supplierFilters={status:'All statuses',agreement:'All agreements',region:'All regions',sort:'Supplier A-Z',search:''};
+var supplierSearchTimer=null;
+
 var pricingPageEventsBound=false;
 var pricingSearchTimer=null;
 var pricingRequestId=0;
@@ -483,6 +495,10 @@ function workspaceAlertDateAfterDays(value){
   return [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")
 }
 function getWorkspaceEntryConfig(section){
+  if(section==="suppliers"){
+    var supplier=suppliersData.records[suppliersData.selectedIndex]||{};
+    return {id:supplier.id,idField:"supplier_id",label:[supplier.name,supplier.accountNumber].filter(Boolean).join(" - "),notePlaceholder:"Add a protected supplier note",noteAction:"saveSupplierNote",alertAction:"saveSupplierAlert",save:saveSupplierWorkspace}
+  }
   if(section==="collections"){
     var collection=collectionsData.records[collectionsData.selectedIndex]||{};
     return {id:collection.id,idField:"collection_id",label:[collection.jobNumber,collection.customer].filter(Boolean).join(" - "),notePlaceholder:"Add a protected collection note",noteAction:"saveCollectionNote",alertAction:"saveCollectionAlert",save:saveCollectionWorkspace}
@@ -1669,10 +1685,302 @@ function loadRegistrationsSummary(){
   });
 }
 
+
+function normalizeSupplierRecord(row){
+  return {
+    id:String(row.supplier_id||''),
+    code:row.supplier_code||'',
+    name:row.supplier_name||row.supplier_code||'',
+    type:row.supplier_type||'',
+    priority:row.priority||'',
+    status:row.status||'Active',
+    accountName:row.account_name||'',
+    customerNumber:row.customer_number||'',
+    accountNumber:row.account_number||'',
+    region:row.region||'',
+    branchNumber:row.branch_number||'',
+    branchName:row.branch_name||'',
+    address1:row.branch_address_1||'',
+    address2:row.branch_address_2||'',
+    city:row.branch_city||'',
+    state:row.branch_state||'',
+    zip:row.branch_zip||'',
+    phone:row.branch_phone||'',
+    ordersEmail:row.orders_email||'',
+    website:row.website||'',
+    portalUrl:row.portal_url||'',
+    portalUsername:row.portal_username||'',
+    agreementStatus:row.signed_agreement_status||'Not Verified',
+    agreementDate:row.agreement_date||'',
+    agreementExpiration:row.agreement_expiration_date||'',
+    renewalDate:row.renewal_date||'',
+    autoRenews:row.auto_renews||'Unknown',
+    renewalNoticeDays:row.renewal_notice_days||'',
+    paymentTerms:row.payment_terms||'',
+    currentBalance:row.current_balance||'',
+    creditLimit:row.credit_limit||'',
+    availableCredit:row.available_credit||'',
+    creditStatus:row.credit_status||'Not Verified',
+    purchasingStatus:row.purchasing_status||'Approved',
+    taxExemptStatus:row.tax_exempt_status||'Not Verified',
+    w9Status:row.w9_status||'Not Verified',
+    vendorApplicationStatus:row.vendor_application_status||'Not Verified',
+    resaleCertificateStatus:row.resale_certificate_status||'Not Verified',
+    insuranceRequired:row.insurance_required||'Unknown',
+    insuranceStatus:row.insurance_status||'Not Verified',
+    insuranceExpiration:row.insurance_expiration_date||'',
+    complianceStatus:row.compliance_status||'Needs Review',
+    complianceReviewDate:row.compliance_review_date||'',
+    nextReviewDate:row.next_review_date||'',
+    defaultShipTo:row.default_ship_to||'',
+    freightTerms:row.freight_terms||'',
+    deliveryTerms:row.delivery_terms||'',
+    minimumOrder:row.minimum_order||'',
+    notes:row.account_notes||'',
+    active:row.active,
+    contactsCount:Number(row.contacts_count||0),
+    documentsCount:Number(row.documents_count||0),
+    notesCount:Number(row.notes_count||0),
+    alertsCount:Number(row.alerts_count||0),
+    updatedAt:row.updated_at||'',
+    updatedBy:row.updated_by||''
+  }
+}
+function applySuppliersPayload(data){
+  suppliersData.records=(data.records||[]).map(normalizeSupplierRecord);
+  suppliersData.contacts=data.contacts||[];
+  suppliersData.documents=data.documents||[];
+  suppliersData.notes=data.notes||[];
+  suppliersData.alerts=data.alerts||[];
+  suppliersData.audit=data.audit||[];
+  suppliersData.metrics=data.metrics||[];
+  suppliersData.selectedIndex=0;
+  suppliersLastUpdated=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})
+}
+function saveSuppliersCache(data){try{localStorage.setItem(SUPPLIERS_CACHE_KEY,JSON.stringify({savedAt:Date.now(),data:data}))}catch(error){console.warn('Suppliers cache save failed',error)}}
+function hydrateSuppliersFromCache(){try{var cached=JSON.parse(localStorage.getItem(SUPPLIERS_CACHE_KEY)||'null');if(!cached||!cached.data)return false;applySuppliersPayload(cached.data);suppliersLoading=false;suppliersLoadError='';suppliersLastUpdated=cached.savedAt?new Date(cached.savedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):suppliersLastUpdated;return true}catch(error){console.warn('Suppliers cache read failed',error);return false}}
+function loadSuppliersData(){
+  if(!CITADEL_API_URL){suppliersLoading=false;suppliersLoadError='Supplier data service not connected';return}
+  if(!suppliersData.records.length)hydrateSuppliersFromCache();
+  suppliersLoading=true;
+  suppliersLoadError='';
+  if(activePage==='suppliers'&&!suppliersData.records.length)renderContent();
+  jsonp(CITADEL_API_URL+'?action=getSuppliers').then(function(response){
+    if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:'No supplier data returned');
+    applySuppliersPayload(response.data);
+    saveSuppliersCache(response.data);
+    suppliersLoading=false;
+    if(activePage==='suppliers'||activePage==='command-center')renderContent()
+  }).catch(function(error){
+    suppliersLoading=false;
+    suppliersLoadError='Unable to refresh supplier records';
+    console.warn('Suppliers load failed',error);
+    if(activePage==='suppliers'||activePage==='command-center')renderContent()
+  })
+}
+function supplierDateLabel(value){if(!value)return 'Not set';var text=String(value);return /^\d{4}-\d{2}-\d{2}/.test(text)?text.slice(0,10):text}
+function getSupplierRegions(){return Array.from(new Set((suppliersData.records||[]).map(function(row){return row.region}).filter(Boolean))).sort()}
+function getSupplierTypes(){return Array.from(new Set((suppliersData.records||[]).map(function(row){return row.type}).filter(Boolean))).sort()}
+function getSupplierStatuses(){return Array.from(new Set((suppliersData.records||[]).map(function(row){return row.status}).filter(Boolean))).sort()}
+function supplierAgreementMissing(row){return !/^(signed|not required)$/i.test(String(row.agreementStatus||''))}
+function supplierRenewalDue(row){var days=daysUntil(row.renewalDate||row.agreementExpiration);return days>=0&&days<=90}
+function supplierComplianceDue(row){return !/^(current|not required)$/i.test(String(row.complianceStatus||''))}
+function supplierCreditReview(row){return /review|hold|cod|not verified/i.test(String(row.creditStatus||''))}
+function getSupplierMetricStats(){
+  var records=suppliersData.records||[];
+  var metrics=suppliersData.metrics||[];
+  if(metrics.length)return metrics;
+  return [
+    {key:'open_alerts',label:'Open Alerts',value:suppliersData.alerts.length,note:'Supplier follow-up'},
+    {key:'all',label:'Suppliers',value:records.length,note:'Active accounts'},
+    {key:'agreements',label:'Agreements',value:records.filter(supplierAgreementMissing).length,note:'Missing or unverified'},
+    {key:'renewals',label:'90 Day Renewals',value:records.filter(supplierRenewalDue).length,note:'Agreement window'},
+    {key:'compliance',label:'Compliance',value:records.filter(supplierComplianceDue).length,note:'Needs review'},
+    {key:'credit',label:'Credit Review',value:records.filter(supplierCreditReview).length,note:'Terms or limit review'}
+  ]
+}
+function getVisibleSupplierRecords(){
+  var rows=(suppliersData.records||[]).slice();
+  if(activeSupplierMetric==='open_alerts')rows=rows.filter(function(row){return row.alertsCount>0});
+  if(activeSupplierMetric==='agreements')rows=rows.filter(supplierAgreementMissing);
+  if(activeSupplierMetric==='renewals')rows=rows.filter(supplierRenewalDue);
+  if(activeSupplierMetric==='compliance')rows=rows.filter(supplierComplianceDue);
+  if(activeSupplierMetric==='credit')rows=rows.filter(supplierCreditReview);
+  if(supplierFilters.status!=='All statuses')rows=rows.filter(function(row){return row.status===supplierFilters.status});
+  if(supplierFilters.agreement!=='All agreements'){
+    if(supplierFilters.agreement==='Signed')rows=rows.filter(function(row){return /^signed$/i.test(row.agreementStatus)});
+    else if(supplierFilters.agreement==='Needs agreement')rows=rows.filter(supplierAgreementMissing);
+    else rows=rows.filter(function(row){return row.agreementStatus===supplierFilters.agreement})
+  }
+  if(supplierFilters.region!=='All regions')rows=rows.filter(function(row){return row.region===supplierFilters.region});
+  var search=supplierFilters.search.toLowerCase().trim();
+  if(search)rows=rows.filter(function(row){return [row.name,row.code,row.type,row.accountName,row.accountNumber,row.customerNumber,row.region,row.branchNumber,row.city,row.state,row.paymentTerms,row.creditStatus,row.complianceStatus].join(' ').toLowerCase().indexOf(search)>-1});
+  if(supplierFilters.sort==='Renewal soon')rows.sort(function(a,b){return daysUntil(a.renewalDate||a.agreementExpiration)-daysUntil(b.renewalDate||b.agreementExpiration)});
+  else if(supplierFilters.sort==='Highest balance')rows.sort(function(a,b){return moneyNumber(b.currentBalance)-moneyNumber(a.currentBalance)});
+  else if(supplierFilters.sort==='Recently updated')rows.sort(function(a,b){return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))});
+  else rows.sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''))});
+  return rows
+}
+function getSupplierItems(type,id){return (suppliersData[type]||[]).filter(function(item){return String(item.supplier_id||'')===String(id||'')})}
+function supplierStatusTone(value){value=String(value||'').toLowerCase();if(/current|signed|approved|good standing|on file/.test(value))return 'monitor';if(/expired|hold|missing|suspended/.test(value))return 'critical';return 'review'}
+function renderSupplierContacts(record){
+  var contacts=getSupplierItems('contacts',record.id);
+  if(!contacts.length)return '<p class="empty-feed">No contacts saved yet.</p>';
+  return '<div class="supplier-item-list">'+contacts.map(function(contact){var index=suppliersData.contacts.indexOf(contact);return '<article><div><strong>'+escapeHtml(contact.contact_name||contact.email||'Unnamed contact')+'</strong><span>'+escapeHtml(contact.role_type||'Contact')+(contact.branch_number?' · Branch '+escapeHtml(contact.branch_number):'')+'</span><em>'+escapeHtml([contact.email,contact.office_phone||contact.secondary_phone].filter(Boolean).join(' · '))+'</em></div><button type="button" data-edit-supplier-contact="'+index+'">Edit</button></article>'}).join('')+'</div>'
+}
+function renderSupplierDocuments(record){
+  var documents=getSupplierItems('documents',record.id);
+  if(!documents.length)return '<p class="empty-feed">No compliance documents saved yet.</p>';
+  return '<div class="supplier-item-list">'+documents.map(function(documentRow){var index=suppliersData.documents.indexOf(documentRow);return '<article><div><strong>'+escapeHtml(documentRow.document_type||'Document')+'</strong><span>'+escapeHtml(documentRow.status||'Not Verified')+'</span><em>'+(documentRow.expiration_date?'Expires '+escapeHtml(supplierDateLabel(documentRow.expiration_date)):'No expiration set')+'</em></div><button type="button" data-edit-supplier-document="'+index+'">Edit</button></article>'}).join('')+'</div>'
+}
+function renderSupplierWorkflowList(items,emptyText,textKey,dateKey,byKey){
+  if(!items.length)return '<p class="empty-feed">'+escapeHtml(emptyText)+'</p>';
+  return items.slice().sort(function(a,b){return String(b[dateKey]||'').localeCompare(String(a[dateKey]||''))}).slice(0,5).map(function(item){return '<article><strong>'+escapeHtml(item[textKey]||'')+'</strong><span>'+escapeHtml(item[byKey]||'Team')+'</span><em>'+escapeHtml(supplierDateLabel(item[dateKey]))+'</em></article>'}).join('')
+}
+function renderSuppliersPage(){
+  if(suppliersLoading&&!suppliersData.records.length){pagePanel.className='page-panel liens-page suppliers-page loading-page';pagePanel.innerHTML='<div class="loading-card"><div class="spinner"></div><h3>Loading supplier accounts</h3><p>Connecting to protected supplier contacts, terms, agreements, and compliance records.</p></div>';return}
+  var visible=getVisibleSupplierRecords();
+  var selected=suppliersData.records[suppliersData.selectedIndex]||visible[0]||suppliersData.records[0]||{};
+  var metrics=getSupplierMetricStats();
+  pagePanel.className='page-panel liens-page suppliers-page';
+  pagePanel.innerHTML=renderModuleStatusLine(suppliersLoading?'Refreshing...':suppliersLastUpdated?'Updated '+suppliersLastUpdated:(suppliersLoadError||''))+
+    '<div class="liens-metrics">'+metrics.map(function(metric){return '<button type="button" class="lien-metric-button '+(activeSupplierMetric===metric.key?'active':'')+'" data-supplier-metric="'+escapeHtml(metric.key)+'"><span>'+escapeHtml(metric.label)+'</span><strong>'+escapeHtml(metric.value)+'</strong><em>'+escapeHtml(metric.note)+'</em></button>'}).join('')+'</div>'+
+    '<section class="liens-filter-card"><div><h3>Filters + Sort + Search</h3><p>Manage supplier contacts, account terms, agreements, credit, and compliance without duplicating accounting.</p></div><div class="supplier-filter-actions"><button type="button" data-supplier-reports>Reports</button><button type="button" data-add-supplier>Add Supplier</button></div><div class="liens-filters"><label>Status<select data-supplier-filter="status">'+renderSelectOptions('All statuses',getSupplierStatuses(),supplierFilters.status)+'</select></label><label>Agreement<select data-supplier-filter="agreement">'+renderSelectOptions('All agreements',['Signed','Needs agreement','Pending','Expired','Not Required','Not Verified'],supplierFilters.agreement)+'</select></label><label>Region<select data-supplier-filter="region">'+renderSelectOptions('All regions',getSupplierRegions(),supplierFilters.region)+'</select></label><label>Sort<select data-supplier-filter="sort"><option'+(supplierFilters.sort==='Supplier A-Z'?' selected':'')+'>Supplier A-Z</option><option'+(supplierFilters.sort==='Renewal soon'?' selected':'')+'>Renewal soon</option><option'+(supplierFilters.sort==='Highest balance'?' selected':'')+'>Highest balance</option><option'+(supplierFilters.sort==='Recently updated'?' selected':'')+'>Recently updated</option></select></label><label>Search<input data-supplier-filter="search" type="search" placeholder="Supplier, account, region" value="'+escapeHtml(supplierFilters.search)+'"></label></div></section>'+
+    '<div class="liens-workspace"><section class="liens-records"><div class="liens-section-head"><div><h3>Supplier Accounts</h3><p>Protected contact, terms, agreement, credit, and compliance records.</p></div><strong>'+escapeHtml(visible.length)+' showing</strong></div><div class="liens-table suppliers-table" role="table"><div class="liens-table-head" role="row"><span>Supplier</span><span>Region</span><span>Type</span><span>Agreement</span><span>Compliance</span><span>Credit</span></div>'+visible.map(function(record){var index=suppliersData.records.indexOf(record);return '<button type="button" class="liens-row'+(index===suppliersData.selectedIndex?' active':'')+'" data-supplier-index="'+index+'" role="row"><span><strong>'+escapeHtml(record.name||record.code)+'</strong><em>'+escapeHtml([record.accountNumber,record.branchNumber?'Branch '+record.branchNumber:''].filter(Boolean).join(' · '))+'</em></span><span>'+escapeHtml(record.region||record.state)+'</span><span>'+escapeHtml(record.type||'Not set')+'</span><span><mark class="stage-'+supplierStatusTone(record.agreementStatus)+'">'+escapeHtml(record.agreementStatus)+'</mark></span><span><mark class="stage-'+supplierStatusTone(record.complianceStatus)+'">'+escapeHtml(record.complianceStatus)+'</mark></span><span><mark class="stage-'+supplierStatusTone(record.creditStatus)+'">'+escapeHtml(record.creditStatus)+'</mark></span></button>'}).join('')+'</div></section>'+
+    '<aside class="liens-detail suppliers-detail">'+(selected.id?'<div class="liens-detail-head"><div><span>Selected supplier</span><h3>'+escapeHtml(selected.name||selected.code)+'</h3><p>'+escapeHtml(selected.type||'Supplier')+' · '+escapeHtml(selected.region||selected.state||'Region not set')+'</p></div></div><div class="liens-detail-grid"><article><span>Account Number</span><strong>'+escapeHtml(selected.accountNumber||'Not set')+'</strong></article><article><span>Branch</span><strong>'+escapeHtml(selected.branchNumber||'Not set')+'</strong></article><article><span>Status</span><strong>'+escapeHtml(selected.status)+'</strong></article><article><span>Orders Email</span><strong>'+escapeHtml(selected.ordersEmail||'Not set')+'</strong></article><article><span>Branch Phone</span><strong>'+escapeHtml(selected.phone||'Not set')+'</strong></article><article><span>Priority</span><strong>'+escapeHtml(selected.priority||'Normal')+'</strong></article></div>'+
+    '<div class="supplier-action-row"><button type="button" data-edit-supplier>Edit Supplier</button><button type="button" data-add-supplier-contact>Add Contact</button><button type="button" data-add-supplier-document>Add Document</button></div>'+
+    '<section class="liens-workflow supplier-section"><div class="card-heading"><h3>Terms + Credit</h3><span>Reference controls; accounting remains the payment system</span></div><div class="liens-detail-grid"><article><span>Payment Terms</span><strong>'+escapeHtml(selected.paymentTerms||'Not set')+'</strong></article><article><span>Current Balance</span><strong>'+escapeHtml(selected.currentBalance===''?'Not set':moneyLabel(selected.currentBalance))+'</strong></article><article><span>Credit Limit</span><strong>'+escapeHtml(selected.creditLimit===''?'Not set':moneyLabel(selected.creditLimit))+'</strong></article><article><span>Available Credit</span><strong>'+escapeHtml(selected.availableCredit===''?'Not set':moneyLabel(selected.availableCredit))+'</strong></article><article><span>Credit Status</span><strong>'+escapeHtml(selected.creditStatus)+'</strong></article><article><span>Purchasing Status</span><strong>'+escapeHtml(selected.purchasingStatus)+'</strong></article></div></section>'+
+    '<section class="liens-workflow supplier-section"><div class="card-heading"><h3>Agreement + Compliance</h3><span>Renewal and document readiness</span></div><div class="liens-detail-grid"><article><span>Signed Agreement</span><strong>'+escapeHtml(selected.agreementStatus)+'</strong></article><article><span>Agreement Date</span><strong>'+escapeHtml(supplierDateLabel(selected.agreementDate))+'</strong></article><article><span>Expiration</span><strong>'+escapeHtml(supplierDateLabel(selected.agreementExpiration))+'</strong></article><article><span>Renewal Date</span><strong>'+escapeHtml(supplierDateLabel(selected.renewalDate))+'</strong></article><article><span>Auto Renews</span><strong>'+escapeHtml(selected.autoRenews)+'</strong></article><article><span>Compliance</span><strong>'+escapeHtml(selected.complianceStatus)+'</strong></article><article><span>Insurance</span><strong>'+escapeHtml(selected.insuranceStatus)+'</strong></article><article><span>Insurance Expiration</span><strong>'+escapeHtml(supplierDateLabel(selected.insuranceExpiration))+'</strong></article><article><span>Next Review</span><strong>'+escapeHtml(supplierDateLabel(selected.nextReviewDate))+'</strong></article></div></section>'+
+    '<section class="liens-workflow supplier-section"><div class="card-heading"><h3>Contacts</h3><span>'+escapeHtml(selected.contactsCount)+' saved</span></div>'+renderSupplierContacts(selected)+'</section>'+
+    '<section class="liens-workflow supplier-section"><div class="card-heading"><h3>Documents</h3><span>'+escapeHtml(selected.documentsCount)+' saved</span></div>'+renderSupplierDocuments(selected)+'</section>'+
+    '<section class="liens-workflow supplier-section"><div class="card-heading"><h3>Citadel Workflow</h3><span>Protected supplier history</span></div><div class="workspace-status">'+escapeHtml(supplierWorkspaceStatus)+'</div><div class="workflow-entry-actions"><button type="button" data-workspace-entry="note">Add Note</button><button type="button" data-workspace-entry="alert">Set Alert</button></div><div class="liens-workspace-feed"><h4>Recent Notes</h4>'+renderSupplierWorkflowList(getSupplierItems('notes',selected.id),'No notes yet.','note_text','created_at','created_by')+'<h4>Open Alerts</h4>'+renderSupplierWorkflowList(getSupplierItems('alerts',selected.id),'No alerts yet.','alert_text','due_date','created_by')+'</div></section>':'<div class="empty-panel"><h3>No supplier records</h3><p>Add the first supplier account to begin.</p></div>')+'</aside></div>'
+}
+
+
+function supplierAccountPayload(record){
+  record=record||{};
+  return {
+    supplier_id:record.id||'',supplier_code:record.code||'',supplier_name:record.name||'',supplier_type:record.type||'',priority:record.priority||'',status:record.status||'Active',
+    account_name:record.accountName||'',customer_number:record.customerNumber||'',account_number:record.accountNumber||'',region:record.region||'',branch_number:record.branchNumber||'',branch_name:record.branchName||'',
+    branch_address_1:record.address1||'',branch_address_2:record.address2||'',branch_city:record.city||'',branch_state:record.state||'',branch_zip:record.zip||'',branch_phone:record.phone||'',
+    orders_email:record.ordersEmail||'',website:record.website||'',portal_url:record.portalUrl||'',portal_username:record.portalUsername||'',signed_agreement_status:record.agreementStatus||'Not Verified',
+    agreement_date:record.agreementDate||'',agreement_expiration_date:record.agreementExpiration||'',renewal_date:record.renewalDate||'',auto_renews:record.autoRenews||'Unknown',renewal_notice_days:record.renewalNoticeDays||'',
+    payment_terms:record.paymentTerms||'',current_balance:record.currentBalance||'',credit_limit:record.creditLimit||'',available_credit:record.availableCredit||'',credit_status:record.creditStatus||'Not Verified',
+    purchasing_status:record.purchasingStatus||'Approved',tax_exempt_status:record.taxExemptStatus||'Not Verified',w9_status:record.w9Status||'Not Verified',vendor_application_status:record.vendorApplicationStatus||'Not Verified',
+    resale_certificate_status:record.resaleCertificateStatus||'Not Verified',insurance_required:record.insuranceRequired||'Unknown',insurance_status:record.insuranceStatus||'Not Verified',insurance_expiration_date:record.insuranceExpiration||'',
+    compliance_status:record.complianceStatus||'Needs Review',compliance_review_date:record.complianceReviewDate||'',next_review_date:record.nextReviewDate||'',default_ship_to:record.defaultShipTo||'',freight_terms:record.freightTerms||'',
+    delivery_terms:record.deliveryTerms||'',minimum_order:record.minimumOrder||'',account_notes:record.notes||'',active:record.active===false?'No':'Yes'
+  }
+}
+function supplierFormPayload(form){var payload={};new FormData(form).forEach(function(value,key){payload[key]=String(value).trim()});return payload}
+function supplierModalSelect(placeholder,values,selected){return renderSelectOptions(placeholder,values,selected||placeholder)}
+function openSupplierAccountModal(record){
+  closeLiensReportsModal();
+  var data=supplierAccountPayload(record);
+  var modal=document.createElement('div');modal.className='citadel-modal-backdrop';
+  modal.innerHTML='<section class="workspace-entry-modal business-contact-modal supplier-account-modal" role="dialog" aria-modal="true" aria-label="Supplier Account"><div class="modal-head"><div><h3>'+(record?'Edit Supplier Account':'Add Supplier Account')+'</h3><p>Maintain contacts, commercial terms, agreements, credit controls, and compliance. Payments remain in accounting.</p></div><button type="button" data-close-modal aria-label="Close">x</button></div><form data-supplier-account-form><input type="hidden" name="supplier_id" value="'+escapeHtml(data.supplier_id)+'"><div class="business-contact-form-grid supplier-account-form-grid">'+
+    '<fieldset><legend>Supplier + Branch</legend><label>Supplier Name *<input name="supplier_name" required value="'+escapeHtml(data.supplier_name)+'"></label><label>Supplier Code<input name="supplier_code" value="'+escapeHtml(data.supplier_code)+'"></label><div><label>Type<input name="supplier_type" value="'+escapeHtml(data.supplier_type)+'"></label><label>Priority<select name="priority">'+supplierModalSelect('Not set',['Critical','High','Normal','Low'],data.priority||'Not set')+'</select></label><label>Status<select name="status">'+supplierModalSelect('Active',['Active','On Hold','Closed','Prospective'],data.status)+'</select></label></div><label>Account Name<input name="account_name" value="'+escapeHtml(data.account_name)+'"></label><div><label>Account Number<input name="account_number" value="'+escapeHtml(data.account_number)+'"></label><label>Customer Number<input name="customer_number" value="'+escapeHtml(data.customer_number)+'"></label><label>Branch Number<input name="branch_number" value="'+escapeHtml(data.branch_number)+'"></label></div><div><label>Region<input name="region" value="'+escapeHtml(data.region)+'"></label><label>Branch Name<input name="branch_name" value="'+escapeHtml(data.branch_name)+'"></label><label>Branch Phone<input name="branch_phone" value="'+escapeHtml(data.branch_phone)+'"></label></div><label>Address 1<input name="branch_address_1" value="'+escapeHtml(data.branch_address_1)+'"></label><label>Address 2<input name="branch_address_2" value="'+escapeHtml(data.branch_address_2)+'"></label><div><label>City<input name="branch_city" value="'+escapeHtml(data.branch_city)+'"></label><label>State<input name="branch_state" maxlength="2" value="'+escapeHtml(data.branch_state)+'"></label><label>ZIP<input name="branch_zip" value="'+escapeHtml(data.branch_zip)+'"></label></div><label>Orders Email<input name="orders_email" type="email" value="'+escapeHtml(data.orders_email)+'"></label><label>Website<input name="website" type="url" placeholder="https://" value="'+escapeHtml(data.website)+'"></label><label>Supplier Portal<input name="portal_url" type="url" placeholder="https://" value="'+escapeHtml(data.portal_url)+'"></label><label>Portal Username (no password)<input name="portal_username" value="'+escapeHtml(data.portal_username)+'"></label></fieldset>'+
+    '<fieldset><legend>Agreement + Renewal</legend><label>Signed Agreement<select name="signed_agreement_status">'+supplierModalSelect('Not Verified',['Signed','Pending','Expired','Not Required','Not Verified'],data.signed_agreement_status)+'</select></label><div><label>Agreement Date<input name="agreement_date" type="date" value="'+escapeHtml(data.agreement_date)+'"></label><label>Expiration Date<input name="agreement_expiration_date" type="date" value="'+escapeHtml(data.agreement_expiration_date)+'"></label></div><div><label>Renewal Date<input name="renewal_date" type="date" value="'+escapeHtml(data.renewal_date)+'"></label><label>Auto Renews<select name="auto_renews">'+supplierModalSelect('Unknown',['Yes','No','Unknown'],data.auto_renews)+'</select></label><label>Notice Days<input name="renewal_notice_days" type="number" min="0" value="'+escapeHtml(data.renewal_notice_days)+'"></label></div><label>Payment Terms<input name="payment_terms" placeholder="Net 30, Net 45, COD..." value="'+escapeHtml(data.payment_terms)+'"></label><div><label>Current Balance<input name="current_balance" type="number" step="0.01" value="'+escapeHtml(data.current_balance)+'"></label><label>Credit Limit<input name="credit_limit" type="number" step="0.01" value="'+escapeHtml(data.credit_limit)+'"></label><label>Available Credit<input name="available_credit" type="number" step="0.01" value="'+escapeHtml(data.available_credit)+'"></label></div><div><label>Credit Status<select name="credit_status">'+supplierModalSelect('Not Verified',['Good Standing','Review','Credit Hold','COD','Not Verified'],data.credit_status)+'</select></label><label>Purchasing Status<select name="purchasing_status">'+supplierModalSelect('Approved',['Approved','Restricted','Suspended','Closed'],data.purchasing_status)+'</select></label><label>Minimum Order<input name="minimum_order" type="number" step="0.01" value="'+escapeHtml(data.minimum_order)+'"></label></div><label>Freight Terms<input name="freight_terms" placeholder="Prepaid, collect, allowance..." value="'+escapeHtml(data.freight_terms)+'"></label><label>Delivery Terms<input name="delivery_terms" value="'+escapeHtml(data.delivery_terms)+'"></label><label>Default Ship-To<input name="default_ship_to" value="'+escapeHtml(data.default_ship_to)+'"></label></fieldset>'+
+    '<fieldset><legend>Compliance</legend><div><label>Compliance Status<select name="compliance_status">'+supplierModalSelect('Needs Review',['Current','Needs Review','Missing Documents','Expired','Not Required'],data.compliance_status)+'</select></label><label>Review Date<input name="compliance_review_date" type="date" value="'+escapeHtml(data.compliance_review_date)+'"></label><label>Next Review<input name="next_review_date" type="date" value="'+escapeHtml(data.next_review_date)+'"></label></div><div><label>Tax Exempt<select name="tax_exempt_status">'+supplierModalSelect('Not Verified',['On File','Pending','Expired','Not Required','Not Verified'],data.tax_exempt_status)+'</select></label><label>W-9<select name="w9_status">'+supplierModalSelect('Not Verified',['On File','Pending','Expired','Not Required','Not Verified'],data.w9_status)+'</select></label><label>Vendor Application<select name="vendor_application_status">'+supplierModalSelect('Not Verified',['On File','Pending','Expired','Not Required','Not Verified'],data.vendor_application_status)+'</select></label></div><div><label>Resale Certificate<select name="resale_certificate_status">'+supplierModalSelect('Not Verified',['On File','Pending','Expired','Not Required','Not Verified'],data.resale_certificate_status)+'</select></label><label>Insurance Required<select name="insurance_required">'+supplierModalSelect('Unknown',['Yes','No','Unknown'],data.insurance_required)+'</select></label><label>Insurance Status<select name="insurance_status">'+supplierModalSelect('Not Verified',['On File','Pending','Expired','Not Required','Not Verified'],data.insurance_status)+'</select></label></div><label>Insurance Expiration<input name="insurance_expiration_date" type="date" value="'+escapeHtml(data.insurance_expiration_date)+'"></label></fieldset>'+
+    '<fieldset><legend>Account Notes</legend><label>Notes<textarea name="account_notes" rows="7" placeholder="Account setup, purchasing restrictions, delivery considerations, compliance follow-up...">'+escapeHtml(data.account_notes)+'</textarea></label><label>Active<select name="active">'+supplierModalSelect('Yes',['Yes','No'],data.active)+'</select></label></fieldset></div><div class="workspace-entry-actions"><button type="button" data-close-modal>Cancel</button><button type="submit" class="primary">Save Supplier</button></div></form></section>';
+  modal.addEventListener('click',function(event){if(event.target===modal||event.target.closest('[data-close-modal]'))closeLiensReportsModal()});
+  modal.querySelector('[data-supplier-account-form]').addEventListener('submit',function(event){event.preventDefault();var form=event.currentTarget;var payload=supplierFormPayload(form);if(!payload.supplier_name){form.elements.supplier_name.focus();return}closeLiensReportsModal();saveSupplierWorkspace('saveSupplierAccount',payload)});
+  document.body.appendChild(modal)
+}
+function openSupplierContactModal(contact){
+  closeLiensReportsModal();
+  var selected=suppliersData.records[suppliersData.selectedIndex]||{};contact=contact||{};
+  var modal=document.createElement('div');modal.className='citadel-modal-backdrop';
+  modal.innerHTML='<section class="workspace-entry-modal business-contact-modal supplier-contact-modal" role="dialog" aria-modal="true" aria-label="Supplier Contact"><div class="modal-head"><div><h3>'+(contact.contact_id?'Edit Supplier Contact':'Add Supplier Contact')+'</h3><p>'+escapeHtml(selected.name||'Supplier')+'</p></div><button type="button" data-close-modal aria-label="Close">x</button></div><form data-supplier-contact-form><input type="hidden" name="supplier_id" value="'+escapeHtml(selected.id||contact.supplier_id||'')+'"><input type="hidden" name="contact_id" value="'+escapeHtml(contact.contact_id||'')+'"><div class="business-contact-form-grid"><label>Role<select name="role_type">'+supplierModalSelect('Select role',['Branch Manager','Branch Representative','Regional Sales Manager','Accounting','Orders','Credit Department','Other'],contact.role_type||'Select role')+'</select></label><label>Contact Name<input name="contact_name" value="'+escapeHtml(contact.contact_name||'')+'"></label><label>Title / Department<input name="title_department" value="'+escapeHtml(contact.title_department||'')+'"></label><label>Email<input name="email" type="email" value="'+escapeHtml(contact.email||'')+'"></label><label>Secondary Email<input name="secondary_email" type="email" value="'+escapeHtml(contact.secondary_email||'')+'"></label><label>Office Phone<input name="office_phone" value="'+escapeHtml(contact.office_phone||'')+'"></label><label>Secondary Phone<input name="secondary_phone" value="'+escapeHtml(contact.secondary_phone||'')+'"></label><label>Extension<input name="extension" value="'+escapeHtml(contact.extension||'')+'"></label><label>Fax<input name="fax" value="'+escapeHtml(contact.fax||'')+'"></label><label>Branch Number<input name="branch_number" value="'+escapeHtml(contact.branch_number||selected.branchNumber||'')+'"></label><label>Region<input name="region" value="'+escapeHtml(contact.region||selected.region||'')+'"></label><label>Preferred Contact<select name="preferred_contact_method">'+supplierModalSelect('Not set',['Email','Phone','Secondary Phone','Mail'],contact.preferred_contact_method||'Not set')+'</select></label><label class="contact-notes-field">Notes<textarea name="notes" rows="4">'+escapeHtml(contact.notes||'')+'</textarea></label><input type="hidden" name="active" value="true"></div><div class="workspace-entry-actions"><button type="button" data-close-modal>Cancel</button><button type="submit" class="primary">Save Contact</button></div></form></section>';
+  modal.addEventListener('click',function(event){if(event.target===modal||event.target.closest('[data-close-modal]'))closeLiensReportsModal()});
+  modal.querySelector('[data-supplier-contact-form]').addEventListener('submit',function(event){event.preventDefault();var payload=supplierFormPayload(event.currentTarget);if(!payload.contact_name&&!payload.email){event.currentTarget.elements.contact_name.focus();return}closeLiensReportsModal();saveSupplierWorkspace('saveSupplierContact',payload)});
+  document.body.appendChild(modal)
+}
+function openSupplierDocumentModal(documentRow){
+  closeLiensReportsModal();
+  var selected=suppliersData.records[suppliersData.selectedIndex]||{};documentRow=documentRow||{};
+  var modal=document.createElement('div');modal.className='citadel-modal-backdrop';
+  modal.innerHTML='<section class="workspace-entry-modal business-contact-modal supplier-document-modal" role="dialog" aria-modal="true" aria-label="Supplier Document"><div class="modal-head"><div><h3>'+(documentRow.document_id?'Edit Supplier Document':'Add Supplier Document')+'</h3><p>'+escapeHtml(selected.name||'Supplier')+'</p></div><button type="button" data-close-modal aria-label="Close">x</button></div><form data-supplier-document-form><input type="hidden" name="supplier_id" value="'+escapeHtml(selected.id||documentRow.supplier_id||'')+'"><input type="hidden" name="document_id" value="'+escapeHtml(documentRow.document_id||'')+'"><div class="business-contact-form-grid"><label>Document Type *<select name="document_type" required>'+supplierModalSelect('Select type',['Signed Agreement','W-9','Tax Exemption','Resale Certificate','Vendor Application','Certificate of Insurance','Credit Application','Pricing Agreement','Other'],documentRow.document_type||'Select type')+'</select></label><label>Status<select name="status">'+supplierModalSelect('Not Verified',['On File','Pending','Expired','Not Required','Not Verified'],documentRow.status||'Not Verified')+'</select></label><label>Issue Date<input name="issue_date" type="date" value="'+escapeHtml(documentRow.issue_date||'')+'"></label><label>Expiration Date<input name="expiration_date" type="date" value="'+escapeHtml(documentRow.expiration_date||'')+'"></label><label>Renewal Date<input name="renewal_date" type="date" value="'+escapeHtml(documentRow.renewal_date||'')+'"></label><label>Document Link<input name="document_url" type="url" placeholder="https://" value="'+escapeHtml(documentRow.document_url||'')+'"></label><label class="contact-notes-field">Notes<textarea name="notes" rows="4">'+escapeHtml(documentRow.notes||'')+'</textarea></label><input type="hidden" name="active" value="true"></div><div class="workspace-entry-actions"><button type="button" data-close-modal>Cancel</button><button type="submit" class="primary">Save Document</button></div></form></section>';
+  modal.addEventListener('click',function(event){if(event.target===modal||event.target.closest('[data-close-modal]'))closeLiensReportsModal()});
+  modal.querySelector('[data-supplier-document-form]').addEventListener('submit',function(event){event.preventDefault();var payload=supplierFormPayload(event.currentTarget);if(payload.document_type==='Select type'){event.currentTarget.elements.document_type.focus();return}closeLiensReportsModal();saveSupplierWorkspace('saveSupplierDocument',payload)});
+  document.body.appendChild(modal)
+}
+function saveSupplierWorkspace(action,payload){
+  supplierWorkspaceStatus='Saving...';if(activePage==='suppliers')renderContent();
+  var params=Object.keys(payload).map(function(key){return encodeURIComponent(key)+'='+encodeURIComponent(payload[key]||'')}).join('&');
+  return jsonp(CITADEL_API_URL+'?action='+encodeURIComponent(action)+'&'+params).then(function(response){
+    if(!response||!response.ok)throw new Error(response&&response.error?response.error:'Save failed');
+    supplierWorkspaceStatus='Saved';return loadSuppliersData()
+  }).catch(function(error){supplierWorkspaceStatus='Save failed';console.warn('Supplier workspace save failed',error);if(activePage==='suppliers')renderContent()})
+}
+function supplierReportQuickRows(type){
+  var rows=(suppliersData.records||[]).slice();
+  if(type==='current')return getVisibleSupplierRecords();
+  if(type==='open_alerts')return rows.filter(function(row){return row.alertsCount>0});
+  if(type==='agreements')return rows.filter(supplierAgreementMissing);
+  if(type==='renewals')return rows.filter(supplierRenewalDue);
+  if(type==='compliance')return rows.filter(supplierComplianceDue);
+  if(type==='credit')return rows.filter(supplierCreditReview);
+  return rows
+}
+function supplierReportFilteredRows(modal){
+  var quick=modal.getAttribute('data-active-quick-report')||'current';
+  if(quick!=='custom')return supplierReportQuickRows(quick);
+  var rows=(suppliersData.records||[]).slice();
+  var value=function(key){var field=modal.querySelector('[data-supplier-report-filter="'+key+'"]');return field?field.value:''};
+  var region=value('region'),status=value('status'),agreement=value('agreement'),compliance=value('compliance'),credit=value('credit'),type=value('type'),search=value('search').toLowerCase().trim();
+  if(region&&region!=='All regions')rows=rows.filter(function(row){return row.region===region});
+  if(status&&status!=='All statuses')rows=rows.filter(function(row){return row.status===status});
+  if(agreement&&agreement!=='All agreements')rows=agreement==='Needs agreement'?rows.filter(supplierAgreementMissing):rows.filter(function(row){return row.agreementStatus===agreement});
+  if(compliance&&compliance!=='All compliance')rows=rows.filter(function(row){return row.complianceStatus===compliance});
+  if(credit&&credit!=='All credit statuses')rows=rows.filter(function(row){return row.creditStatus===credit});
+  if(type&&type!=='All types')rows=rows.filter(function(row){return row.type===type});
+  if(search)rows=rows.filter(function(row){return [row.name,row.code,row.accountNumber,row.region,row.type,row.paymentTerms].join(' ').toLowerCase().indexOf(search)>-1});
+  return rows
+}
+function supplierReportTable(rows){
+  return [['Supplier','Code','Type','Region','Account Number','Branch','Agreement','Agreement Expiration','Renewal Date','Payment Terms','Current Balance','Credit Limit','Credit Status','Compliance','Insurance Expiration','Contacts','Open Alerts']].concat(rows.map(function(row){return [row.name,row.code,row.type,row.region,row.accountNumber,row.branchNumber,row.agreementStatus,row.agreementExpiration,row.renewalDate,row.paymentTerms,row.currentBalance,row.creditLimit,row.creditStatus,row.complianceStatus,row.insuranceExpiration,row.contactsCount,row.alertsCount]}))
+}
+function updateSupplierReportSummary(){
+  var modal=document.querySelector('.citadel-report-modal[aria-label="Suppliers Reports"]');if(!modal)return;
+  var rows=supplierReportFilteredRows(modal);var quick=modal.getAttribute('data-active-quick-report')||'current';
+  var labels={current:'Current View',open_alerts:'Open Alerts',agreements:'Missing Agreements',renewals:'90 Day Renewals',compliance:'Compliance Review',credit:'Credit Review',custom:'Custom Report'};
+  var count=modal.querySelector('[data-supplier-report-count]');if(count)count.textContent=rows.length+' records';
+  var parameters=modal.querySelector('[data-supplier-report-parameters]');if(parameters)parameters.innerHTML='<strong>Report parameters</strong><span>View: '+escapeHtml(labels[quick]||'Custom Report')+'</span><span>Region: '+escapeHtml((modal.querySelector('[data-supplier-report-filter="region"]')||{}).value||'All regions')+'</span><span>Search: '+escapeHtml((modal.querySelector('[data-supplier-report-filter="search"]')||{}).value||'None')+'</span>';
+  modal.querySelectorAll('[data-quick-supplier-report]').forEach(function(button){var active=button.getAttribute('data-quick-supplier-report')===quick;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))})
+}
+function openSupplierReportsModal(){
+  closeLiensReportsModal();
+  var modal=document.createElement('div');modal.className='citadel-modal-backdrop';
+  modal.innerHTML='<section class="citadel-report-modal" role="dialog" aria-modal="true" aria-label="Suppliers Reports" data-active-quick-report="current"><div class="modal-head"><div><h3>Suppliers Reports</h3><p>Build supplier contact, agreement, credit, terms, renewal, and compliance reports.</p></div><button type="button" data-close-modal aria-label="Close reports">x</button></div><div class="report-callout">Supplier account controls are protected in Citadel; payment activity remains in accounting.</div><section class="report-band"><div class="report-band-head"><strong>Quick Reports</strong><span>Common exports</span></div><div class="quick-report-grid"><button type="button" data-quick-supplier-report="open_alerts">Open Alerts</button><button type="button" data-quick-supplier-report="agreements">Missing Agreements</button><button type="button" data-quick-supplier-report="renewals">90 Day Renewals</button><button type="button" data-quick-supplier-report="compliance">Compliance Review</button><button type="button" data-quick-supplier-report="credit">Credit Review</button><button type="button" class="active" data-quick-supplier-report="current" aria-pressed="true">Current View</button></div></section><section class="report-custom"><div class="report-band-head"><strong>Custom Report</strong><span>Filters and export format</span></div><div class="report-form-grid"><label>Region<select data-supplier-report-filter="region">'+renderSelectOptions('All regions',getSupplierRegions(),'All regions')+'</select></label><label>Status<select data-supplier-report-filter="status">'+renderSelectOptions('All statuses',getSupplierStatuses(),'All statuses')+'</select></label><label>Agreement<select data-supplier-report-filter="agreement">'+renderSelectOptions('All agreements',['Signed','Needs agreement','Pending','Expired','Not Required','Not Verified'],'All agreements')+'</select></label><label>Compliance<select data-supplier-report-filter="compliance">'+renderSelectOptions('All compliance',['Current','Needs Review','Missing Documents','Expired','Not Required'],'All compliance')+'</select></label><label>Credit Status<select data-supplier-report-filter="credit">'+renderSelectOptions('All credit statuses',['Good Standing','Review','Credit Hold','COD','Not Verified'],'All credit statuses')+'</select></label><label>Supplier Type<select data-supplier-report-filter="type">'+renderSelectOptions('All types',getSupplierTypes(),'All types')+'</select></label><label>Search Text<input data-supplier-report-filter="search" placeholder="Supplier, account, region"></label></div></section><div class="report-summary-row"><div class="report-parameters" data-supplier-report-parameters></div><div class="report-total"><strong data-supplier-report-count>'+escapeHtml(getVisibleSupplierRecords().length)+' records</strong><span>Supplier account view</span><em>Contacts, terms, agreements, credit, and compliance</em></div></div><div class="modal-actions"><button type="button" data-supplier-report-reset>Reset</button><span></span><select data-supplier-export-format aria-label="Export format"><option>CSV</option><option>Excel</option><option>PDF</option></select><button type="button" data-close-modal>Cancel</button><button type="button" data-supplier-report-export>Export</button></div></section>';
+  modal.addEventListener('click',function(event){var quick=event.target.closest('[data-quick-supplier-report]');if(quick){modal.setAttribute('data-active-quick-report',quick.getAttribute('data-quick-supplier-report'));updateSupplierReportSummary();return}if(event.target.closest('[data-supplier-report-reset]')){modal.setAttribute('data-active-quick-report','current');modal.querySelectorAll('[data-supplier-report-filter]').forEach(function(field){if(field.tagName==='SELECT')field.selectedIndex=0;else field.value=''});updateSupplierReportSummary();return}if(event.target.closest('[data-supplier-report-export]')){var rows=supplierReportFilteredRows(modal);var format=modal.querySelector('[data-supplier-export-format]').value;reportDownloadTable(supplierReportTable(rows),format,'citadel-suppliers-report');return}if(event.target===modal||event.target.closest('[data-close-modal]'))closeLiensReportsModal()});
+  modal.addEventListener('input',function(event){if(event.target.closest('[data-supplier-report-filter]')){modal.setAttribute('data-active-quick-report','custom');updateSupplierReportSummary()}});
+  modal.addEventListener('change',function(event){if(event.target.closest('[data-supplier-report-filter]')){modal.setAttribute('data-active-quick-report','custom');updateSupplierReportSummary()}});
+  document.body.appendChild(modal);updateSupplierReportSummary()
+}
+function bindSuppliersPage(){
+  if(suppliersPageEventsBound)return;suppliersPageEventsBound=true;
+  pagePanel.addEventListener('click',function(event){
+    if(activePage!=='suppliers')return;
+    var entry=event.target.closest('[data-workspace-entry]');if(entry){openWorkspaceEntryModal('suppliers',entry.getAttribute('data-workspace-entry'));return}
+    var metric=event.target.closest('[data-supplier-metric]');if(metric){activeSupplierMetric=metric.getAttribute('data-supplier-metric')||'all';suppliersData.selectedIndex=0;renderSuppliersPage();return}
+    if(event.target.closest('[data-supplier-reports]')){openSupplierReportsModal();return}
+    if(event.target.closest('[data-add-supplier]')){openSupplierAccountModal();return}
+    if(event.target.closest('[data-edit-supplier]')){openSupplierAccountModal(suppliersData.records[suppliersData.selectedIndex]||{});return}
+    if(event.target.closest('[data-add-supplier-contact]')){openSupplierContactModal();return}
+    if(event.target.closest('[data-add-supplier-document]')){openSupplierDocumentModal();return}
+    var contactButton=event.target.closest('[data-edit-supplier-contact]');if(contactButton){openSupplierContactModal(suppliersData.contacts[Number(contactButton.getAttribute('data-edit-supplier-contact'))]||{});return}
+    var documentButton=event.target.closest('[data-edit-supplier-document]');if(documentButton){openSupplierDocumentModal(suppliersData.documents[Number(documentButton.getAttribute('data-edit-supplier-document'))]||{});return}
+    var row=event.target.closest('[data-supplier-index]');if(!row)return;suppliersData.selectedIndex=Number(row.getAttribute('data-supplier-index'));renderSuppliersPage()
+  });
+  pagePanel.addEventListener('change',function(event){if(activePage!=='suppliers')return;var field=event.target.closest('select[data-supplier-filter]');if(!field)return;supplierFilters[field.getAttribute('data-supplier-filter')]=field.value;suppliersData.selectedIndex=0;renderSuppliersPage()});
+  pagePanel.addEventListener('input',function(event){if(activePage!=='suppliers')return;var search=event.target.closest('input[data-supplier-filter="search"]');if(!search)return;supplierFilters.search=search.value;window.clearTimeout(supplierSearchTimer);supplierSearchTimer=window.setTimeout(function(){suppliersData.selectedIndex=0;renderSuppliersPage();var next=pagePanel.querySelector('input[data-supplier-filter="search"]');if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length)}},180)})
+}
+
 function renderRegistrationsModule(){pagePanel.className="page-panel registrations-module-page";pagePanel.innerHTML='<iframe class="registrations-module-frame" title="Registrations workspace" src="./modules/registrations/index.html?v=2.1.2.10"></iframe>'}
 
-function renderContent(){var label=getPageLabel(activePage);pageTitle.textContent=label;if(activePage==="command-center"){renderCommandCenter();bindCommandCenter();return}if(activePage==="region-health"){renderRegionHealthPage();bindStandardPage();return}if(activePage==="liens"){renderLiensPage();bindLiensPage();return}if(activePage==="collections"){renderCollectionsPage();bindCollectionsPage();return}if(activePage==="contractors"){renderContractorsPage();bindContractorsPage();return}if(activePage==="registrations"){renderRegistrationsModule();return}if(activePage==="reviews"){renderReviewsPage();bindReviewsPage();if(!reviewsData.records.length&&!reviewsLoading&&!reviewsLoadError)loadReviewsData();return}if(activePage==="pricing"){renderPricingPage();bindPricingPage();if(!pricingState.rows.length&&!pricingState.loading&&!pricingState.error)loadPricingData();return}if(activePage==="fleet"||activePage==="fleet-vehicles"||activePage==="fleet-drivers"){renderFleetPage();bindFleetPage();if(!fleetData.sourceRows.length&&!fleetData.vehicles.length&&!fleetData.drivers.length&&!fleetLoading&&!fleetLoadError)loadFleetData();return}renderStandardContent();bindStandardPage()}
+function renderContent(){var label=getPageLabel(activePage);pageTitle.textContent=label;if(activePage==="command-center"){renderCommandCenter();bindCommandCenter();return}if(activePage==="region-health"){renderRegionHealthPage();bindStandardPage();return}if(activePage==="liens"){renderLiensPage();bindLiensPage();return}if(activePage==="collections"){renderCollectionsPage();bindCollectionsPage();return}if(activePage==="suppliers"){renderSuppliersPage();bindSuppliersPage();return}if(activePage==="contractors"){renderContractorsPage();bindContractorsPage();return}if(activePage==="registrations"){renderRegistrationsModule();return}if(activePage==="reviews"){renderReviewsPage();bindReviewsPage();if(!reviewsData.records.length&&!reviewsLoading&&!reviewsLoadError)loadReviewsData();return}if(activePage==="pricing"){renderPricingPage();bindPricingPage();if(!pricingState.rows.length&&!pricingState.loading&&!pricingState.error)loadPricingData();return}if(activePage==="fleet"||activePage==="fleet-vehicles"||activePage==="fleet-drivers"){renderFleetPage();bindFleetPage();if(!fleetData.sourceRows.length&&!fleetData.vehicles.length&&!fleetData.drivers.length&&!fleetLoading&&!fleetLoadError)loadFleetData();return}renderStandardContent();bindStandardPage()}
 function setActivePage(pageId){activePage=pageId;renderNavigation();renderContent()}
 
-initSettingsMenu();initForceRefreshButton();checkForCitadelUpdate();hydrateLiensFromCache();hydrateCollectionsFromCache();hydrateContractorsFromCache();hydrateReviewsFromCache();hydrateFleetFromCache();loadPricingStaticData();setActivePage(activePage);loadLiensData();loadCollectionsData();loadContractorsData();loadRegistrationsSummary();loadReviewsData();loadFleetData();
+initSettingsMenu();initForceRefreshButton();checkForCitadelUpdate();hydrateLiensFromCache();hydrateCollectionsFromCache();hydrateSuppliersFromCache();hydrateContractorsFromCache();hydrateReviewsFromCache();hydrateFleetFromCache();loadPricingStaticData();setActivePage(activePage);loadLiensData();loadCollectionsData();loadSuppliersData();loadContractorsData();loadRegistrationsSummary();loadReviewsData();loadFleetData();
 
