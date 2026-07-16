@@ -1,5 +1,6 @@
 var CITADEL_VERSION="2.1.2";
 var CITADEL_API_URL="https://script.google.com/macros/s/AKfycbzKIMMrIFdmS3xKUHzSzwR-Y-Z4FebDLBod1OWmORqDC-_J9pXH2azFVrONruv1djvIhw/exec";
+var PAYMENT_IMPORT_SHEET_URL="https://docs.google.com/spreadsheets/d/1peF6ujpJGi_vugM7hanoL06KLNUC_tarAOoW2dW6QfQ/edit#gid=261509484";
 var COMMAND_FOCUS_NOTE_PREFIX="citadel_command_focus_note_";
 var selectedCommandModule="liens";
 var liensWorkspaceStatus="";
@@ -15,6 +16,7 @@ var pages=[{id:"command-center",label:"Command Center"},{id:"region-health",labe
 var LIENS_CACHE_KEY="citadel_liens_cache_v1";
 var liensData={metrics:[],notes:[],alerts:[],followUps:[],selectedIndex:0,records:[]};
 var lienPaymentHistoryCache={};
+var paymentImportRunning=false;
 var liensLoading=!!CITADEL_API_URL;
 var liensLoadError="";
 var liensLastUpdated="";
@@ -457,6 +459,79 @@ function hydrateLienPaymentRecord(record,data){
 function renderLienPaymentModalContent(record,transactions){
   return renderLienPaymentSummaryGrid(record,transactions)+(record.hasReversal?'<p class="lien-payment-flags">'+escapeHtml(record.reversalCount+' reversal'+(record.reversalCount===1?'':'s')+' totaling '+moneyLabel(record.reversalAmount))+'</p>':'')+'<div class="lien-payment-modal-table-head"><span>Date / Type</span><span>Amount</span><span>Status</span></div>'+renderLienPaymentRows(transactions,transactions.length)
 }
+function closeLienPaymentImportModal(){
+  var modal=document.querySelector(".payment-import-modal-backdrop");
+  if(modal)modal.remove()
+}
+
+function paymentImportStatusMarkup(status){
+  status=status||{};
+  var latest=status.latest_import||{};
+  var latestLabel=latest.source_label||"No completed import label";
+  var latestStatus=latest.status||"Not run";
+  var latestTime=latest.imported_at||"";
+  return '<div class="liens-detail-grid"><article><span>Staging Rows</span><strong>'+escapeHtml(status.staging_rows||0)+'</strong></article><article><span>Retained Transactions</span><strong>'+escapeHtml(status.transactions||0)+'</strong></article><article><span>Matched Jobs</span><strong>'+escapeHtml(status.summaries||0)+'</strong></article></div><div class="report-callout"><strong>Latest import:</strong> '+escapeHtml(latestLabel)+' &middot; '+escapeHtml(latestStatus)+(latestTime?' &middot; '+escapeHtml(latestTime):'')+'</div>'
+}
+
+function paymentImportResultMarkup(result){
+  result=result||{};
+  return '<div class="report-callout"><strong>'+escapeHtml(result.status||"Completed")+'</strong> &middot; '+escapeHtml(result.source_label||"Payment report")+'</div><div class="liens-detail-grid"><article><span>Source Rows</span><strong>'+escapeHtml(result.source_rows||0)+'</strong></article><article><span>Retained Rows</span><strong>'+escapeHtml(result.retained_rows||0)+'</strong></article><article><span>Matched Jobs</span><strong>'+escapeHtml(result.job_summaries||0)+'</strong></article><article><span>Exact Duplicates</span><strong>'+escapeHtml(result.duplicate_rows||0)+'</strong></article><article><span>Reversals</span><strong>'+escapeHtml(result.negative_rows||0)+'</strong></article><article><span>Validation Errors</span><strong>'+escapeHtml(result.validation_error_rows||0)+'</strong></article><article><span>Missing Methods</span><strong>'+escapeHtml(result.missing_payment_method_rows||0)+'</strong></article><article><span>Zero-net Jobs</span><strong>'+escapeHtml(result.zero_net_jobs||0)+'</strong></article><article><span>Outlier Reviews</span><strong>'+escapeHtml(result.outlier_rows||0)+'</strong></article></div>'
+}
+
+function openLienPaymentImportModal(){
+  closeLienPaymentImportModal();
+  var today=new Date();
+  var defaultLabel="Deposit Report "+String(today.getMonth()+1).padStart(2,"0")+"/"+String(today.getDate()).padStart(2,"0")+"/"+today.getFullYear();
+  var modal=document.createElement("div");
+  modal.className="citadel-modal-backdrop workspace-entry-backdrop payment-import-modal-backdrop";
+  modal.innerHTML='<section class="workspace-entry-modal" role="dialog" aria-modal="true" aria-label="Run Liens Payment Import"><div class="modal-head"><div><h3>Run Liens / Payments Import</h3><p>Validate and publish the current protected PaymentImport staging report.</p></div><button type="button" data-close-payment-import aria-label="Close">X</button></div><form class="workspace-entry-form" data-payment-import-form><div class="workspace-entry-body"><div class="report-callout">Replace the <strong>PaymentImport</strong> tab with one fresh Deposit Report before each run. Every source row is retained; exact duplicates are flagged, only the first is counted, and negative reversals remain in net totals.</div><p><a class="record-link" href="'+escapeHtml(PAYMENT_IMPORT_SHEET_URL)+'" target="_blank" rel="noopener">Open protected PaymentImport sheet</a></p><label class="workspace-entry-field">Report label<input name="source_label" value="'+escapeHtml(defaultLabel)+'" maxlength="160" required></label><div data-payment-import-status><p class="liens-empty">Checking the current import status...</p></div><div class="report-callout">Scheduled automation remains off until 2-3 distinct fresh reports have imported successfully.</div><div class="workspace-status" data-payment-import-feedback></div></div><div class="workspace-entry-actions"><button type="button" data-close-payment-import>Cancel</button><button type="submit" class="primary" data-run-payment-import-now>Run Import</button></div></form></section>';
+  var form=modal.querySelector("[data-payment-import-form]");
+  var statusBox=modal.querySelector("[data-payment-import-status]");
+  var feedback=modal.querySelector("[data-payment-import-feedback]");
+  var runButton=modal.querySelector("[data-run-payment-import-now]");
+  var onKeydown=function(event){if(event.key==="Escape"&&!paymentImportRunning)close()};
+  function close(){
+    if(paymentImportRunning)return;
+    document.removeEventListener("keydown",onKeydown);
+    modal.remove()
+  }
+  modal.querySelectorAll("[data-close-payment-import]").forEach(function(button){button.addEventListener("click",close)});
+  modal.addEventListener("click",function(event){if(event.target===modal)close()});
+  form.addEventListener("submit",function(event){
+    event.preventDefault();
+    if(paymentImportRunning)return;
+    var sourceLabel=form.elements.source_label.value.trim();
+    if(!sourceLabel){form.elements.source_label.focus();return}
+    paymentImportRunning=true;
+    runButton.disabled=true;
+    runButton.textContent="Importing...";
+    feedback.textContent="Validating the staging report and rebuilding payment summaries...";
+    jsonp(CITADEL_API_URL+"?action=runPaymentImport&imported_by="+encodeURIComponent("Citadel user")+"&source_label="+encodeURIComponent(sourceLabel)).then(function(response){
+      if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:"Payment import failed");
+      statusBox.innerHTML=paymentImportResultMarkup(response.data);
+      feedback.textContent="Import completed. Liens payment summaries are refreshing now.";
+      lienPaymentHistoryCache={};
+      loadLiensData()
+    }).catch(function(error){
+      feedback.textContent="Import failed: "+(error.message||"Please review the PaymentImport tab and try again.")
+    }).finally(function(){
+      paymentImportRunning=false;
+      runButton.disabled=false;
+      runButton.textContent="Run Import"
+    })
+  });
+  document.body.appendChild(modal);
+  document.addEventListener("keydown",onKeydown);
+  jsonp(CITADEL_API_URL+"?action=getPaymentImportStatus").then(function(response){
+    if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:"Status unavailable");
+    if(document.body.contains(modal))statusBox.innerHTML=paymentImportStatusMarkup(response.data)
+  }).catch(function(error){
+    if(document.body.contains(modal))statusBox.innerHTML='<p class="liens-empty">Unable to load import status. '+escapeHtml(error.message||"Please try again.")+'</p>'
+  });
+  form.elements.source_label.focus();
+  form.elements.source_label.select()
+}
+
 function openLienPaymentHistoryModal(record){
   if(!record||!record.blazeJobId)return;
   closeLienPaymentHistoryModal();
@@ -483,7 +558,7 @@ function openLienPaymentHistoryModal(record){
   })
 }
 function renderLiensLoadingPage(){pagePanel.className="page-panel liens-page";pagePanel.innerHTML='<section class="liens-loading-card"><div class="loading-pulse"></div><h3>Loading lien records</h3><p>First load is pulling the latest Blaze report data. After this, Citadel will open this page from a local snapshot while it refreshes quietly.</p></section>'}
-function renderLiensPage(){if(liensLoading&&!liensData.records.length){renderLiensLoadingPage();return}var visibleRecords=getVisibleLienRecords();var selected=liensData.records[liensData.selectedIndex]||visibleRecords[0]||liensData.records[0]||{};var metricStats=getLienMetricStats(liensData.records);pagePanel.className="page-panel liens-page";pagePanel.innerHTML=renderModuleStatusLine(liensLoading?"Refreshing...":liensLastUpdated?"Updated "+liensLastUpdated:"")+'<div class="liens-metrics">'+metricStats.map(function(metric){return '<button type="button" class="lien-metric-button '+(activeLienMetric===metric.key?'active':'')+'" data-lien-metric="'+escapeHtml(metric.key)+'"><span>'+escapeHtml(metric.label)+'</span><strong>'+escapeHtml(metric.value)+'</strong><em>'+escapeHtml(metric.note)+'</em></button>'}).join('')+'</div><section class="liens-filter-card"><div><h3>Filters + Sort + Search</h3><p>Refine and find records the same way on every page</p></div><button type="button" data-open-reports="liens">Reports</button><div class="liens-filters"><label>Status<select data-lien-filter="status">'+renderSelectOptions('All statuses',LIEN_STATUS_OPTIONS,lienFilters.status)+'</select></label><label>Stage<select data-lien-filter="stage">'+renderSelectOptions('All stages',LIEN_STAGE_OPTIONS,lienFilters.stage)+'</select></label><label>Region<select data-lien-filter="region">'+renderSelectOptions('All regions',getLienRegions(),lienFilters.region)+'</select></label><label>Sort<select data-lien-filter="sort"><option'+(lienFilters.sort==='Highest balance'?' selected':'')+'>Highest balance</option><option'+(lienFilters.sort==='Most past due'?' selected':'')+'>Most past due</option><option'+(lienFilters.sort==='Newest update'?' selected':'')+'>Newest update</option></select></label><label>Search<input data-lien-filter="search" type="search" placeholder="Search this view" value="'+escapeHtml(lienFilters.search)+'"></label></div></section><div class="liens-workspace"><section class="liens-records"><div class="liens-section-head"><div><h3>Records</h3><p>Review Blaze report data, notes, alerts, and follow-up work.</p></div><strong>'+escapeHtml(visibleRecords.length)+' showing</strong></div><div class="liens-table" role="table"><div class="liens-table-head" role="row"><span>Account</span><span>Customer</span><span>Region</span><span>Status</span><span>Stage</span><span>Balance</span></div>'+visibleRecords.map(function(record){var index=liensData.records.indexOf(record);return '<div class="liens-row'+(index===liensData.selectedIndex?' active':'')+'" data-lien-index="'+index+'" role="row" tabindex="0"><span>'+(record.blazeUrl?'<a class="record-link" href="'+escapeHtml(record.blazeUrl)+'" target="_blank" rel="noopener">'+escapeHtml(record.jobNumber||record.id)+'</a>':'<a class="record-link record-link-disabled" href="#" title="Blaze URL not included in source report yet">'+escapeHtml(record.jobNumber||record.id)+'</a>')+'<em>'+escapeHtml(record.owner)+'</em></span><span>'+escapeHtml(record.customer)+'</span><span>'+escapeHtml(record.region)+'</span><span><mark>'+escapeHtml(record.status)+'</mark></span><span><mark class="stage-'+escapeHtml(String(record.stage||'').toLowerCase())+'">'+escapeHtml(record.stage)+'</mark></span><span><strong>'+escapeHtml(moneyLabel(record.balance))+'</strong></span></div>'}).join('')+'</div></section><aside class="liens-detail"><div class="liens-detail-head"><div><span>Selected record</span><h3>'+escapeHtml(selected.jobNumber||selected.id)+' - '+escapeHtml(selected.customer)+'</h3><p>Liens / '+escapeHtml(selected.stage)+' &middot; '+escapeHtml(selected.region)+'</p></div></div><div class="liens-detail-grid"><article><span>Sales Rep</span><strong>'+escapeHtml(selected.owner)+'</strong></article><article><span>Contracted Amount</span><strong>'+escapeHtml(moneyLabel(selected.contractedAmount))+'</strong></article><article><span>Balance</span><strong>'+escapeHtml(moneyLabel(selected.balance))+'</strong></article><article><span>First Invoice</span><strong>'+escapeHtml(selected.firstInvoice)+'</strong></article><article><span>Latest Invoice</span><strong>'+escapeHtml(selected.latestInvoice)+'</strong></article><article><span>Invoice Count</span><strong>'+escapeHtml(selected.invoiceCount)+'</strong></article></div>'+renderLienPaymentHistory(selected)+'<section class="liens-workflow"><div class="card-heading"><h3>Citadel Workflow</h3><span>Protected from source imports</span></div><div class="workspace-status">'+escapeHtml(liensWorkspaceStatus)+'</div><div class="workflow-entry-actions"><button type="button" data-workspace-entry="note">Add Note</button><button type="button" data-workspace-entry="alert">Set Alert</button></div><div class="liens-workspace-feed"><h4>Recent Notes</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('notes',selected.id),'No notes yet.',[{key:'note_text',strong:true},{key:'note_by',fallback:'Team'},{key:'note_date'}])+'<h4>Open Alerts</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('alerts',selected.id),'No alerts yet.',[{key:'alert_text',strong:true},{key:'owner',fallback:'Carlynn'},{key:'due_date'}])+'<h4>Follow-ups</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('followUps',selected.id),'No follow-ups yet.',[{key:'followup_text',strong:true},{key:'assigned_to',fallback:'Carlynn'},{key:'due_date'}])+'</div></section></aside></div>'}
+function renderLiensPage(){if(liensLoading&&!liensData.records.length){renderLiensLoadingPage();return}var visibleRecords=getVisibleLienRecords();var selected=liensData.records[liensData.selectedIndex]||visibleRecords[0]||liensData.records[0]||{};var metricStats=getLienMetricStats(liensData.records);pagePanel.className="page-panel liens-page";pagePanel.innerHTML=renderModuleStatusLine(liensLoading?"Refreshing...":liensLastUpdated?"Updated "+liensLastUpdated:"")+'<div class="liens-metrics">'+metricStats.map(function(metric){return '<button type="button" class="lien-metric-button '+(activeLienMetric===metric.key?'active':'')+'" data-lien-metric="'+escapeHtml(metric.key)+'"><span>'+escapeHtml(metric.label)+'</span><strong>'+escapeHtml(metric.value)+'</strong><em>'+escapeHtml(metric.note)+'</em></button>'}).join('')+'</div><section class="liens-filter-card"><div><h3>Filters + Sort + Search</h3><p>Refine and find records the same way on every page</p></div><div class="workflow-entry-actions"><button type="button" data-run-payment-import>Run Import</button><button type="button" data-open-reports="liens">Reports</button></div><div class="liens-filters"><label>Status<select data-lien-filter="status">'+renderSelectOptions('All statuses',LIEN_STATUS_OPTIONS,lienFilters.status)+'</select></label><label>Stage<select data-lien-filter="stage">'+renderSelectOptions('All stages',LIEN_STAGE_OPTIONS,lienFilters.stage)+'</select></label><label>Region<select data-lien-filter="region">'+renderSelectOptions('All regions',getLienRegions(),lienFilters.region)+'</select></label><label>Sort<select data-lien-filter="sort"><option'+(lienFilters.sort==='Highest balance'?' selected':'')+'>Highest balance</option><option'+(lienFilters.sort==='Most past due'?' selected':'')+'>Most past due</option><option'+(lienFilters.sort==='Newest update'?' selected':'')+'>Newest update</option></select></label><label>Search<input data-lien-filter="search" type="search" placeholder="Search this view" value="'+escapeHtml(lienFilters.search)+'"></label></div></section><div class="liens-workspace"><section class="liens-records"><div class="liens-section-head"><div><h3>Records</h3><p>Review Blaze report data, notes, alerts, and follow-up work.</p></div><strong>'+escapeHtml(visibleRecords.length)+' showing</strong></div><div class="liens-table" role="table"><div class="liens-table-head" role="row"><span>Account</span><span>Customer</span><span>Region</span><span>Status</span><span>Stage</span><span>Balance</span></div>'+visibleRecords.map(function(record){var index=liensData.records.indexOf(record);return '<div class="liens-row'+(index===liensData.selectedIndex?' active':'')+'" data-lien-index="'+index+'" role="row" tabindex="0"><span>'+(record.blazeUrl?'<a class="record-link" href="'+escapeHtml(record.blazeUrl)+'" target="_blank" rel="noopener">'+escapeHtml(record.jobNumber||record.id)+'</a>':'<a class="record-link record-link-disabled" href="#" title="Blaze URL not included in source report yet">'+escapeHtml(record.jobNumber||record.id)+'</a>')+'<em>'+escapeHtml(record.owner)+'</em></span><span>'+escapeHtml(record.customer)+'</span><span>'+escapeHtml(record.region)+'</span><span><mark>'+escapeHtml(record.status)+'</mark></span><span><mark class="stage-'+escapeHtml(String(record.stage||'').toLowerCase())+'">'+escapeHtml(record.stage)+'</mark></span><span><strong>'+escapeHtml(moneyLabel(record.balance))+'</strong></span></div>'}).join('')+'</div></section><aside class="liens-detail"><div class="liens-detail-head"><div><span>Selected record</span><h3>'+escapeHtml(selected.jobNumber||selected.id)+' - '+escapeHtml(selected.customer)+'</h3><p>Liens / '+escapeHtml(selected.stage)+' &middot; '+escapeHtml(selected.region)+'</p></div></div><div class="liens-detail-grid"><article><span>Sales Rep</span><strong>'+escapeHtml(selected.owner)+'</strong></article><article><span>Contracted Amount</span><strong>'+escapeHtml(moneyLabel(selected.contractedAmount))+'</strong></article><article><span>Balance</span><strong>'+escapeHtml(moneyLabel(selected.balance))+'</strong></article><article><span>First Invoice</span><strong>'+escapeHtml(selected.firstInvoice)+'</strong></article><article><span>Latest Invoice</span><strong>'+escapeHtml(selected.latestInvoice)+'</strong></article><article><span>Invoice Count</span><strong>'+escapeHtml(selected.invoiceCount)+'</strong></article></div>'+renderLienPaymentHistory(selected)+'<section class="liens-workflow"><div class="card-heading"><h3>Citadel Workflow</h3><span>Protected from source imports</span></div><div class="workspace-status">'+escapeHtml(liensWorkspaceStatus)+'</div><div class="workflow-entry-actions"><button type="button" data-workspace-entry="note">Add Note</button><button type="button" data-workspace-entry="alert">Set Alert</button></div><div class="liens-workspace-feed"><h4>Recent Notes</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('notes',selected.id),'No notes yet.',[{key:'note_text',strong:true},{key:'note_by',fallback:'Team'},{key:'note_date'}])+'<h4>Open Alerts</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('alerts',selected.id),'No alerts yet.',[{key:'alert_text',strong:true},{key:'owner',fallback:'Carlynn'},{key:'due_date'}])+'<h4>Follow-ups</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('followUps',selected.id),'No follow-ups yet.',[{key:'followup_text',strong:true},{key:'assigned_to',fallback:'Carlynn'},{key:'due_date'}])+'</div></section></aside></div>'}
 function closeWorkspaceEntryModal(){
   var modal=document.querySelector(".workspace-entry-backdrop");
   if(modal)modal.remove()
@@ -568,6 +643,8 @@ function bindLiensPage(){
   liensPageEventsBound=true;
   pagePanel.addEventListener("click",function(event){
     if(activePage!=="liens")return;
+    var importButton=event.target.closest("[data-run-payment-import]");
+    if(importButton){openLienPaymentImportModal();return}
     var reportButton=event.target.closest("[data-open-reports]");
     if(reportButton){openLiensReportsModal();return}
     var paymentHistoryButton=event.target.closest("[data-open-payment-history]");
