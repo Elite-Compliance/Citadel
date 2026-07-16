@@ -10,7 +10,7 @@ const SPREADSHEETS = {
 };
 const LIEN_STATUS_REPORTS_FOLDER_ID = '1XcllT_u0WP7H5Cr9zvw9G6NNcOUTYcTH';
 const LIEN_MASTER_REPORT_NAME = 'Receivables Aging';
-const REQUIRED_LIEN_RECORD_COLUMNS = ['blaze_url', 'days_past_due', 'first_invoice_date', 'latest_invoice_date', 'invoice_count', 'no_payment_received', 'payment_received', 'last_payment_date', 'payment_status'];
+const REQUIRED_LIEN_RECORD_COLUMNS = ['blaze_url', 'contracted_amount', 'days_past_due', 'first_invoice_date', 'latest_invoice_date', 'invoice_count', 'no_payment_received', 'payment_received', 'last_payment_date', 'payment_status'];
 const SHEETS = {
   commandMetrics: 'CommandMetrics',
   commandFocus: 'CommandFocus',
@@ -1830,6 +1830,7 @@ function mapReceivableToLienRecord_(row, status, key) {
   const account = getField_(row, ['job_number', 'job', 'job_number_', 'job #', 'account_name', 'account', 'account_number']);
   const blazeUrl = getField_(row, ['job_link', 'job link', 'Job Link', 'blaze_url', 'blaze link', 'blaze_link', 'url', 'job_url', 'record_url']);
   const balance = getField_(row, ['balance', 'total_balance', 'total revenue', 'amount', 'invoice_balance', 'ar_balance']);
+  const contractedAmount = getField_(row, ['total_revenue', 'total revenue', 'contracted_amount', 'contracted amount', 'contract value', 'contracted value']);
   const invoiceDates = getInvoiceSentDates_(row);
   const firstInvoiceDate = invoiceDates.length ? invoiceDates[0] : getField_(row, ['first_invoice_date', 'first invoice date', 'first invoice', 'invoice 1 sent date', 'invoice_1_sent_date', 'oldest_invoice_date', 'oldest invoice date', 'oldest invoice', 'first_invoice_dt']);
   const latestInvoiceDate = invoiceDates.length ? invoiceDates[invoiceDates.length - 1] : getField_(row, ['latest_invoice_date', 'latest invoice date', 'latest invoice', 'last_invoice_date', 'last invoice date', 'last invoice', 'newest invoice date']);
@@ -1847,6 +1848,7 @@ function mapReceivableToLienRecord_(row, status, key) {
     status: status,
     stage: getStageFromReceivable_(row, status, days),
     balance: balance,
+    contracted_amount: contractedAmount,
     days_past_due: days,
     first_invoice_date: firstInvoiceDate,
     latest_invoice_date: latestInvoiceDate,
