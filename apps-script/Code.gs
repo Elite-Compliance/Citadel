@@ -6,7 +6,8 @@ const SPREADSHEETS = {
   pricing: '1kF3oCkjkMzAqwohT-pYk2CSKkZ0C5hGx3aPee9XsIgY',
   reviews: '1EjRpoie4MP8eE4SmYi0xqXIbGavH3ffz5DTb-MUdE1U',
   fleet: '1cUbzbYW_7UCwD4oD9_pSWZBLDZYF3VpvqBijUOMBhuo',
-  registrations: '1_vi1q6qUu821TiUgMtelsF4ya2EBsXlPIlt-COEb6X8'
+  registrations: '1_vi1q6qUu821TiUgMtelsF4ya2EBsXlPIlt-COEb6X8',
+  suppliers: '1dKaiRkQNb3C1T4ajWYZZ0v72Pk6T9jaw7lmmJFl4cTA'
 };
 const LIEN_STATUS_REPORTS_FOLDER_ID = '1XcllT_u0WP7H5Cr9zvw9G6NNcOUTYcTH';
 const LIEN_MASTER_REPORT_NAME = 'Receivables Aging';
@@ -47,7 +48,13 @@ const SHEETS = {
   collectionAlerts: 'CollectionAlerts',
   businessContacts: 'BusinessContacts',
   collectionAttorneys: 'CollectionAttorneys',
-  collectionContactLinks: 'CollectionContactLinks'
+  collectionContactLinks: 'CollectionContactLinks',
+  supplierAccounts: 'SupplierAccounts',
+  supplierContacts: 'SupplierContacts',
+  supplierDocuments: 'SupplierDocuments',
+  supplierNotes: 'SupplierNotes',
+  supplierAlerts: 'SupplierAlerts',
+  supplierAudit: 'SupplierAudit'
 };
 
 const CONTRACTOR_RECORD_HEADERS = ['Contractor', 'Phone', 'Email', 'Regions', 'Risk', 'Documents', 'GL Expiry', 'WC Expiry', 'Next Action', 'Address'];
@@ -73,6 +80,13 @@ const REGISTRATION_NOTE_HEADERS = ['note_id', 'request_id', 'registration_id', '
 const REGISTRATION_ALERT_HEADERS = ['alert_id', 'request_id', 'registration_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const REGISTRATION_FOLLOWUP_HEADERS = ['followup_id', 'request_id', 'registration_id', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const REGISTRATION_BANNER_HEADERS = ['banner_id', 'regions', 'message', 'status', 'active_at', 'active_by', 'removed_at', 'removed_by', 'active'];
+const SUPPLIER_ACCOUNT_HEADERS = ['supplier_id', 'supplier_code', 'supplier_name', 'supplier_type', 'priority', 'status', 'account_name', 'customer_number', 'account_number', 'region', 'branch_number', 'branch_name', 'branch_address_1', 'branch_address_2', 'branch_city', 'branch_state', 'branch_zip', 'branch_phone', 'orders_email', 'website', 'portal_url', 'portal_username', 'signed_agreement_status', 'agreement_date', 'agreement_expiration_date', 'renewal_date', 'auto_renews', 'renewal_notice_days', 'payment_terms', 'current_balance', 'credit_limit', 'available_credit', 'credit_status', 'purchasing_status', 'tax_exempt_status', 'w9_status', 'vendor_application_status', 'resale_certificate_status', 'insurance_required', 'insurance_status', 'insurance_expiration_date', 'compliance_status', 'compliance_review_date', 'next_review_date', 'default_ship_to', 'freight_terms', 'delivery_terms', 'minimum_order', 'account_notes', 'source_file', 'created_at', 'created_by', 'updated_at', 'updated_by', 'active'];
+const SUPPLIER_CONTACT_HEADERS = ['contact_id', 'supplier_id', 'role_type', 'contact_name', 'title_department', 'email', 'secondary_email', 'office_phone', 'secondary_phone', 'extension', 'fax', 'branch_number', 'region', 'preferred_contact_method', 'notes', 'active', 'created_at', 'created_by', 'updated_at', 'updated_by'];
+const SUPPLIER_DOCUMENT_HEADERS = ['document_id', 'supplier_id', 'document_type', 'status', 'issue_date', 'expiration_date', 'renewal_date', 'document_url', 'notes', 'created_at', 'created_by', 'updated_at', 'updated_by'];
+const SUPPLIER_NOTE_HEADERS = ['note_id', 'supplier_id', 'note_text', 'created_at', 'created_by'];
+const SUPPLIER_ALERT_HEADERS = ['alert_id', 'supplier_id', 'alert_text', 'due_date', 'status', 'created_at', 'created_by', 'resolved_at', 'resolved_by'];
+const SUPPLIER_AUDIT_HEADERS = ['audit_id', 'supplier_id', 'action', 'field_name', 'prior_value', 'new_value', 'changed_at', 'changed_by'];
+
 const COLLECTION_RECORD_HEADERS = ['collection_id', 'lien_id', 'collection_agency', 'date_sent_to_agency', 'amount_outstanding', 'amount_collected', 'amount_we_receive', 'date_received', 'tracking_status', 'created_at', 'updated_by', 'last_updated', 'active'];
 const COLLECTION_NOTE_HEADERS = ['note_id', 'collection_id', 'note_date', 'note_by', 'note_type', 'note_text', 'active'];
 const COLLECTION_ALERT_HEADERS = ['alert_id', 'collection_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
@@ -106,6 +120,30 @@ function doGet(e) {
 
     if (action === 'getRegistrations') {
       return output_(e, { ok: true, data: getRegistrations(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'getSuppliers') {
+      return output_(e, { ok: true, data: getSuppliers(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'saveSupplierAccount') {
+      return output_(e, { ok: true, data: saveSupplierAccount(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'saveSupplierContact') {
+      return output_(e, { ok: true, data: saveSupplierContact(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'saveSupplierDocument') {
+      return output_(e, { ok: true, data: saveSupplierDocument(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'saveSupplierNote') {
+      return output_(e, { ok: true, data: saveSupplierNote(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'saveSupplierAlert') {
+      return output_(e, { ok: true, data: saveSupplierAlert(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
     }
 
     if (action === 'getCollections') {
@@ -204,6 +242,10 @@ function doGet(e) {
       return output_(e, { ok: true, data: setupCollectionsSheet(), version: CITADEL_VERSION });
     }
 
+    if (action === 'setupSuppliersSheet') {
+      return output_(e, { ok: true, data: setupSuppliersSheet(), version: CITADEL_VERSION });
+    }
+
     if (action === 'importLienStatusReports') {
       return output_(e, { ok: true, data: importLienStatusReports(), version: CITADEL_VERSION });
     }
@@ -222,6 +264,230 @@ function doPost(e) {
   } catch (error) {
     return output_(e, { ok: false, error: error.message || String(error) });
   }
+}
+
+
+function setupSuppliersSheet() {
+  const spreadsheetId = SPREADSHEETS.suppliers;
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.supplierAccounts, SUPPLIER_ACCOUNT_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.supplierContacts, SUPPLIER_CONTACT_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.supplierDocuments, SUPPLIER_DOCUMENT_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.supplierNotes, SUPPLIER_NOTE_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.supplierAlerts, SUPPLIER_ALERT_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.supplierAudit, SUPPLIER_AUDIT_HEADERS);
+  return {
+    spreadsheet_id: spreadsheetId,
+    sheets: [SHEETS.supplierAccounts, SHEETS.supplierContacts, SHEETS.supplierDocuments, SHEETS.supplierNotes, SHEETS.supplierAlerts, SHEETS.supplierAudit]
+  };
+}
+
+function isSupplierActive_(row) {
+  const value = String(row.active == null ? '' : row.active).trim().toLowerCase();
+  return value === '' || value === 'true' || value === 'yes' || value === 'active' || row.active === true;
+}
+
+function getSuppliers() {
+  setupSuppliersSheet();
+  const spreadsheetId = SPREADSHEETS.suppliers;
+  const contacts = readSheetObjects_(spreadsheetId, SHEETS.supplierContacts).filter(isSupplierActive_);
+  const documents = readSheetObjects_(spreadsheetId, SHEETS.supplierDocuments).filter(isSupplierActive_);
+  const notes = readSheetObjects_(spreadsheetId, SHEETS.supplierNotes);
+  const alerts = readSheetObjects_(spreadsheetId, SHEETS.supplierAlerts).filter(function(row) {
+    return !/resolved|closed/i.test(String(row.status || ''));
+  });
+  const audit = readSheetObjects_(spreadsheetId, SHEETS.supplierAudit);
+  const records = readSheetObjects_(spreadsheetId, SHEETS.supplierAccounts).filter(isSupplierActive_).map(function(row) {
+    const id = String(row.supplier_id || '');
+    const record = Object.assign({}, row);
+    record.contacts_count = contacts.filter(function(item) { return String(item.supplier_id) === id; }).length;
+    record.documents_count = documents.filter(function(item) { return String(item.supplier_id) === id; }).length;
+    record.notes_count = notes.filter(function(item) { return String(item.supplier_id) === id; }).length;
+    record.alerts_count = alerts.filter(function(item) { return String(item.supplier_id) === id; }).length;
+    return record;
+  });
+  return {
+    records: records,
+    contacts: contacts,
+    documents: documents,
+    notes: notes,
+    alerts: alerts,
+    audit: audit,
+    metrics: buildSupplierMetrics_(records, alerts),
+    source: 'Citadel Supplier Accounts'
+  };
+}
+
+function saveSupplierAccount(payload) {
+  payload = payload || {};
+  setupSuppliersSheet();
+  const spreadsheetId = SPREADSHEETS.suppliers;
+  const supplierId = String(payload.supplier_id || '').trim() || makeIdFromText_('SUP', [payload.supplier_name, payload.branch_number, payload.region].join('|'));
+  if (!String(payload.supplier_name || '').trim()) throw new Error('Supplier name is required.');
+  const existing = readSheetObjects_(spreadsheetId, SHEETS.supplierAccounts).filter(function(row) {
+    return String(row.supplier_id) === supplierId;
+  })[0] || {};
+  const record = Object.assign({}, existing);
+  SUPPLIER_ACCOUNT_HEADERS.forEach(function(header) {
+    if (Object.prototype.hasOwnProperty.call(payload, header)) record[header] = payload[header];
+  });
+  record.supplier_id = supplierId;
+  ['current_balance', 'credit_limit', 'available_credit', 'minimum_order'].forEach(function(header) {
+    if (String(record[header] == null ? '' : record[header]).trim() !== '') record[header] = parseMoney_(record[header]);
+  });
+  if (String(record.renewal_notice_days == null ? '' : record.renewal_notice_days).trim() !== '') {
+    record.renewal_notice_days = Number(record.renewal_notice_days) || 0;
+  }
+  record.created_at = existing.created_at || timestamp_();
+  record.created_by = existing.created_by || String(payload.updated_by || 'Amanda').trim();
+  record.updated_at = timestamp_();
+  record.updated_by = String(payload.updated_by || 'Amanda').trim();
+  const activeText = String(record.active == null ? '' : record.active).toLowerCase();
+  record.active = activeText ? !/^(false|no|inactive|closed)$/.test(activeText) : true;
+  upsertSheetObject_(spreadsheetId, SHEETS.supplierAccounts, 'supplier_id', supplierId, record);
+  logSupplierChanges_(supplierId, existing, record, record.updated_by, existing.supplier_id ? 'Account Updated' : 'Account Created');
+  return record;
+}
+
+function saveSupplierContact(payload) {
+  payload = payload || {};
+  setupSuppliersSheet();
+  const supplierId = String(payload.supplier_id || '').trim();
+  if (!supplierId) throw new Error('supplier_id is required.');
+  if (!String(payload.contact_name || '').trim() && !String(payload.email || '').trim()) throw new Error('Contact name or email is required.');
+  const contactId = String(payload.contact_id || '').trim() || makeId_('supplier-contact');
+  const existing = readSheetObjects_(SPREADSHEETS.suppliers, SHEETS.supplierContacts).filter(function(row) {
+    return String(row.contact_id) === contactId;
+  })[0] || {};
+  const record = Object.assign({}, existing);
+  SUPPLIER_CONTACT_HEADERS.forEach(function(header) {
+    if (Object.prototype.hasOwnProperty.call(payload, header)) record[header] = payload[header];
+  });
+  record.contact_id = contactId;
+  record.supplier_id = supplierId;
+  record.created_at = existing.created_at || timestamp_();
+  record.created_by = existing.created_by || String(payload.updated_by || 'Amanda').trim();
+  record.updated_at = timestamp_();
+  record.updated_by = String(payload.updated_by || 'Amanda').trim();
+  record.active = !/^(false|no|inactive)$/.test(String(record.active || 'true').toLowerCase());
+  upsertSheetObject_(SPREADSHEETS.suppliers, SHEETS.supplierContacts, 'contact_id', contactId, record);
+  appendSupplierAudit_(supplierId, existing.contact_id ? 'Contact Updated' : 'Contact Added', 'contact', existing.contact_name || '', record.contact_name || record.email || '', record.updated_by);
+  return record;
+}
+
+function saveSupplierDocument(payload) {
+  payload = payload || {};
+  setupSuppliersSheet();
+  const supplierId = String(payload.supplier_id || '').trim();
+  if (!supplierId) throw new Error('supplier_id is required.');
+  if (!String(payload.document_type || '').trim()) throw new Error('Document type is required.');
+  const documentId = String(payload.document_id || '').trim() || makeId_('supplier-document');
+  const existing = readSheetObjects_(SPREADSHEETS.suppliers, SHEETS.supplierDocuments).filter(function(row) {
+    return String(row.document_id) === documentId;
+  })[0] || {};
+  const record = Object.assign({}, existing);
+  SUPPLIER_DOCUMENT_HEADERS.forEach(function(header) {
+    if (Object.prototype.hasOwnProperty.call(payload, header)) record[header] = payload[header];
+  });
+  record.document_id = documentId;
+  record.supplier_id = supplierId;
+  record.created_at = existing.created_at || timestamp_();
+  record.created_by = existing.created_by || String(payload.updated_by || 'Amanda').trim();
+  record.updated_at = timestamp_();
+  record.updated_by = String(payload.updated_by || 'Amanda').trim();
+  record.active = !/^(false|no|inactive)$/.test(String(record.active || 'true').toLowerCase());
+  upsertSheetObject_(SPREADSHEETS.suppliers, SHEETS.supplierDocuments, 'document_id', documentId, record);
+  appendSupplierAudit_(supplierId, existing.document_id ? 'Document Updated' : 'Document Added', record.document_type, existing.status || '', record.status || '', record.updated_by);
+  return record;
+}
+
+function saveSupplierNote(payload) {
+  payload = payload || {};
+  const supplierId = String(payload.supplier_id || '').trim();
+  const noteText = String(payload.note_text || '').trim();
+  if (!supplierId || !noteText) throw new Error('Supplier and note text are required.');
+  setupSuppliersSheet();
+  const record = {
+    note_id: makeId_('supplier-note'),
+    supplier_id: supplierId,
+    note_text: noteText,
+    created_at: timestamp_(),
+    created_by: String(payload.created_by || payload.updated_by || 'Amanda').trim()
+  };
+  appendObject_(SPREADSHEETS.suppliers, SHEETS.supplierNotes, record);
+  appendSupplierAudit_(supplierId, 'Note Added', 'note', '', noteText, record.created_by);
+  return record;
+}
+
+function saveSupplierAlert(payload) {
+  payload = payload || {};
+  const supplierId = String(payload.supplier_id || '').trim();
+  const alertText = String(payload.alert_text || '').trim();
+  if (!supplierId || !alertText) throw new Error('Supplier and alert text are required.');
+  setupSuppliersSheet();
+  const record = {
+    alert_id: makeId_('supplier-alert'),
+    supplier_id: supplierId,
+    alert_text: alertText,
+    due_date: String(payload.due_date || '').trim(),
+    status: String(payload.status || 'Open').trim(),
+    created_at: timestamp_(),
+    created_by: String(payload.created_by || payload.updated_by || 'Amanda').trim(),
+    resolved_at: '',
+    resolved_by: ''
+  };
+  appendObject_(SPREADSHEETS.suppliers, SHEETS.supplierAlerts, record);
+  appendSupplierAudit_(supplierId, 'Alert Added', 'alert', '', alertText, record.created_by);
+  return record;
+}
+
+function logSupplierChanges_(supplierId, before, after, changedBy, action) {
+  const ignored = { created_at: true, created_by: true, updated_at: true, updated_by: true };
+  let changes = 0;
+  SUPPLIER_ACCOUNT_HEADERS.forEach(function(header) {
+    if (ignored[header] || header === 'supplier_id') return;
+    const oldValue = before[header] == null ? '' : before[header];
+    const newValue = after[header] == null ? '' : after[header];
+    if (String(oldValue) === String(newValue)) return;
+    appendSupplierAudit_(supplierId, action, header, oldValue, newValue, changedBy);
+    changes += 1;
+  });
+  if (!changes && !before.supplier_id) appendSupplierAudit_(supplierId, action, 'supplier_name', '', after.supplier_name || '', changedBy);
+}
+
+function appendSupplierAudit_(supplierId, action, fieldName, priorValue, newValue, changedBy) {
+  appendObject_(SPREADSHEETS.suppliers, SHEETS.supplierAudit, {
+    audit_id: makeId_('supplier-audit'),
+    supplier_id: supplierId,
+    action: action,
+    field_name: fieldName || '',
+    prior_value: priorValue == null ? '' : priorValue,
+    new_value: newValue == null ? '' : newValue,
+    changed_at: timestamp_(),
+    changed_by: changedBy || 'Amanda'
+  });
+}
+
+function buildSupplierMetrics_(records, alerts) {
+  const missingAgreements = records.filter(function(row) {
+    return !/^(signed|not required)$/i.test(String(row.signed_agreement_status || ''));
+  }).length;
+  const renewals = records.filter(function(row) {
+    return isDateWithinDays_(row.renewal_date || row.agreement_expiration_date, 90);
+  }).length;
+  const compliance = records.filter(function(row) {
+    return !/^(current|not required)$/i.test(String(row.compliance_status || ''));
+  }).length;
+  const credit = records.filter(function(row) {
+    return /review|hold|cod|not verified/i.test(String(row.credit_status || ''));
+  }).length;
+  return [
+    { key: 'open_alerts', label: 'Open Alerts', value: alerts.length, note: 'Supplier follow-up' },
+    { key: 'all', label: 'Suppliers', value: records.length, note: 'Active accounts' },
+    { key: 'agreements', label: 'Agreements', value: missingAgreements, note: 'Missing or unverified' },
+    { key: 'renewals', label: '90 Day Renewals', value: renewals, note: 'Agreement window' },
+    { key: 'compliance', label: 'Compliance', value: compliance, note: 'Needs review' },
+    { key: 'credit', label: 'Credit Review', value: credit, note: 'Terms or limit review' }
+  ];
 }
 
 function setupCollectionsSheet() {
