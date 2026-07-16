@@ -830,3 +830,44 @@ body[data-theme="light"] .command-alert-list article{
   .lien-payment-modal .lien-payment-row{grid-template-columns:minmax(0,1fr) auto}
   .lien-payment-modal .lien-payment-row>em{grid-column:1/-1}
 }
+
+
+/* Suppliers account, terms, and compliance workspace */
+.suppliers-page .suppliers-table .liens-table-head,
+.suppliers-page .suppliers-table .liens-row{grid-template-columns:1.18fr .82fr .72fr 1fr 1fr 1fr}
+.suppliers-page .liens-row{width:100%;text-align:left;font:inherit;color:var(--text)}
+.supplier-filter-actions{display:flex;justify-content:flex-end;gap:8px}
+.supplier-filter-actions button,
+.supplier-action-row button,
+.supplier-item-list button{border:1px solid var(--blue-300);background:var(--navy-700);color:#fff;font-weight:800;cursor:pointer}
+.supplier-filter-actions button{padding:9px 18px}
+.supplier-action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+.supplier-action-row button{min-height:38px;padding:8px 10px}
+.supplier-section{margin-top:10px}
+.supplier-section .liens-detail-grid{margin-top:10px}
+.supplier-item-list{display:grid;gap:7px;margin-top:9px}
+.supplier-item-list article{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;border:1px solid var(--line);background:var(--field-bg);padding:9px 10px}
+.supplier-item-list article div{display:grid;gap:2px;min-width:0}
+.supplier-item-list strong{color:var(--text);font-size:12px}
+.supplier-item-list span,.supplier-item-list em{color:var(--muted);font-size:11px;font-style:normal;white-space:normal;overflow-wrap:anywhere}
+.supplier-item-list button{padding:6px 11px}
+.supplier-account-modal{width:min(1180px,calc(100vw - 36px))}
+.supplier-account-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.supplier-account-form-grid fieldset{align-content:start}
+.supplier-account-form-grid fieldset>div{grid-template-columns:repeat(3,minmax(0,1fr))}
+.supplier-account-form-grid fieldset>label{margin:0}
+.suppliers-detail .empty-panel{border:1px solid var(--line);padding:24px;color:var(--muted)}
+body[data-theme="light"] .supplier-filter-actions button,
+body[data-theme="light"] .supplier-action-row button,
+body[data-theme="light"] .supplier-item-list button{background:#12365b;color:#fff}
+@media(max-width:1080px){
+  .supplier-filter-actions{flex-wrap:wrap}
+  .supplier-account-form-grid{grid-template-columns:1fr}
+}
+@media(max-width:720px){
+  .suppliers-page .suppliers-table .liens-table-head{display:none}
+  .suppliers-page .suppliers-table .liens-row{grid-template-columns:1fr 1fr}
+  .suppliers-page .suppliers-table .liens-row>span:first-child{grid-column:1/-1}
+  .supplier-action-row{grid-template-columns:1fr}
+  .supplier-account-form-grid fieldset>div{grid-template-columns:1fr}
+}
