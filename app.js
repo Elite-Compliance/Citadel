@@ -348,6 +348,7 @@ function normalizeLienRecord(record){
     grossPayments:payment.gross_payments||0,
     netPaymentsReceived:payment.net_payments_received||0,
     latestPaymentDate:payment.latest_payment_date||"",
+    latestPaymentAmount:payment.latest_payment_amount||0,
     paymentCount:Number(payment.payment_count||0),
     latestPaymentType:payment.latest_payment_type||"",
     latestPaymentMethod:payment.latest_payment_method||"",
@@ -394,8 +395,12 @@ function renderLienPaymentRows(rows,limit){
     return '<article class="'+classes.join(' ')+'"><div><strong>'+escapeHtml(formatLienPaymentDate(item.date))+'</strong><span>'+escapeHtml([item.type,item.method].filter(Boolean).join(' / ')||'Payment')+'</span></div><strong class="lien-payment-amount">'+escapeHtml(moneyLabel(item.amount))+'</strong><em>'+escapeHtml(lienPaymentStatusLabel(item))+'</em></article>'
   }).join('')+'</div>'
 }
-function renderLienPaymentSummaryGrid(record){
-  return '<div class="lien-payment-summary"><article><span>Net Received</span><strong>'+escapeHtml(moneyLabel(record.netPaymentsReceived||0))+'</strong></article><article><span>Gross Payments</span><strong>'+escapeHtml(moneyLabel(record.grossPayments||0))+'</strong></article><article><span>Latest Payment</span><strong>'+escapeHtml(formatLienPaymentDate(record.latestPaymentDate))+'</strong></article><article><span>Transactions</span><strong>'+escapeHtml(record.paymentCount||0)+'</strong></article><article><span>Blaze Stage</span><strong>'+escapeHtml(record.blazeStage||'-')+'</strong></article><article><span>Days in Blaze Stage</span><strong>'+escapeHtml(record.daysInBlazeStage===''?'-':record.daysInBlazeStage)+'</strong></article></div>'
+function lienLatestPaymentAmount(record,transactions){
+  var rows=transactions&&transactions.length?transactions:(record.paymentHistoryPreview||[]);
+  return rows.length?rows[0].amount:(record.latestPaymentAmount||0)
+}
+function renderLienPaymentSummaryGrid(record,transactions){
+  return '<div class="lien-payment-summary"><article><span>Received</span><strong>'+escapeHtml(moneyLabel(record.netPaymentsReceived||0))+'</strong></article><article><span>Last Payment</span><strong>'+escapeHtml(moneyLabel(lienLatestPaymentAmount(record,transactions)))+'</strong></article><article><span>Latest Payment</span><strong>'+escapeHtml(formatLienPaymentDate(record.latestPaymentDate))+'</strong></article><article><span>Transactions</span><strong>'+escapeHtml(record.paymentCount||0)+'</strong></article><article><span>Blaze Stage</span><strong>'+escapeHtml(record.blazeStage||'-')+'</strong></article><article><span>Days in Blaze Stage</span><strong>'+escapeHtml(record.daysInBlazeStage===''?'-':record.daysInBlazeStage)+'</strong></article></div>'
 }
 function renderLienPaymentHistory(record){
   if(!record||!record.id)return "";
@@ -406,7 +411,7 @@ function renderLienPaymentHistory(record){
     var flags=[];
     if(record.hasReversal)flags.push(record.reversalCount+' reversal'+(record.reversalCount===1?'':'s'));
     if(record.paymentOutlierReview)flags.push('Amount review required');
-    body=renderLienPaymentSummaryGrid(record)+(flags.length?'<p class="lien-payment-flags">'+escapeHtml(flags.join(' - '))+'</p>':'')+'<h4>Recent Transactions</h4>'+renderLienPaymentRows(record.paymentHistoryPreview,3)+(record.paymentCount||record.paymentHistoryPreview.length?'<button type="button" class="lien-payment-history-button" data-open-payment-history>View Full History</button>':'')
+    body=renderLienPaymentSummaryGrid(record,record.paymentHistoryPreview)+(flags.length?'<p class="lien-payment-flags">'+escapeHtml(flags.join(' - '))+'</p>':'')+'<h4>Recent Transactions</h4>'+renderLienPaymentRows(record.paymentHistoryPreview,3)+(record.paymentCount||record.paymentHistoryPreview.length?'<button type="button" class="lien-payment-history-button" data-open-payment-history>View Full History</button>':'')
   }
   return '<section class="lien-payment-history"><div class="card-heading"><h3>Payment History</h3><span>Protected payment report</span></div>'+body+'</section>'
 }
@@ -425,6 +430,7 @@ function hydrateLienPaymentRecord(record,data){
     grossPayments:summary.gross_payments||0,
     netPaymentsReceived:summary.net_payments_received||0,
     latestPaymentDate:summary.latest_payment_date||"",
+    latestPaymentAmount:summary.latest_payment_amount||record.latestPaymentAmount||0,
     paymentCount:Number(summary.payment_count||0),
     latestPaymentType:summary.latest_payment_type||"",
     latestPaymentMethod:summary.latest_payment_method||"",
@@ -436,7 +442,7 @@ function hydrateLienPaymentRecord(record,data){
   })
 }
 function renderLienPaymentModalContent(record,transactions){
-  return renderLienPaymentSummaryGrid(record)+(record.hasReversal?'<p class="lien-payment-flags">'+escapeHtml(record.reversalCount+' reversal'+(record.reversalCount===1?'':'s')+' totaling '+moneyLabel(record.reversalAmount))+'</p>':'')+'<div class="lien-payment-modal-table-head"><span>Date / Type</span><span>Amount</span><span>Status</span></div>'+renderLienPaymentRows(transactions,transactions.length)
+  return renderLienPaymentSummaryGrid(record,transactions)+(record.hasReversal?'<p class="lien-payment-flags">'+escapeHtml(record.reversalCount+' reversal'+(record.reversalCount===1?'':'s')+' totaling '+moneyLabel(record.reversalAmount))+'</p>':'')+'<div class="lien-payment-modal-table-head"><span>Date / Type</span><span>Amount</span><span>Status</span></div>'+renderLienPaymentRows(transactions,transactions.length)
 }
 function openLienPaymentHistoryModal(record){
   if(!record||!record.blazeJobId)return;
