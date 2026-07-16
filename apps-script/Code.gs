@@ -7,6 +7,7 @@ const SPREADSHEETS = {
   reviews: '1EjRpoie4MP8eE4SmYi0xqXIbGavH3ffz5DTb-MUdE1U',
   fleet: '1cUbzbYW_7UCwD4oD9_pSWZBLDZYF3VpvqBijUOMBhuo',
   registrations: '1_vi1q6qUu821TiUgMtelsF4ya2EBsXlPIlt-COEb6X8',
+  payments: '1peF6ujpJGi_vugM7hanoL06KLNUC_tarAOoW2dW6QfQ',
   suppliers: '1dKaiRkQNb3C1T4ajWYZZ0v72Pk6T9jaw7lmmJFl4cTA'
 };
 const LIEN_STATUS_REPORTS_FOLDER_ID = '1XcllT_u0WP7H5Cr9zvw9G6NNcOUTYcTH';
@@ -48,13 +49,16 @@ const SHEETS = {
   collectionAlerts: 'CollectionAlerts',
   businessContacts: 'BusinessContacts',
   collectionAttorneys: 'CollectionAttorneys',
-  collectionContactLinks: 'CollectionContactLinks',
   supplierAccounts: 'SupplierAccounts',
   supplierContacts: 'SupplierContacts',
   supplierDocuments: 'SupplierDocuments',
   supplierNotes: 'SupplierNotes',
   supplierAlerts: 'SupplierAlerts',
-  supplierAudit: 'SupplierAudit'
+  supplierAudit: 'SupplierAudit',
+  paymentImport: 'PaymentImport',
+  paymentTransactions: 'Payments',
+  paymentSummary: 'PaymentSummary',
+  paymentImportLog: 'PaymentImportLog'
 };
 
 const CONTRACTOR_RECORD_HEADERS = ['Contractor', 'Phone', 'Email', 'Regions', 'Risk', 'Documents', 'GL Expiry', 'WC Expiry', 'Next Action', 'Address'];
@@ -87,12 +91,15 @@ const SUPPLIER_NOTE_HEADERS = ['note_id', 'supplier_id', 'note_text', 'created_a
 const SUPPLIER_ALERT_HEADERS = ['alert_id', 'supplier_id', 'alert_text', 'due_date', 'status', 'created_at', 'created_by', 'resolved_at', 'resolved_by'];
 const SUPPLIER_AUDIT_HEADERS = ['audit_id', 'supplier_id', 'action', 'field_name', 'prior_value', 'new_value', 'changed_at', 'changed_by'];
 
-const COLLECTION_RECORD_HEADERS = ['collection_id', 'lien_id', 'collection_agency', 'date_sent_to_agency', 'amount_outstanding', 'amount_collected', 'amount_we_receive', 'date_received', 'tracking_status', 'created_at', 'updated_by', 'last_updated', 'active'];
+const COLLECTION_RECORD_HEADERS = ['collection_id', 'lien_id', 'assigned_attorney_id', 'assigned_attorney_name', 'collection_agency', 'date_sent_to_agency', 'amount_outstanding', 'amount_collected', 'amount_we_receive', 'date_received', 'tracking_status', 'created_at', 'updated_by', 'last_updated', 'active'];
 const COLLECTION_NOTE_HEADERS = ['note_id', 'collection_id', 'note_date', 'note_by', 'note_type', 'note_text', 'active'];
 const COLLECTION_ALERT_HEADERS = ['alert_id', 'collection_id', 'alert_type', 'alert_text', 'priority', 'owner', 'due_date', 'status', 'created_date', 'resolved_date', 'active'];
 const BUSINESS_CONTACT_HEADERS = ['contact_id', 'contact_type', 'organization_name', 'contact_name', 'job_title', 'department', 'primary_email', 'secondary_email', 'office_phone', 'phone_extension', 'mobile_phone', 'fax', 'website', 'preferred_contact_method', 'business_address_1', 'business_address_2', 'business_city', 'business_state', 'business_zip', 'business_country', 'mailing_same_as_business', 'mailing_address_1', 'mailing_address_2', 'mailing_city', 'mailing_state', 'mailing_zip', 'mailing_country', 'notes', 'created_at', 'updated_at', 'active'];
 const COLLECTION_ATTORNEY_HEADERS = ['attorney_id', 'firm_name', 'office_name', 'attorney_name', 'job_title', 'bar_number', 'licensed_states', 'practice_areas', 'primary_email', 'secondary_email', 'office_phone', 'phone_extension', 'mobile_phone', 'fax', 'website', 'preferred_contact_method', 'business_address_1', 'business_address_2', 'business_city', 'business_state', 'business_zip', 'business_country', 'mailing_same_as_business', 'mailing_address_1', 'mailing_address_2', 'mailing_city', 'mailing_state', 'mailing_zip', 'mailing_country', 'notes', 'created_at', 'updated_at', 'active'];
-const COLLECTION_CONTACT_LINK_HEADERS = ['link_id', 'collection_id', 'contact_id', 'relationship', 'is_primary', 'created_at', 'updated_at', 'active'];
+const PAYMENT_IMPORT_HEADERS = ['Region', 'Sales Rep', 'Job Number', 'Job Link', 'Customer', 'Current Stage', 'Stage Enter Date', 'Payment Amount', 'Payment Type', 'Payment Source Type', 'Payment Date'];
+const PAYMENT_TRANSACTION_HEADERS = ['payment_key', 'blaze_job_id', 'job_number', 'job_link', 'region', 'sales_rep', 'customer', 'blaze_stage', 'stage_enter_date', 'days_in_current_stage', 'payment_amount', 'payment_type', 'payment_method', 'payment_date', 'source_row_hash', 'source_row_number', 'duplicate_group_size', 'duplicate_sequence', 'duplicate_status', 'included_in_summary', 'is_reversal', 'missing_payment_method', 'stage_normalized', 'outlier_review', 'validation_error', 'imported_at', 'active'];
+const PAYMENT_SUMMARY_HEADERS = ['blaze_job_id', 'job_number', 'job_link', 'region', 'sales_rep', 'customer', 'blaze_stage', 'stage_enter_date', 'days_in_current_stage', 'gross_payments', 'net_payments_received', 'latest_payment_date', 'payment_count', 'latest_payment_type', 'latest_payment_method', 'reversal_count', 'reversal_amount', 'has_reversal', 'net_payment_zero', 'outlier_review', 'last_imported_at', 'active'];
+const PAYMENT_IMPORT_LOG_HEADERS = ['import_id', 'imported_at', 'imported_by', 'source_sheet', 'source_label', 'source_rows', 'unique_rows', 'duplicate_rows', 'negative_rows', 'missing_payment_method_rows', 'validation_error_rows', 'zero_net_jobs', 'outlier_rows', 'status', 'notes'];
 
 function doGet(e) {
   const action = getParam_(e, 'action') || 'getLiens';
@@ -100,6 +107,25 @@ function doGet(e) {
   try {
     if (action === 'getLiens') {
       return output_(e, { ok: true, data: getLiens(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'getLienPayments') {
+      return output_(e, { ok: true, data: getLienPayments(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'getPaymentImportStatus') {
+      return output_(e, { ok: true, data: getPaymentImportStatus(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'runPaymentImport') {
+      return output_(e, {
+        ok: true,
+        data: runPaymentImport({
+          imported_by: getParam_(e, 'imported_by') || 'Citadel user',
+          source_label: getParam_(e, 'source_label') || ''
+        }),
+        version: CITADEL_VERSION
+      });
     }
 
     if (action === 'getContractors') {
@@ -501,10 +527,9 @@ function setupCollectionsSheet() {
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.collectionAlerts, COLLECTION_ALERT_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.businessContacts, BUSINESS_CONTACT_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.collectionAttorneys, COLLECTION_ATTORNEY_HEADERS);
-  ensureSheetWithHeaders_(spreadsheetId, SHEETS.collectionContactLinks, COLLECTION_CONTACT_LINK_HEADERS);
   return {
     spreadsheet_id: spreadsheetId,
-    sheets: [SHEETS.collectionRecords, SHEETS.collectionNotes, SHEETS.collectionAlerts, SHEETS.businessContacts, SHEETS.collectionAttorneys, SHEETS.collectionContactLinks]
+    sheets: [SHEETS.collectionRecords, SHEETS.collectionNotes, SHEETS.collectionAlerts, SHEETS.businessContacts, SHEETS.collectionAttorneys]
   };
 }
 
@@ -521,7 +546,6 @@ function getCollections() {
   });
   const contacts = readSheetObjects_(spreadsheetId, SHEETS.businessContacts).filter(isActiveRow_);
   const attorneys = readSheetObjects_(spreadsheetId, SHEETS.collectionAttorneys).filter(isActiveRow_);
-  const contactLinks = readSheetObjects_(spreadsheetId, SHEETS.collectionContactLinks).filter(isActiveRow_);
   const trackingByLienId = {};
   trackingRows.forEach(function(row) {
     trackingByLienId[String(row.lien_id || '')] = row;
@@ -541,15 +565,12 @@ function getCollections() {
   records.forEach(function(record) { currentCollectionIds[String(record.collection_id)] = true; });
   const currentNotes = notes.filter(function(item) { return currentCollectionIds[String(item.collection_id)]; });
   const currentAlerts = alerts.filter(function(item) { return currentCollectionIds[String(item.collection_id)]; });
-  const currentContactLinks = contactLinks.filter(function(item) { return currentCollectionIds[String(item.collection_id)]; });
-
   return {
     records: records,
     notes: currentNotes,
     alerts: currentAlerts,
     contacts: contacts,
     attorneys: attorneys,
-    contactLinks: currentContactLinks,
     metrics: buildCollectionMetrics_(records, currentAlerts),
     source: 'LienRecords / Collection Agency'
   };
@@ -572,41 +593,58 @@ function saveCollectionRecord(payload) {
   const hasOutstanding = String(payload.amount_outstanding == null ? '' : payload.amount_outstanding).trim() !== '';
   const amountOutstanding = hasOutstanding ? parseMoney_(payload.amount_outstanding) : Math.max(parseMoney_(source.balance) - amountCollected, 0);
   const dateReceived = String(payload.date_received || '').trim();
+  const assignedAttorneyId = String(payload.assigned_attorney_id || '').trim();
+  const assignedAttorney = assignedAttorneyId ? findCollectionAttorney_(assignedAttorneyId) : null;
+  if (assignedAttorneyId && !assignedAttorney) throw new Error('The selected attorney is no longer active in the protected directory.');
+  const assignedAttorneyName = assignedAttorney ? assignedAttorney.name : '';
   const record = {
     collection_id: collectionId,
     lien_id: lienId,
-    collection_agency: String(payload.collection_agency || '').trim(),
+    assigned_attorney_id: assignedAttorneyId,
+    assigned_attorney_name: assignedAttorneyName,
+    collection_agency: String(existing.collection_agency || '').trim(),
     date_sent_to_agency: String(payload.date_sent_to_agency || payload.sent_date || '').trim(),
     amount_outstanding: amountOutstanding,
     amount_collected: amountCollected,
     amount_we_receive: parseMoney_(payload.amount_we_receive),
     date_received: dateReceived,
-    tracking_status: collectionTrackingStatus_(dateReceived, amountCollected, String(payload.collection_agency || '').trim()),
+    tracking_status: collectionTrackingStatus_(dateReceived, amountCollected, assignedAttorneyName),
     created_at: existing.created_at || timestamp_(),
     updated_by: String(payload.updated_by || 'Amanda').trim(),
     last_updated: timestamp_(),
     active: true
   };
   upsertSheetObject_(SPREADSHEETS.commandCenter, SHEETS.collectionRecords, 'collection_id', collectionId, record);
-  syncCollectionContactLinks_(collectionId, payload.contact_links);
   return record;
+}
+
+function findCollectionAttorney_(attorneyId) {
+  const spreadsheetId = SPREADSHEETS.commandCenter;
+  const attorney = readSheetObjects_(spreadsheetId, SHEETS.collectionAttorneys).filter(function(row) {
+    return isActiveRow_(row) && String(row.attorney_id || '').trim() === attorneyId;
+  })[0];
+  if (attorney) return { id: attorneyId, name: String(attorney.firm_name || attorney.office_name || attorney.attorney_name || '').trim() };
+  const contact = readSheetObjects_(spreadsheetId, SHEETS.businessContacts).filter(function(row) {
+    return isActiveRow_(row) && String(row.contact_type || '').trim() === 'Attorney' && String(row.contact_id || '').trim() === attorneyId;
+  })[0];
+  return contact ? { id: attorneyId, name: String(contact.organization_name || contact.contact_name || '').trim() } : null;
 }
 
 function isCollectionAgencyLien_(row) {
   return String(row.status || '').trim().toLowerCase() === 'collection agency';
 }
 
-function collectionTrackingStatus_(dateReceived, amountCollected, agency) {
+function collectionTrackingStatus_(dateReceived, amountCollected, assignedAttorney) {
   if (dateReceived) return 'Received';
   if (amountCollected > 0) return 'Partially Collected';
-  return agency ? 'Placed' : 'Needs Assignment';
+  return assignedAttorney ? 'Placed' : 'Needs Assignment';
 }
 
 function mergeCollectionSource_(source, tracking) {
   const lienId = String(source.lien_id || '').trim();
   const amountCollected = parseMoney_(tracking.amount_collected);
   const hasOutstanding = String(tracking.amount_outstanding == null ? '' : tracking.amount_outstanding).trim() !== '';
-  const agency = String(tracking.collection_agency || '').trim();
+  const assignedAttorneyName = String(tracking.assigned_attorney_name || '').trim();
   const dateReceived = String(tracking.date_received || '').trim();
   return {
     collection_id: String(tracking.collection_id || '').trim() || makeIdFromText_('COL', lienId),
@@ -623,13 +661,14 @@ function mergeCollectionSource_(source, tracking) {
     first_invoice_date: source.first_invoice_date || '',
     latest_invoice_date: source.latest_invoice_date || '',
     invoice_count: source.invoice_count || '',
-    collection_agency: agency,
+    assigned_attorney_id: tracking.assigned_attorney_id || '',
+    assigned_attorney_name: assignedAttorneyName,
     date_sent_to_agency: tracking.date_sent_to_agency || '',
     amount_outstanding: hasOutstanding ? parseMoney_(tracking.amount_outstanding) : Math.max(parseMoney_(source.balance) - amountCollected, 0),
     amount_collected: amountCollected,
     amount_we_receive: parseMoney_(tracking.amount_we_receive),
     date_received: dateReceived,
-    tracking_status: tracking.tracking_status || collectionTrackingStatus_(dateReceived, amountCollected, agency),
+    tracking_status: tracking.tracking_status || collectionTrackingStatus_(dateReceived, amountCollected, assignedAttorneyName),
     source_status: source.status || '',
     created_at: tracking.created_at || '',
     updated_by: tracking.updated_by || '',
@@ -738,51 +777,6 @@ function saveCollectionAttorney(payload) {
   return record;
 }
 
-function syncCollectionContactLinks_(collectionId, rawLinks) {
-  let requested = [];
-  if (rawLinks) {
-    try {
-      requested = JSON.parse(String(rawLinks));
-    } catch (error) {
-      throw new Error('The selected business contacts could not be read.');
-    }
-  }
-  if (!Array.isArray(requested)) throw new Error('Collection contact links must be a list.');
-  const spreadsheetId = SPREADSHEETS.commandCenter;
-  const existing = readSheetObjects_(spreadsheetId, SHEETS.collectionContactLinks).filter(function(row) {
-    return String(row.collection_id) === String(collectionId);
-  });
-  const requestedKeys = {};
-  requested.forEach(function(link) {
-    const contactId = String(link.contact_id || '').trim();
-    const relationship = String(link.relationship || 'Other').trim();
-    if (!contactId) return;
-    const key = contactId + '|' + relationship;
-    requestedKeys[key] = true;
-    const match = existing.filter(function(row) {
-      return String(row.contact_id) === contactId && String(row.relationship || 'Other') === relationship;
-    })[0];
-    const record = {
-      link_id: match ? match.link_id : makeId_('contact-link'),
-      collection_id: collectionId,
-      contact_id: contactId,
-      relationship: relationship,
-      is_primary: link.is_primary === true || String(link.is_primary).toLowerCase() === 'true',
-      created_at: match ? match.created_at : timestamp_(),
-      updated_at: timestamp_(),
-      active: true
-    };
-    upsertSheetObject_(spreadsheetId, SHEETS.collectionContactLinks, 'link_id', record.link_id, record);
-  });
-  existing.forEach(function(row) {
-    const key = String(row.contact_id) + '|' + String(row.relationship || 'Other');
-    if (!isActiveRow_(row) || requestedKeys[key]) return;
-    row.active = false;
-    row.updated_at = timestamp_();
-    upsertSheetObject_(spreadsheetId, SHEETS.collectionContactLinks, 'link_id', row.link_id, row);
-  });
-}
-
 function saveCollectionNote(payload) {
   payload = payload || {};
   if (!payload.collection_id) throw new Error('collection_id is required.');
@@ -836,6 +830,333 @@ function buildCollectionMetrics_(records, alerts) {
     { metric_key: 'collected', label: 'Collected', value: formatMoney_(collected), note: 'Agency recovery', tone: 'blue', sort_order: 4 },
     { metric_key: 'expected', label: 'Expected Receipt', value: formatMoney_(expected), note: 'Amount due to Elite', tone: 'blue', sort_order: 5 }
   ];
+}
+
+function setupPaymentsSheet() {
+  const spreadsheetId = getPaymentsSpreadsheetId_();
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.paymentImport, PAYMENT_IMPORT_HEADERS);
+  ensureSheetWithExactHeaders_(spreadsheetId, SHEETS.paymentTransactions, PAYMENT_TRANSACTION_HEADERS, {
+    payment_method: ['payment_source'],
+    source_row_hash: ['source_row_has'],
+    duplicate_group_size: ['duplicate_count', 'duplicate_1']
+  });
+  ensureSheetWithExactHeaders_(spreadsheetId, SHEETS.paymentSummary, PAYMENT_SUMMARY_HEADERS);
+  ensureSheetWithExactHeaders_(spreadsheetId, SHEETS.paymentImportLog, PAYMENT_IMPORT_LOG_HEADERS);
+  return {
+    spreadsheet_id: spreadsheetId,
+    sheets: [SHEETS.paymentImport, SHEETS.paymentTransactions, SHEETS.paymentSummary, SHEETS.paymentImportLog]
+  };
+}
+
+function importPaymentsFromStaging() {
+  return runPaymentImport({
+    imported_by: 'Apps Script editor',
+    source_label: 'Manual Apps Script import'
+  });
+}
+
+function runPaymentImport(options) {
+  const context = options || {};
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) {
+    throw new Error('Another payment import is already running. Please wait a moment and try again.');
+  }
+
+  const spreadsheetId = getPaymentsSpreadsheetId_();
+  const importedAt = timestamp_();
+  const importedBy = String(context.imported_by || 'Citadel user').trim() || 'Citadel user';
+  const sourceLabel = String(context.source_label || '').trim().slice(0, 160);
+  let sourceRows = 0;
+
+  try {
+    setupPaymentsSheet();
+    validatePaymentImportHeaders_(spreadsheetId);
+    const rawRows = readSheetObjects_(spreadsheetId, SHEETS.paymentImport);
+    sourceRows = rawRows.length;
+    if (!rawRows.length) {
+      throw new Error('PaymentImport is empty. Paste a fresh Deposit Report into the PaymentImport tab, then run the import again.');
+    }
+
+    const groupSizes = {};
+    rawRows.forEach(function(row) {
+      const sourceHash = paymentSourceRowHash_(row);
+      groupSizes[sourceHash] = (groupSizes[sourceHash] || 0) + 1;
+    });
+
+    const groupSequences = {};
+    const transactions = rawRows.map(function(row, index) {
+      const sourceHash = paymentSourceRowHash_(row);
+      groupSequences[sourceHash] = (groupSequences[sourceHash] || 0) + 1;
+      return normalizePaymentTransaction_(
+        row,
+        sourceHash,
+        index + 2,
+        groupSizes[sourceHash],
+        groupSequences[sourceHash],
+        importedAt
+      );
+    }).sort(function(left, right) {
+      return String(right.payment_date).localeCompare(String(left.payment_date)) ||
+        String(left.job_number).localeCompare(String(right.job_number)) ||
+        Number(left.source_row_number) - Number(right.source_row_number);
+    });
+
+    const uniqueRows = Object.keys(groupSizes).length;
+    const duplicateRows = rawRows.length - uniqueRows;
+    const validationErrorRows = transactions.filter(function(row) { return !!row.validation_error; }).length;
+    const summaryTransactions = transactions.filter(function(row) {
+      return row.included_in_summary && !row.validation_error;
+    });
+    const summaries = buildPaymentSummaries_(summaryTransactions, importedAt);
+
+    replaceSheetObjects_(spreadsheetId, SHEETS.paymentTransactions, PAYMENT_TRANSACTION_HEADERS, transactions);
+    replaceSheetObjects_(spreadsheetId, SHEETS.paymentSummary, PAYMENT_SUMMARY_HEADERS, summaries);
+
+    const importLog = {
+      import_id: makeId_('payment-import'),
+      imported_at: importedAt,
+      imported_by: importedBy,
+      source_sheet: SHEETS.paymentImport,
+      source_label: sourceLabel,
+      source_rows: rawRows.length,
+      unique_rows: uniqueRows,
+      duplicate_rows: duplicateRows,
+      negative_rows: transactions.filter(function(row) { return row.is_reversal; }).length,
+      missing_payment_method_rows: transactions.filter(function(row) { return row.missing_payment_method; }).length,
+      validation_error_rows: validationErrorRows,
+      zero_net_jobs: summaries.filter(function(row) { return row.net_payment_zero; }).length,
+      outlier_rows: transactions.filter(function(row) { return row.outlier_review; }).length,
+      status: duplicateRows || validationErrorRows ||
+        transactions.some(function(row) { return row.missing_payment_method || row.outlier_review; })
+          ? 'Completed with warnings'
+          : 'Completed',
+      notes: 'All source rows retained. Exact duplicate groups are flagged; only the first row in each group is counted. Reversals remain included in net totals.'
+    };
+    appendObject_(spreadsheetId, SHEETS.paymentImportLog, importLog);
+
+    const result = {
+      import_id: importLog.import_id,
+      imported_at: importLog.imported_at,
+      status: importLog.status,
+      source_label: importLog.source_label,
+      source_rows: importLog.source_rows,
+      retained_rows: transactions.length,
+      unique_rows: importLog.unique_rows,
+      duplicate_rows: importLog.duplicate_rows,
+      negative_rows: importLog.negative_rows,
+      missing_payment_method_rows: importLog.missing_payment_method_rows,
+      validation_error_rows: importLog.validation_error_rows,
+      zero_net_jobs: importLog.zero_net_jobs,
+      outlier_rows: importLog.outlier_rows,
+      job_summaries: summaries.length
+    };
+    Logger.log(JSON.stringify(result, null, 2));
+    return result;
+  } catch (error) {
+    try {
+      setupPaymentsSheet();
+      appendObject_(spreadsheetId, SHEETS.paymentImportLog, {
+        import_id: makeId_('payment-import'),
+        imported_at: importedAt,
+        imported_by: importedBy,
+        source_sheet: SHEETS.paymentImport,
+        source_label: sourceLabel,
+        source_rows: sourceRows,
+        unique_rows: '',
+        duplicate_rows: '',
+        negative_rows: '',
+        missing_payment_method_rows: '',
+        validation_error_rows: '',
+        zero_net_jobs: '',
+        outlier_rows: '',
+        status: 'Failed',
+        notes: error && error.message ? error.message : String(error)
+      });
+    } catch (logError) {
+      Logger.log('Unable to write failed payment import log: ' + (logError.message || String(logError)));
+    }
+    throw error;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getPaymentImportStatus() {
+  const spreadsheetId = getPaymentsSpreadsheetId_();
+  setupPaymentsSheet();
+  const logs = readSheetObjects_(spreadsheetId, SHEETS.paymentImportLog);
+  const status = {
+    staging_rows: readSheetObjects_(spreadsheetId, SHEETS.paymentImport).length,
+    transactions: readSheetObjects_(spreadsheetId, SHEETS.paymentTransactions).length,
+    summaries: readSheetObjects_(spreadsheetId, SHEETS.paymentSummary).length,
+    latest_import: logs.length ? logs[logs.length - 1] : null,
+    recent_imports: logs.slice(-5).reverse()
+  };
+  Logger.log(JSON.stringify(status, null, 2));
+  return status;
+}
+
+function validatePaymentImportHeaders_(spreadsheetId) {
+  const sheet = getRequiredSheet_(spreadsheetId, SHEETS.paymentImport);
+  const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getDisplayValues()[0].map(function(value) {
+    return String(value || '').trim();
+  });
+  const missing = PAYMENT_IMPORT_HEADERS.filter(function(header) { return headers.indexOf(header) === -1; });
+  if (missing.length) throw new Error('PaymentImport is missing required columns: ' + missing.join(', '));
+}
+
+function paymentSourceRowHash_(row) {
+  const sourceText = PAYMENT_IMPORT_HEADERS.map(function(header) {
+    return String(row[header] === null || row[header] === undefined ? '' : row[header]).trim();
+  }).join('\u001f');
+  return sha256Hex_(sourceText);
+}
+
+function normalizePaymentTransaction_(row, sourceHash, sourceRowNumber, duplicateGroupSize, duplicateSequence, importedAt) {
+  const jobLink = String(row['Job Link'] || '').trim();
+  const blazeJobId = extractBlazeJobId_(jobLink);
+  const rawStage = String(row['Current Stage'] || '').trim();
+  const blazeStage = normalizeBlazeStage_(rawStage);
+  const stageEnterDate = normalizeSourceDate_(row['Stage Enter Date']);
+  const paymentDate = normalizeSourceDate_(row['Payment Date']);
+  const amountText = String(row['Payment Amount'] === null || row['Payment Amount'] === undefined ? '' : row['Payment Amount']).replace(/[$,\s]/g, '');
+  const amount = amountText === '' ? NaN : Number(amountText);
+  const paymentMethod = String(row['Payment Source Type'] || '').trim();
+  const validationErrors = [];
+  if (!blazeJobId) validationErrors.push('Missing or invalid Blaze job UUID');
+  if (!paymentDate) validationErrors.push('Missing or invalid payment date');
+  if (!isFinite(amount)) validationErrors.push('Missing or invalid payment amount');
+
+  const hasExactDuplicate = duplicateGroupSize > 1;
+  const includedInSummary = duplicateSequence === 1;
+  const duplicateStatus = !hasExactDuplicate
+    ? ''
+    : includedInSummary
+      ? 'Exact duplicate group - included in totals'
+      : 'Exact duplicate - review source entry; excluded from totals';
+
+  return {
+    payment_key: 'pay-' + sourceHash.slice(0, 24) + '-' + String(sourceRowNumber),
+    blaze_job_id: blazeJobId,
+    job_number: String(row['Job Number'] || '').trim(),
+    job_link: jobLink,
+    region: String(row.Region || '').trim(),
+    sales_rep: String(row['Sales Rep'] || '').trim(),
+    customer: String(row.Customer || '').trim(),
+    blaze_stage: blazeStage,
+    stage_enter_date: stageEnterDate,
+    days_in_current_stage: stageEnterDate ? calculateAgingDays_(stageEnterDate) : '',
+    payment_amount: isFinite(amount) ? amount : '',
+    payment_type: String(row['Payment Type'] || '').trim(),
+    payment_method: paymentMethod,
+    payment_date: paymentDate,
+    source_row_hash: sourceHash,
+    source_row_number: sourceRowNumber,
+    duplicate_group_size: duplicateGroupSize,
+    duplicate_sequence: duplicateSequence,
+    duplicate_status: duplicateStatus,
+    included_in_summary: includedInSummary,
+    is_reversal: isFinite(amount) && amount < 0,
+    missing_payment_method: !paymentMethod,
+    stage_normalized: rawStage !== blazeStage,
+    outlier_review: isFinite(amount) && Math.abs(amount) >= 1000000,
+    validation_error: validationErrors.join('; '),
+    imported_at: importedAt,
+    active: true
+  };
+}
+
+function buildPaymentSummaries_(transactions, importedAt) {
+  const byJobId = {};
+  transactions.forEach(function(row) {
+    if (!row.blaze_job_id || row.validation_error) return;
+    if (!byJobId[row.blaze_job_id]) byJobId[row.blaze_job_id] = [];
+    byJobId[row.blaze_job_id].push(row);
+  });
+
+  return Object.keys(byJobId).map(function(blazeJobId) {
+    const rows = byJobId[blazeJobId].slice().sort(function(left, right) {
+      return String(right.payment_date).localeCompare(String(left.payment_date));
+    });
+    const latest = rows[0];
+    const gross = rows.reduce(function(sum, row) { return sum + Math.max(Number(row.payment_amount || 0), 0); }, 0);
+    const net = rows.reduce(function(sum, row) { return sum + Number(row.payment_amount || 0); }, 0);
+    const reversals = rows.filter(function(row) { return row.is_reversal; });
+    return {
+      blaze_job_id: blazeJobId,
+      job_number: latest.job_number,
+      job_link: latest.job_link,
+      region: latest.region,
+      sales_rep: latest.sales_rep,
+      customer: latest.customer,
+      blaze_stage: latest.blaze_stage,
+      stage_enter_date: latest.stage_enter_date,
+      days_in_current_stage: latest.days_in_current_stage,
+      gross_payments: roundCurrency_(gross),
+      net_payments_received: roundCurrency_(net),
+      latest_payment_date: latest.payment_date,
+      payment_count: rows.length,
+      latest_payment_type: latest.payment_type,
+      latest_payment_method: latest.payment_method,
+      reversal_count: reversals.length,
+      reversal_amount: roundCurrency_(reversals.reduce(function(sum, row) { return sum + Math.abs(Number(row.payment_amount || 0)); }, 0)),
+      has_reversal: reversals.length > 0,
+      net_payment_zero: Math.abs(net) < 0.005,
+      outlier_review: rows.some(function(row) { return row.outlier_review; }),
+      last_imported_at: importedAt,
+      active: true
+    };
+  }).sort(function(left, right) {
+    return String(left.job_number).localeCompare(String(right.job_number));
+  });
+}
+
+function extractBlazeJobId_(jobLink) {
+  const match = String(jobLink || '').match(/\/job-dashboard\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\/?#]|$)/i);
+  return match ? match[1].toLowerCase() : '';
+}
+
+function normalizeBlazeStage_(value) {
+  const compact = String(value || '').trim().replace(/\s+/g, ' ');
+  if (compact.toLowerCase() === 'waiting for payment') return 'Waiting for Payment';
+  return compact;
+}
+
+function normalizeSourceDate_(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[1] + '-' + iso[2] + '-' + iso[3];
+  const mdy = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (!mdy) return '';
+  const year = Number(mdy[3]) < 100 ? 2000 + Number(mdy[3]) : Number(mdy[3]);
+  const month = Number(mdy[1]);
+  const day = Number(mdy[2]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return '';
+  return Utilities.formatDate(date, 'UTC', 'yyyy-MM-dd');
+}
+
+function sha256Hex_(value) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(value || ''), Utilities.Charset.UTF_8)
+    .map(function(byte) { return ((byte + 256) % 256).toString(16).padStart(2, '0'); })
+    .join('');
+}
+
+function roundCurrency_(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+function replaceSheetObjects_(spreadsheetId, sheetName, headers, records) {
+  const sheet = getRequiredSheet_(spreadsheetId, sheetName);
+  const existingRows = Math.max(sheet.getLastRow() - 1, 0);
+  if (existingRows) sheet.getRange(2, 1, existingRows, Math.max(sheet.getLastColumn(), headers.length)).clearContent();
+  if (!records.length) return;
+  sheet.getRange(2, 1, records.length, headers.length).setValues(records.map(function(record) {
+    return headers.map(function(header) {
+      return Object.prototype.hasOwnProperty.call(record, header) ? record[header] : '';
+    });
+  }));
 }
 
 function setupRegistrationsSheet() {
@@ -1370,6 +1691,12 @@ function mapActiveRegistration_(row) {
 function getRegistrationsSpreadsheetId_() {
   const spreadsheetId = SPREADSHEETS.registrations;
   if (!spreadsheetId) throw new Error('Registrations spreadsheet ID is not configured yet.');
+  return spreadsheetId;
+}
+
+function getPaymentsSpreadsheetId_() {
+  const spreadsheetId = SPREADSHEETS.payments;
+  if (!spreadsheetId) throw new Error('Payments spreadsheet ID is not configured yet.');
   return spreadsheetId;
 }
 
@@ -1961,6 +2288,77 @@ function clearLegacyCommandCenterRows() {
   ];
 }
 
+function paymentSheetRowIsActive_(row) {
+  return row.active === '' || row.active === true || String(row.active).toUpperCase() === 'TRUE';
+}
+
+function buildLienPaymentContext_() {
+  const emptyContext = {
+    available: false,
+    summaryByJobId: {},
+    transactionsByJobId: {}
+  };
+
+  try {
+    const spreadsheetId = getPaymentsSpreadsheetId_();
+    const summaries = readSheetObjects_(spreadsheetId, SHEETS.paymentSummary).filter(paymentSheetRowIsActive_);
+    const transactions = readSheetObjects_(spreadsheetId, SHEETS.paymentTransactions).filter(paymentSheetRowIsActive_);
+    const summaryByJobId = {};
+    const transactionsByJobId = {};
+
+    summaries.forEach(function(summary) {
+      const blazeJobId = String(summary.blaze_job_id || '').trim().toLowerCase();
+      if (blazeJobId) summaryByJobId[blazeJobId] = summary;
+    });
+
+    transactions.forEach(function(transaction) {
+      const blazeJobId = String(transaction.blaze_job_id || '').trim().toLowerCase();
+      if (!blazeJobId) return;
+      if (!transactionsByJobId[blazeJobId]) transactionsByJobId[blazeJobId] = [];
+      transactionsByJobId[blazeJobId].push(transaction);
+    });
+
+    Object.keys(transactionsByJobId).forEach(function(blazeJobId) {
+      transactionsByJobId[blazeJobId].sort(function(left, right) {
+        return String(right.payment_date || '').localeCompare(String(left.payment_date || '')) ||
+          Number(left.source_row_number || 0) - Number(right.source_row_number || 0);
+      });
+    });
+
+    return {
+      available: true,
+      summaryByJobId: summaryByJobId,
+      transactionsByJobId: transactionsByJobId
+    };
+  } catch (error) {
+    Logger.log('Liens payment enrichment unavailable: ' + error.message);
+    return emptyContext;
+  }
+}
+
+function lienBlazeJobId_(record) {
+  const direct = String(record.blaze_job_id || '').trim().toLowerCase();
+  if (direct) return direct;
+  return extractBlazeJobId_(record.blaze_url || record.job_link || record['Job Link'] || record.url || record.record_url || '');
+}
+
+function getLienPayments(payload) {
+  payload = payload || {};
+  const directId = String(payload.blaze_job_id || '').trim().toLowerCase();
+  const blazeJobId = directId || extractBlazeJobId_(payload.job_link || payload.blaze_url || '');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(blazeJobId)) {
+    throw new Error('A valid Blaze job UUID is required for payment history.');
+  }
+
+  const context = buildLienPaymentContext_();
+  return {
+    data_available: context.available,
+    blaze_job_id: blazeJobId,
+    summary: context.summaryByJobId[blazeJobId] || null,
+    transactions: (context.transactionsByJobId[blazeJobId] || []).slice()
+  };
+}
+
 function getLiens() {
   const records = readSheetObjects_(SPREADSHEETS.liens, SHEETS.lienRecords)
     .filter(function(row) { return row.active === '' || row.active === true || String(row.active).toUpperCase() === 'TRUE'; });
@@ -1968,6 +2366,7 @@ function getLiens() {
   const alerts = sheetExists_(SPREADSHEETS.liens, SHEETS.lienAlerts) ? readSheetObjects_(SPREADSHEETS.liens, SHEETS.lienAlerts) : [];
   const followUps = sheetExists_(SPREADSHEETS.liens, SHEETS.lienFollowUps) ? readSheetObjects_(SPREADSHEETS.liens, SHEETS.lienFollowUps) : [];
   const metrics = sheetExists_(SPREADSHEETS.liens, SHEETS.lienMetrics) ? readSheetObjects_(SPREADSHEETS.liens, SHEETS.lienMetrics).sort(sortByOrder_) : buildLienMetrics_(records);
+  const paymentContext = buildLienPaymentContext_();
 
   const latestNoteByLien = latestById_(notes, 'lien_id', 'note_date');
   const activeAlertByLien = latestById_(alerts.filter(function(alert) {
@@ -1982,19 +2381,30 @@ function getLiens() {
     notes: notes,
     alerts: alerts,
     followUps: activeFollowUps,
+    payments_available: paymentContext.available,
     records: records.map(function(record) {
       const note = latestNoteByLien[String(record.lien_id)] || {};
       const alert = activeAlertByLien[String(record.lien_id)] || {};
+      const blazeJobId = lienBlazeJobId_(record);
+      const paymentSummary = blazeJobId ? paymentContext.summaryByJobId[blazeJobId] || null : null;
+      const paymentHistory = blazeJobId ? paymentContext.transactionsByJobId[blazeJobId] || [] : [];
+
       record.workflow_note = note.note_text || record.workflow_note || '';
       record.alert_text = alert.alert_text || record.alert_text || '';
       record.notes_count = notes.filter(function(item) { return String(item.lien_id) === String(record.lien_id); }).length;
-      record.alerts_count = alerts.filter(function(item) { return String(item.lien_id) === String(record.lien_id) && (item.active === '' || item.active === true || String(item.active).toUpperCase() === 'TRUE'); }).length;
+      record.alerts_count = alerts.filter(function(item) {
+        return String(item.lien_id) === String(record.lien_id) &&
+          (item.active === '' || item.active === true || String(item.active).toUpperCase() === 'TRUE');
+      }).length;
       record.followups_count = activeFollowUps.filter(function(item) { return String(item.lien_id) === String(record.lien_id); }).length;
+      record.blaze_job_id = blazeJobId;
+      record.payment_data_available = paymentContext.available;
+      record.payment_summary = paymentSummary;
+      record.payment_history_preview = paymentHistory.slice(0, 3);
       return record;
     })
   };
 }
-
 
 
 function importLienStatusReports() {
