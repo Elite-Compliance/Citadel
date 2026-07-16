@@ -14,6 +14,7 @@ var pages=[{id:"command-center",label:"Command Center"},{id:"region-health",labe
 
 var LIENS_CACHE_KEY="citadel_liens_cache_v1";
 var liensData={metrics:[],notes:[],alerts:[],followUps:[],selectedIndex:0,records:[]};
+var lienPaymentHistoryCache={};
 var liensLoading=!!CITADEL_API_URL;
 var liensLoadError="";
 var liensLastUpdated="";
@@ -261,7 +262,17 @@ function renderCommandAlerts(moduleId,module){
   return '<div class="command-alert-list">'+rows.map(function(row){return '<article><strong>'+escapeHtml(row.text)+'</strong><span>'+escapeHtml((moduleId==='inbox'||moduleId==='region-health'?row.source+' - ':'')+row.meta)+'</span></article>'}).join('')+'</div>';
 }
 function bindCommandCenter(){pagePanel.addEventListener("click",function(event){var row=event.target.closest("[data-command-module]");if(!row)return;if(event.target.closest("textarea")||event.target.closest("input"))return;selectedCommandModule=row.getAttribute("data-command-module");renderCommandCenter();bindCommandCenter()});pagePanel.addEventListener("input",function(event){var target=event.target.closest("[data-command-note]");if(!target)return;var moduleId=target.getAttribute("data-command-note");setCommandFocusNote(moduleId,target.value);var row=target.closest(".command-row");var done=row&&row.querySelector("[data-command-done]");if(done)done.disabled=!target.value.trim()});pagePanel.addEventListener("change",function(event){var done=event.target.closest("[data-command-done]");if(!done||!done.checked)return;var moduleId=done.getAttribute("data-command-done");setCommandFocusNote(moduleId,"");selectedCommandModule=moduleId;renderCommandCenter();bindCommandCenter()})}
-function isNoPaymentRecord(row){var direct=String(row.no_payment_received||row.noPaymentReceived||"").toLowerCase();if(/^(true|yes|y|1|x|no payment|none)$/i.test(direct))return true;if(/^(false|no|n|0)$/i.test(direct))return false;var paid=moneyNumber(row.payment_received||row.payments_received||row.amount_paid||row.paid_amount||row.total_paid);if(paid>0)return false;var lastPayment=String(row.last_payment_date||row.lastPaymentDate||"").trim();if(lastPayment)return false;return /no payment|no payments|no deposit|missing deposit/i.test([row.status,row.stage,row.note,row.alert,row.payment_status].join(" "))}
+function isNoPaymentRecord(row){
+  if(row&&row.paymentDataAvailable&&row.blazeJobId)return Number(row.paymentCount||0)===0;
+  var direct=String(row.no_payment_received||row.noPaymentReceived||"").toLowerCase();
+  if(/^(true|yes|y|1|x|no payment|none)$/i.test(direct))return true;
+  if(/^(false|no|n|0)$/i.test(direct))return false;
+  var paid=moneyNumber(row.payment_received||row.payments_received||row.amount_paid||row.paid_amount||row.total_paid);
+  if(paid>0)return false;
+  var lastPayment=String(row.last_payment_date||row.lastPaymentDate||"").trim();
+  if(lastPayment)return false;
+  return /no payment|no payments|no deposit|missing deposit/i.test([row.status,row.stage,row.note,row.alert,row.payment_status].join(" "))
+}
 function getLienMetricStats(records){records=records||[];var total=records.reduce(function(sum,row){return sum+moneyNumber(row.balance)},0);var openAlerts=records.filter(function(row){return Number(row.alerts_count||0)>0||Number(row.followups_count||0)>0}).length;var noDeposit=records.filter(isNoPaymentRecord).length;var sixty=records.filter(function(row){return Number(row.days||0)>=60}).length;var agency=records.filter(function(row){return /agency/i.test([row.status,row.stage,row.release_status,row.note,row.alert].join(" "))}).length;return [{key:"open_alerts",label:"Open Alerts",value:openAlerts,note:"Alerts + follow-ups"},{key:"active_accounts",label:"Active Accounts",value:records.length,note:"Current source records"},{key:"total_balance",label:"Total Balance",value:moneyLabel(total),note:"Active lien exposure"},{key:"no_deposit",label:"No Deposit",value:noDeposit,note:"Missing deposit"},{key:"sixty_days",label:"60+ Days",value:sixty,note:"Past due aging"},{key:"sent_to_agency",label:"Sent to Agency",value:agency,note:"Escalated accounts"}]}
 function getVisibleLienRecords(){
   var records=liensData.records||[];
@@ -281,15 +292,179 @@ function getVisibleLienRecords(){
 }
 function getLienWorkspaceItems(kind,lienId){return (liensData[kind]||[]).filter(function(item){return String(item.lien_id)===String(lienId)}).reverse()}
 function renderLienWorkspaceList(items,emptyText,fields){if(!items.length)return '<p class="liens-empty">'+escapeHtml(emptyText)+'</p>';return '<div class="liens-activity-list">'+items.map(function(item){return '<article>'+fields.map(function(field){return field.strong?'<strong>'+escapeHtml(item[field.key]||field.fallback||'')+'</strong>':'<span>'+escapeHtml(item[field.key]||field.fallback||'')+'</span>'}).join('')+'</article>'}).join('')+'</div>'}
-function normalizeLienRecord(record){return {id:record.lien_id||record.id,jobNumber:record.job_number||record['Job Number']||record.source_record_id||record.account_name||record.lien_id||record.id,blazeUrl:record.blaze_url||record.job_link||record['Job Link']||record.url||record.record_url||'',customer:record.customer||record.account_name,region:record.region,status:record.status||record.release_status,stage:record.stage||record.priority,balance:record.balance,owner:record.owner,days:record.days_past_due,firstInvoice:record.first_invoice_date,latestInvoice:record.latest_invoice_date,invoiceCount:record.invoice_count,no_payment_received:record.no_payment_received,payment_received:record.payment_received,payments_received:record.payments_received,amount_paid:record.amount_paid,paid_amount:record.paid_amount,total_paid:record.total_paid,last_payment_date:record.last_payment_date,payment_status:record.payment_status,note:record.workflow_note||record.note||'',alert:record.alert_text||record.alert||'',alerts_count:record.alerts_count||0,notes_count:record.notes_count||0,followups_count:record.followups_count||0,release_status:record.release_status}}
+function lienPaymentFlag(value){
+  return value===true||String(value||"").toUpperCase()==="TRUE"
+}
+function normalizeLienPaymentTransaction(row){
+  row=row||{};
+  return {
+    paymentKey:row.payment_key||"",
+    date:row.payment_date||"",
+    amount:row.payment_amount,
+    type:row.payment_type||"",
+    method:row.payment_method||"",
+    isReversal:lienPaymentFlag(row.is_reversal),
+    duplicateStatus:row.duplicate_status||"",
+    duplicateGroupSize:Number(row.duplicate_group_size||1),
+    duplicateSequence:Number(row.duplicate_sequence||1),
+    includedInSummary:row.included_in_summary===undefined||row.included_in_summary===""?true:lienPaymentFlag(row.included_in_summary),
+    outlierReview:lienPaymentFlag(row.outlier_review),
+    validationError:row.validation_error||"",
+    sourceRowNumber:row.source_row_number||""
+  }
+}
+function normalizeLienRecord(record){
+  record=record||{};
+  var payment=record.payment_summary||{};
+  var blazeJobId=record.blaze_job_id||payment.blaze_job_id||"";
+  return {
+    id:record.lien_id||record.id,
+    jobNumber:record.job_number||record['Job Number']||record.source_record_id||record.account_name||record.lien_id||record.id,
+    blazeUrl:record.blaze_url||record.job_link||record['Job Link']||record.url||record.record_url||"",
+    blazeJobId:blazeJobId,
+    customer:record.customer||record.account_name,
+    region:record.region,
+    status:record.status||record.release_status,
+    stage:record.stage||record.priority,
+    balance:record.balance,
+    owner:record.owner,
+    days:record.days_past_due,
+    firstInvoice:record.first_invoice_date,
+    latestInvoice:record.latest_invoice_date,
+    invoiceCount:record.invoice_count,
+    no_payment_received:record.no_payment_received,
+    payment_received:record.payment_received,
+    payments_received:record.payments_received,
+    amount_paid:record.amount_paid,
+    paid_amount:record.paid_amount,
+    total_paid:record.total_paid,
+    last_payment_date:record.last_payment_date,
+    payment_status:record.payment_status,
+    paymentDataAvailable:lienPaymentFlag(record.payment_data_available),
+    paymentSummaryMatched:!!payment.blaze_job_id,
+    blazeStage:payment.blaze_stage||"",
+    stageEnterDate:payment.stage_enter_date||"",
+    daysInBlazeStage:payment.days_in_current_stage||"",
+    grossPayments:payment.gross_payments||0,
+    netPaymentsReceived:payment.net_payments_received||0,
+    latestPaymentDate:payment.latest_payment_date||"",
+    paymentCount:Number(payment.payment_count||0),
+    latestPaymentType:payment.latest_payment_type||"",
+    latestPaymentMethod:payment.latest_payment_method||"",
+    reversalCount:Number(payment.reversal_count||0),
+    reversalAmount:payment.reversal_amount||0,
+    hasReversal:lienPaymentFlag(payment.has_reversal),
+    netPaymentZero:lienPaymentFlag(payment.net_payment_zero),
+    paymentOutlierReview:lienPaymentFlag(payment.outlier_review),
+    paymentHistoryPreview:(record.payment_history_preview||[]).map(normalizeLienPaymentTransaction),
+    note:record.workflow_note||record.note||"",
+    alert:record.alert_text||record.alert||"",
+    alerts_count:record.alerts_count||0,
+    notes_count:record.notes_count||0,
+    followups_count:record.followups_count||0,
+    release_status:record.release_status
+  }
+}
 function applyLiensPayload(data){liensData.metrics=data.metrics||[];liensData.notes=data.notes||[];liensData.alerts=data.alerts||[];liensData.followUps=data.followUps||[];liensData.records=(data.records||[]).map(normalizeLienRecord);liensData.selectedIndex=0;liensLastUpdated=new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}
 function saveLiensCache(data){try{localStorage.setItem(LIENS_CACHE_KEY,JSON.stringify({savedAt:Date.now(),data:data}))}catch(error){console.warn("Liens cache save failed",error)}}
 function hydrateLiensFromCache(){try{var cached=JSON.parse(localStorage.getItem(LIENS_CACHE_KEY)||"null");if(!cached||!cached.data||!(cached.data.records||[]).length)return false;applyLiensPayload(cached.data);liensLoading=false;liensLoadError="";liensLastUpdated=cached.savedAt?new Date(cached.savedAt).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):liensLastUpdated;return true}catch(error){console.warn("Liens cache read failed",error);return false}}
 
 function getLienRegions(){return Array.from(new Set((liensData.records||[]).map(function(row){return row.region}).filter(Boolean))).sort()}
 function renderSelectOptions(allLabel,options,selected){return '<option'+(selected===allLabel?' selected':'')+'>'+escapeHtml(allLabel)+'</option>'+options.map(function(value){return '<option'+(selected===value?' selected':'')+'>'+escapeHtml(value)+'</option>'}).join('')}
+function formatLienPaymentDate(value){
+  var text=String(value||"").trim();
+  var match=text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!match)return text||"-";
+  return Number(match[2])+"/"+Number(match[3])+"/"+match[1]
+}
+function lienPaymentStatusLabel(item){
+  if(!item.includedInSummary)return "Duplicate - excluded from totals";
+  if(item.isReversal)return "Reversal";
+  if(item.outlierReview)return "Review amount";
+  if(item.validationError)return "Review source data";
+  return "Included in totals"
+}
+function renderLienPaymentRows(rows,limit){
+  var items=(rows||[]).slice(0,limit||rows.length);
+  if(!items.length)return '<p class="liens-empty">No payment transactions found for this Blaze job.</p>';
+  return '<div class="lien-payment-list">'+items.map(function(item){
+    var classes=['lien-payment-row'];
+    if(!item.includedInSummary)classes.push('is-duplicate');
+    if(item.isReversal)classes.push('is-reversal');
+    return '<article class="'+classes.join(' ')+'"><div><strong>'+escapeHtml(formatLienPaymentDate(item.date))+'</strong><span>'+escapeHtml([item.type,item.method].filter(Boolean).join(' / ')||'Payment')+'</span></div><strong class="lien-payment-amount">'+escapeHtml(moneyLabel(item.amount))+'</strong><em>'+escapeHtml(lienPaymentStatusLabel(item))+'</em></article>'
+  }).join('')+'</div>'
+}
+function renderLienPaymentSummaryGrid(record){
+  return '<div class="lien-payment-summary"><article><span>Net Received</span><strong>'+escapeHtml(moneyLabel(record.netPaymentsReceived||0))+'</strong></article><article><span>Gross Payments</span><strong>'+escapeHtml(moneyLabel(record.grossPayments||0))+'</strong></article><article><span>Latest Payment</span><strong>'+escapeHtml(formatLienPaymentDate(record.latestPaymentDate))+'</strong></article><article><span>Transactions</span><strong>'+escapeHtml(record.paymentCount||0)+'</strong></article><article><span>Blaze Stage</span><strong>'+escapeHtml(record.blazeStage||'-')+'</strong></article><article><span>Days in Blaze Stage</span><strong>'+escapeHtml(record.daysInBlazeStage===''?'-':record.daysInBlazeStage)+'</strong></article></div>'
+}
+function renderLienPaymentHistory(record){
+  if(!record||!record.id)return "";
+  var body='';
+  if(!record.blazeJobId)body='<p class="liens-empty">Payment matching requires the Blaze job link. Job Number alone is not used.</p>';
+  else if(!record.paymentDataAvailable)body='<p class="liens-empty">Protected payment data is temporarily unavailable.</p>';
+  else{
+    var flags=[];
+    if(record.hasReversal)flags.push(record.reversalCount+' reversal'+(record.reversalCount===1?'':'s'));
+    if(record.paymentOutlierReview)flags.push('Amount review required');
+    body=renderLienPaymentSummaryGrid(record)+(flags.length?'<p class="lien-payment-flags">'+escapeHtml(flags.join(' - '))+'</p>':'')+'<h4>Recent Transactions</h4>'+renderLienPaymentRows(record.paymentHistoryPreview,3)+(record.paymentCount||record.paymentHistoryPreview.length?'<button type="button" class="lien-payment-history-button" data-open-payment-history>View Full History</button>':'')
+  }
+  return '<section class="lien-payment-history"><div class="card-heading"><h3>Payment History</h3><span>Protected payment report</span></div>'+body+'</section>'
+}
+function closeLienPaymentHistoryModal(){
+  var modal=document.querySelector('.lien-payment-modal-backdrop');
+  if(modal)modal.remove()
+}
+function hydrateLienPaymentRecord(record,data){
+  var summary=data&&data.summary||{};
+  return Object.assign({},record,{
+    paymentDataAvailable:!!(data&&data.data_available),
+    paymentSummaryMatched:!!summary.blaze_job_id,
+    blazeStage:summary.blaze_stage||record.blazeStage||"",
+    stageEnterDate:summary.stage_enter_date||record.stageEnterDate||"",
+    daysInBlazeStage:summary.days_in_current_stage===''?record.daysInBlazeStage:(summary.days_in_current_stage||record.daysInBlazeStage||""),
+    grossPayments:summary.gross_payments||0,
+    netPaymentsReceived:summary.net_payments_received||0,
+    latestPaymentDate:summary.latest_payment_date||"",
+    paymentCount:Number(summary.payment_count||0),
+    latestPaymentType:summary.latest_payment_type||"",
+    latestPaymentMethod:summary.latest_payment_method||"",
+    reversalCount:Number(summary.reversal_count||0),
+    reversalAmount:summary.reversal_amount||0,
+    hasReversal:lienPaymentFlag(summary.has_reversal),
+    netPaymentZero:lienPaymentFlag(summary.net_payment_zero),
+    paymentOutlierReview:lienPaymentFlag(summary.outlier_review)
+  })
+}
+function renderLienPaymentModalContent(record,transactions){
+  return renderLienPaymentSummaryGrid(record)+(record.hasReversal?'<p class="lien-payment-flags">'+escapeHtml(record.reversalCount+' reversal'+(record.reversalCount===1?'':'s')+' totaling '+moneyLabel(record.reversalAmount))+'</p>':'')+'<div class="lien-payment-modal-table-head"><span>Date / Type</span><span>Amount</span><span>Status</span></div>'+renderLienPaymentRows(transactions,transactions.length)
+}
+function openLienPaymentHistoryModal(record){
+  if(!record||!record.blazeJobId)return;
+  closeLienPaymentHistoryModal();
+  var modal=document.createElement('div');
+  modal.className='citadel-modal-backdrop lien-payment-modal-backdrop';
+  modal.innerHTML='<section class="lien-payment-modal" role="dialog" aria-modal="true" aria-label="Payment History"><div class="modal-head"><div><h3>Payment History</h3><p>'+escapeHtml((record.jobNumber||record.id)+' - '+(record.customer||''))+'</p></div><button type="button" data-close-payment-history aria-label="Close">x</button></div><div class="lien-payment-modal-body"><p class="liens-empty">Loading complete payment history...</p></div></section>';
+  var body=modal.querySelector('.lien-payment-modal-body');
+  var close=function(){modal.remove()};
+  modal.addEventListener('click',function(event){if(event.target===modal||event.target.closest('[data-close-payment-history]'))close()});
+  document.body.appendChild(modal);
+  var cached=lienPaymentHistoryCache[record.blazeJobId];
+  function display(payload){
+    var enriched=hydrateLienPaymentRecord(record,payload||{});
+    var transactions=((payload&&payload.transactions)||[]).map(normalizeLienPaymentTransaction);
+    body.innerHTML=renderLienPaymentModalContent(enriched,transactions)
+  }
+  if(cached){display(cached);return}
+  jsonp(CITADEL_API_URL+'?action=getLienPayments&blaze_job_id='+encodeURIComponent(record.blazeJobId)).then(function(response){
+    if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:'Payment history unavailable');
+    lienPaymentHistoryCache[record.blazeJobId]=response.data;
+    if(document.body.contains(modal))display(response.data)
+  }).catch(function(error){
+    if(document.body.contains(modal))body.innerHTML='<p class="liens-empty">Unable to load payment history. '+escapeHtml(error.message||'Please try again.')+'</p>'
+  })
+}
 function renderLiensLoadingPage(){pagePanel.className="page-panel liens-page";pagePanel.innerHTML='<section class="liens-loading-card"><div class="loading-pulse"></div><h3>Loading lien records</h3><p>First load is pulling the latest Blaze report data. After this, Citadel will open this page from a local snapshot while it refreshes quietly.</p></section>'}
-function renderLiensPage(){if(liensLoading&&!liensData.records.length){renderLiensLoadingPage();return}var visibleRecords=getVisibleLienRecords();var selected=liensData.records[liensData.selectedIndex]||visibleRecords[0]||liensData.records[0]||{};var metricStats=getLienMetricStats(liensData.records);pagePanel.className="page-panel liens-page";pagePanel.innerHTML=renderModuleStatusLine(liensLoading?"Refreshing...":liensLastUpdated?"Updated "+liensLastUpdated:"")+'<div class="liens-metrics">'+metricStats.map(function(metric){return '<button type="button" class="lien-metric-button '+(activeLienMetric===metric.key?'active':'')+'" data-lien-metric="'+escapeHtml(metric.key)+'"><span>'+escapeHtml(metric.label)+'</span><strong>'+escapeHtml(metric.value)+'</strong><em>'+escapeHtml(metric.note)+'</em></button>'}).join('')+'</div><section class="liens-filter-card"><div><h3>Filters + Sort + Search</h3><p>Refine and find records the same way on every page</p></div><button type="button" data-open-reports="liens">Reports</button><div class="liens-filters"><label>Status<select data-lien-filter="status">'+renderSelectOptions('All statuses',LIEN_STATUS_OPTIONS,lienFilters.status)+'</select></label><label>Stage<select data-lien-filter="stage">'+renderSelectOptions('All stages',LIEN_STAGE_OPTIONS,lienFilters.stage)+'</select></label><label>Region<select data-lien-filter="region">'+renderSelectOptions('All regions',getLienRegions(),lienFilters.region)+'</select></label><label>Sort<select data-lien-filter="sort"><option'+(lienFilters.sort==='Highest balance'?' selected':'')+'>Highest balance</option><option'+(lienFilters.sort==='Most past due'?' selected':'')+'>Most past due</option><option'+(lienFilters.sort==='Newest update'?' selected':'')+'>Newest update</option></select></label><label>Search<input data-lien-filter="search" type="search" placeholder="Search this view" value="'+escapeHtml(lienFilters.search)+'"></label></div></section><div class="liens-workspace"><section class="liens-records"><div class="liens-section-head"><div><h3>Records</h3><p>Review Blaze report data, notes, alerts, and follow-up work.</p></div><strong>'+escapeHtml(visibleRecords.length)+' showing</strong></div><div class="liens-table" role="table"><div class="liens-table-head" role="row"><span>Account</span><span>Customer</span><span>Region</span><span>Status</span><span>Stage</span><span>Balance</span></div>'+visibleRecords.map(function(record){var index=liensData.records.indexOf(record);return '<div class="liens-row'+(index===liensData.selectedIndex?' active':'')+'" data-lien-index="'+index+'" role="row" tabindex="0"><span>'+(record.blazeUrl?'<a class="record-link" href="'+escapeHtml(record.blazeUrl)+'" target="_blank" rel="noopener">'+escapeHtml(record.jobNumber||record.id)+'</a>':'<a class="record-link record-link-disabled" href="#" title="Blaze URL not included in source report yet">'+escapeHtml(record.jobNumber||record.id)+'</a>')+'<em>'+escapeHtml(record.owner)+'</em></span><span>'+escapeHtml(record.customer)+'</span><span>'+escapeHtml(record.region)+'</span><span><mark>'+escapeHtml(record.status)+'</mark></span><span><mark class="stage-'+escapeHtml(String(record.stage||'').toLowerCase())+'">'+escapeHtml(record.stage)+'</mark></span><span><strong>'+escapeHtml(moneyLabel(record.balance))+'</strong></span></div>'}).join('')+'</div></section><aside class="liens-detail"><div class="liens-detail-head"><div><span>Selected record</span><h3>'+escapeHtml(selected.jobNumber||selected.id)+' - '+escapeHtml(selected.customer)+'</h3><p>Liens / '+escapeHtml(selected.stage)+'</p></div></div><div class="liens-detail-grid"><article><span>Region</span><strong>'+escapeHtml(selected.region)+'</strong></article><article><span>Sales Rep</span><strong>'+escapeHtml(selected.owner)+'</strong></article><article><span>Balance</span><strong>'+escapeHtml(moneyLabel(selected.balance))+'</strong></article><article><span>Days Past Due</span><strong>'+escapeHtml(selected.days)+'</strong></article><article><span>First Invoice</span><strong>'+escapeHtml(selected.firstInvoice)+'</strong></article><article><span>Latest Invoice</span><strong>'+escapeHtml(selected.latestInvoice)+'</strong></article><article><span>Invoice Count</span><strong>'+escapeHtml(selected.invoiceCount)+'</strong></article></div><section class="liens-workflow"><div class="card-heading"><h3>Citadel Workflow</h3><span>Protected from source imports</span></div><div class="workspace-status">'+escapeHtml(liensWorkspaceStatus)+'</div><div class="workflow-entry-actions"><button type="button" data-workspace-entry="note">Add Note</button><button type="button" data-workspace-entry="alert">Set Alert</button></div><div class="liens-workspace-feed"><h4>Recent Notes</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('notes',selected.id),'No notes yet.',[{key:'note_text',strong:true},{key:'note_by',fallback:'Team'},{key:'note_date'}])+'<h4>Open Alerts</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('alerts',selected.id),'No alerts yet.',[{key:'alert_text',strong:true},{key:'owner',fallback:'Carlynn'},{key:'due_date'}])+'<h4>Follow-ups</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('followUps',selected.id),'No follow-ups yet.',[{key:'followup_text',strong:true},{key:'assigned_to',fallback:'Carlynn'},{key:'due_date'}])+'</div></section></aside></div>'}
+function renderLiensPage(){if(liensLoading&&!liensData.records.length){renderLiensLoadingPage();return}var visibleRecords=getVisibleLienRecords();var selected=liensData.records[liensData.selectedIndex]||visibleRecords[0]||liensData.records[0]||{};var metricStats=getLienMetricStats(liensData.records);pagePanel.className="page-panel liens-page";pagePanel.innerHTML=renderModuleStatusLine(liensLoading?"Refreshing...":liensLastUpdated?"Updated "+liensLastUpdated:"")+'<div class="liens-metrics">'+metricStats.map(function(metric){return '<button type="button" class="lien-metric-button '+(activeLienMetric===metric.key?'active':'')+'" data-lien-metric="'+escapeHtml(metric.key)+'"><span>'+escapeHtml(metric.label)+'</span><strong>'+escapeHtml(metric.value)+'</strong><em>'+escapeHtml(metric.note)+'</em></button>'}).join('')+'</div><section class="liens-filter-card"><div><h3>Filters + Sort + Search</h3><p>Refine and find records the same way on every page</p></div><button type="button" data-open-reports="liens">Reports</button><div class="liens-filters"><label>Status<select data-lien-filter="status">'+renderSelectOptions('All statuses',LIEN_STATUS_OPTIONS,lienFilters.status)+'</select></label><label>Stage<select data-lien-filter="stage">'+renderSelectOptions('All stages',LIEN_STAGE_OPTIONS,lienFilters.stage)+'</select></label><label>Region<select data-lien-filter="region">'+renderSelectOptions('All regions',getLienRegions(),lienFilters.region)+'</select></label><label>Sort<select data-lien-filter="sort"><option'+(lienFilters.sort==='Highest balance'?' selected':'')+'>Highest balance</option><option'+(lienFilters.sort==='Most past due'?' selected':'')+'>Most past due</option><option'+(lienFilters.sort==='Newest update'?' selected':'')+'>Newest update</option></select></label><label>Search<input data-lien-filter="search" type="search" placeholder="Search this view" value="'+escapeHtml(lienFilters.search)+'"></label></div></section><div class="liens-workspace"><section class="liens-records"><div class="liens-section-head"><div><h3>Records</h3><p>Review Blaze report data, notes, alerts, and follow-up work.</p></div><strong>'+escapeHtml(visibleRecords.length)+' showing</strong></div><div class="liens-table" role="table"><div class="liens-table-head" role="row"><span>Account</span><span>Customer</span><span>Region</span><span>Status</span><span>Stage</span><span>Balance</span></div>'+visibleRecords.map(function(record){var index=liensData.records.indexOf(record);return '<div class="liens-row'+(index===liensData.selectedIndex?' active':'')+'" data-lien-index="'+index+'" role="row" tabindex="0"><span>'+(record.blazeUrl?'<a class="record-link" href="'+escapeHtml(record.blazeUrl)+'" target="_blank" rel="noopener">'+escapeHtml(record.jobNumber||record.id)+'</a>':'<a class="record-link record-link-disabled" href="#" title="Blaze URL not included in source report yet">'+escapeHtml(record.jobNumber||record.id)+'</a>')+'<em>'+escapeHtml(record.owner)+'</em></span><span>'+escapeHtml(record.customer)+'</span><span>'+escapeHtml(record.region)+'</span><span><mark>'+escapeHtml(record.status)+'</mark></span><span><mark class="stage-'+escapeHtml(String(record.stage||'').toLowerCase())+'">'+escapeHtml(record.stage)+'</mark></span><span><strong>'+escapeHtml(moneyLabel(record.balance))+'</strong></span></div>'}).join('')+'</div></section><aside class="liens-detail"><div class="liens-detail-head"><div><span>Selected record</span><h3>'+escapeHtml(selected.jobNumber||selected.id)+' - '+escapeHtml(selected.customer)+'</h3><p>Liens / '+escapeHtml(selected.stage)+'</p></div></div><div class="liens-detail-grid"><article><span>Region</span><strong>'+escapeHtml(selected.region)+'</strong></article><article><span>Sales Rep</span><strong>'+escapeHtml(selected.owner)+'</strong></article><article><span>Balance</span><strong>'+escapeHtml(moneyLabel(selected.balance))+'</strong></article><article><span>Days Past Due</span><strong>'+escapeHtml(selected.days)+'</strong></article><article><span>First Invoice</span><strong>'+escapeHtml(selected.firstInvoice)+'</strong></article><article><span>Latest Invoice</span><strong>'+escapeHtml(selected.latestInvoice)+'</strong></article><article><span>Invoice Count</span><strong>'+escapeHtml(selected.invoiceCount)+'</strong></article></div>'+renderLienPaymentHistory(selected)+'<section class="liens-workflow"><div class="card-heading"><h3>Citadel Workflow</h3><span>Protected from source imports</span></div><div class="workspace-status">'+escapeHtml(liensWorkspaceStatus)+'</div><div class="workflow-entry-actions"><button type="button" data-workspace-entry="note">Add Note</button><button type="button" data-workspace-entry="alert">Set Alert</button></div><div class="liens-workspace-feed"><h4>Recent Notes</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('notes',selected.id),'No notes yet.',[{key:'note_text',strong:true},{key:'note_by',fallback:'Team'},{key:'note_date'}])+'<h4>Open Alerts</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('alerts',selected.id),'No alerts yet.',[{key:'alert_text',strong:true},{key:'owner',fallback:'Carlynn'},{key:'due_date'}])+'<h4>Follow-ups</h4>'+renderLienWorkspaceList(getLienWorkspaceItems('followUps',selected.id),'No follow-ups yet.',[{key:'followup_text',strong:true},{key:'assigned_to',fallback:'Carlynn'},{key:'due_date'}])+'</div></section></aside></div>'}
 function closeWorkspaceEntryModal(){
   var modal=document.querySelector(".workspace-entry-backdrop");
   if(modal)modal.remove()
@@ -372,6 +547,8 @@ function bindLiensPage(){
     if(activePage!=="liens")return;
     var reportButton=event.target.closest("[data-open-reports]");
     if(reportButton){openLiensReportsModal();return}
+    var paymentHistoryButton=event.target.closest("[data-open-payment-history]");
+    if(paymentHistoryButton){openLienPaymentHistoryModal(liensData.records[liensData.selectedIndex]||{});return}
     var entryButton=event.target.closest("[data-workspace-entry]");
     if(entryButton){openWorkspaceEntryModal("liens",entryButton.getAttribute("data-workspace-entry"));return}
     var metricButton=event.target.closest("[data-lien-metric]");
