@@ -12,7 +12,20 @@ const SPREADSHEETS = {
 };
 const LIEN_STATUS_REPORTS_FOLDER_ID = '1XcllT_u0WP7H5Cr9zvw9G6NNcOUTYcTH';
 const LIEN_MASTER_REPORT_NAME = 'Receivables Aging';
-const REQUIRED_LIEN_RECORD_COLUMNS = ['blaze_url', 'contracted_amount', 'days_past_due', 'first_invoice_date', 'latest_invoice_date', 'invoice_count', 'no_payment_received', 'payment_received', 'last_payment_date', 'payment_status'];
+const LIEN_REPORT_MANIFEST = [
+  { name: 'Receivables Aging', status: 'Receivable', master: true, priority: 999 },
+  { name: 'Paid In Full with Lien', status: 'Paid In Full with Lien', priority: 100 },
+  { name: 'Attorney', status: 'Attorney', priority: 50 },
+  { name: 'Attorney - Customer', status: 'Attorney - Customer', priority: 30 },
+  { name: 'Attorney - Elite', status: 'Attorney - Elite', priority: 40 },
+  { name: 'Bankruptcy', status: 'Bankruptcy', priority: 10 },
+  { name: 'Collection Agency', status: 'Collection Agency', priority: 60 },
+  { name: 'Foreclosure', status: 'Foreclosure', priority: 20 },
+  { name: 'Lien', status: 'Lien', priority: 80 },
+  { name: 'Lien Released', status: 'Lien Released', priority: 90 },
+  { name: 'Small Claims', status: 'Small Claims', priority: 70 }
+];
+const REQUIRED_LIEN_RECORD_COLUMNS = ['job_number', 'blaze_job_id', 'blaze_url', 'contracted_amount', 'days_past_due', 'first_invoice_date', 'latest_invoice_date', 'invoice_count', 'no_payment_received', 'payment_received', 'last_payment_date', 'payment_status', 'source_statuses', 'source_report_count', 'source_current_stage', 'source_last_note', 'profit_percentage', 'import_batch_id', 'source_row_number', 'source_removed_at'];
 const SHEETS = {
   commandMetrics: 'CommandMetrics',
   commandFocus: 'CommandFocus',
@@ -21,6 +34,8 @@ const SHEETS = {
   lienAlerts: 'LienAlerts',
   lienFollowUps: 'LienFollowUps',
   lienMetrics: 'LienMetrics',
+  lienImportLog: 'LienImportLog',
+  lienReportMemberships: 'LienReportMemberships',
   contractorRecords: 'ContractorRecords',
   contractorNotes: 'ContractorNotes',
   contractorAlerts: 'ContractorAlerts',
@@ -100,6 +115,8 @@ const PAYMENT_IMPORT_HEADERS = ['Region', 'Sales Rep', 'Job Number', 'Job Link',
 const PAYMENT_TRANSACTION_HEADERS = ['payment_key', 'blaze_job_id', 'job_number', 'job_link', 'region', 'sales_rep', 'customer', 'blaze_stage', 'stage_enter_date', 'days_in_current_stage', 'payment_amount', 'payment_type', 'payment_method', 'payment_date', 'source_row_hash', 'source_row_number', 'duplicate_group_size', 'duplicate_sequence', 'duplicate_status', 'included_in_summary', 'is_reversal', 'missing_payment_method', 'stage_normalized', 'outlier_review', 'validation_error', 'imported_at', 'active'];
 const PAYMENT_SUMMARY_HEADERS = ['blaze_job_id', 'job_number', 'job_link', 'region', 'sales_rep', 'customer', 'blaze_stage', 'stage_enter_date', 'days_in_current_stage', 'gross_payments', 'net_payments_received', 'latest_payment_date', 'payment_count', 'latest_payment_type', 'latest_payment_method', 'reversal_count', 'reversal_amount', 'has_reversal', 'net_payment_zero', 'outlier_review', 'last_imported_at', 'active'];
 const PAYMENT_IMPORT_LOG_HEADERS = ['import_id', 'imported_at', 'imported_by', 'source_sheet', 'source_label', 'source_rows', 'unique_rows', 'duplicate_rows', 'negative_rows', 'missing_payment_method_rows', 'validation_error_rows', 'zero_net_jobs', 'outlier_rows', 'status', 'notes'];
+const LIEN_IMPORT_LOG_HEADERS = ['import_id', 'started_at', 'completed_at', 'imported_by', 'source_folder_id', 'report_count', 'source_rows', 'master_rows', 'active_records', 'inactive_records', 'membership_rows', 'multi_status_jobs', 'job_number_collision_count', 'empty_report_count', 'status', 'warnings', 'error'];
+const LIEN_REPORT_MEMBERSHIP_HEADERS = ['import_id', 'blaze_job_id', 'lien_id', 'job_number', 'report_name', 'report_status', 'source_file_id', 'source_sheet', 'source_row_number', 'imported_at', 'active'];
 
 function doGet(e) {
   const action = getParam_(e, 'action') || 'getLiens';
@@ -123,6 +140,20 @@ function doGet(e) {
         data: runPaymentImport({
           imported_by: getParam_(e, 'imported_by') || 'Citadel user',
           source_label: getParam_(e, 'source_label') || ''
+        }),
+        version: CITADEL_VERSION
+      });
+    }
+
+    if (action === 'getLienImportStatus') {
+      return output_(e, { ok: true, data: getLienImportStatus(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'runLienImport') {
+      return output_(e, {
+        ok: true,
+        data: runLienImport({
+          imported_by: getParam_(e, 'imported_by') || 'Citadel user'
         }),
         version: CITADEL_VERSION
       });
@@ -631,7 +662,10 @@ function findCollectionAttorney_(attorneyId) {
 }
 
 function isCollectionAgencyLien_(row) {
-  return String(row.status || '').trim().toLowerCase() === 'collection agency';
+  const statuses = String(row.source_statuses || row.status || '')
+    .split('|')
+    .map(function(value) { return value.trim().toLowerCase(); });
+  return statuses.indexOf('collection agency') >= 0;
 }
 
 function collectionTrackingStatus_(dateReceived, amountCollected, assignedAttorney) {
@@ -2426,75 +2460,380 @@ function getLiens() {
 }
 
 
-function importLienStatusReports() {
-  const folder = DriveApp.getFolderById(LIEN_STATUS_REPORTS_FOLDER_ID);
-  const files = folder.getFilesByType(MimeType.GOOGLE_SHEETS);
-  let masterRows = [];
-  let statusRows = [];
-  const seenStatuses = {};
-  const scanned = [];
-
-  while (files.hasNext()) {
-    const file = files.next();
-    const ss = SpreadsheetApp.openById(file.getId());
-    scanned.push(file.getName());
-    ss.getSheets().forEach(function(sheet) {
-      const sheetName = sheet.getName();
-      const rows = readSheetObjectsFromSheet_(sheet);
-      if (!rows.length) return;
-      if (sameName_(file.getName(), LIEN_MASTER_REPORT_NAME) || sameName_(sheetName, LIEN_MASTER_REPORT_NAME)) {
-        masterRows = masterRows.concat(rows);
-        return;
-      }
-      const status = file.getName();
-      seenStatuses[status] = true;
-      rows.forEach(function(row) {
-        row.__status = status;
-        row.__source_sheet = sheetName;
-        row.__source_file = file.getName();
-        statusRows.push(row);
-      });
-    });
-  }
-
-  if (!masterRows.length) {
-    throw new Error('No master rows found. Need a Google Sheet or tab named Receivables Aging in the lien status reports folder.');
-  }
-
-  const statusByKey = {};
-  statusRows.forEach(function(row) {
-    statusByKey[makeReceivableKey_(row)] = row.__status;
-  });
-
-  const normalized = masterRows.map(function(row) {
-    const key = makeReceivableKey_(row);
-    const status = statusByKey[key] || 'Receivable';
-    seenStatuses[status] = true;
-    return mapReceivableToLienRecord_(row, status, key);
-  });
-
-  replaceSourceRecords_(normalized);
-  return {
-    imported: normalized.length,
-    statuses: Object.keys(seenStatuses).sort(),
-    scanned_files: scanned
-  };
+function normalizeLienReportName_(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-function readSheetObjectsFromSheet_(sheet) {
+function readLienReportRows_(sheet) {
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return [];
   const headers = values[0].map(normalizeHeader_);
   return values.slice(1)
-    .filter(function(row) { return row.some(function(cell) { return cell !== '' && cell !== null; }); })
-    .map(function(row) {
-      return headers.reduce(function(record, header, index) {
-        if (!header) return record;
-        record[header] = normalizeValue_(row[index]);
-        return record;
+    .map(function(row, index) {
+      if (!row.some(function(cell) { return cell !== '' && cell !== null; })) return null;
+      const record = headers.reduce(function(result, header, columnIndex) {
+        if (header) result[header] = normalizeValue_(row[columnIndex]);
+        return result;
       }, {});
-    });
+      record.__source_row_number = index + 2;
+      return record;
+    })
+    .filter(Boolean);
 }
+
+function scanLienReportSet_() {
+  const folder = DriveApp.getFolderById(LIEN_STATUS_REPORTS_FOLDER_ID);
+  const iterator = folder.getFilesByType(MimeType.GOOGLE_SHEETS);
+  const expectedByName = {};
+  const filesByName = {};
+  const extras = [];
+
+  LIEN_REPORT_MANIFEST.forEach(function(report) {
+    expectedByName[normalizeLienReportName_(report.name)] = report;
+  });
+
+  while (iterator.hasNext()) {
+    const file = iterator.next();
+    const key = normalizeLienReportName_(file.getName());
+    if (!expectedByName[key]) {
+      extras.push(file.getName());
+      continue;
+    }
+    if (!filesByName[key]) filesByName[key] = [];
+    filesByName[key].push(file);
+  }
+
+  const errors = [];
+  const warnings = [];
+  const reports = [];
+  const masterRows = [];
+  const membershipRows = [];
+
+  LIEN_REPORT_MANIFEST.forEach(function(report) {
+    const key = normalizeLienReportName_(report.name);
+    const matches = filesByName[key] || [];
+    if (!matches.length) {
+      errors.push('Missing report: ' + report.name);
+      reports.push({ name: report.name, status: report.status, present: false, valid: false, row_count: 0, empty: true });
+      return;
+    }
+    if (matches.length > 1) {
+      errors.push('Duplicate report files: ' + report.name + ' (' + matches.length + ')');
+      reports.push({ name: report.name, status: report.status, present: true, valid: false, row_count: 0, empty: false });
+      return;
+    }
+
+    const file = matches[0];
+    const spreadsheet = SpreadsheetApp.openById(file.getId());
+    const sheet = spreadsheet.getSheetByName('Receivables Report') || spreadsheet.getSheets()[0];
+    if (!sheet) {
+      errors.push('No worksheet found in ' + report.name);
+      reports.push({ name: report.name, status: report.status, present: true, valid: false, row_count: 0, empty: true, file_id: file.getId() });
+      return;
+    }
+
+    const rows = readLienReportRows_(sheet);
+    const seenIds = {};
+    let invalidRows = 0;
+    let duplicateIds = 0;
+
+    rows.forEach(function(row) {
+      const jobLink = getField_(row, ['job_link', 'job link', 'blaze_url', 'job_url', 'url']);
+      const blazeJobId = extractBlazeJobId_(jobLink);
+      const jobNumber = getField_(row, ['job_number', 'job number', 'job', 'account', 'account_name']);
+      if (!blazeJobId) {
+        invalidRows++;
+        return;
+      }
+      if (seenIds[blazeJobId]) duplicateIds++;
+      seenIds[blazeJobId] = true;
+      row.__blaze_job_id = blazeJobId;
+      row.__job_number = String(jobNumber || '').trim();
+      row.__report_name = report.name;
+      row.__report_status = report.status;
+      row.__source_file_id = file.getId();
+      row.__source_sheet = sheet.getName();
+      membershipRows.push(row);
+      if (report.master) masterRows.push(row);
+    });
+
+    if (invalidRows) errors.push(report.name + ' has ' + invalidRows + ' row(s) without a valid Blaze job UUID.');
+    if (duplicateIds) errors.push(report.name + ' has ' + duplicateIds + ' duplicate Blaze UUID row(s).');
+    reports.push({
+      name: report.name,
+      status: report.status,
+      present: true,
+      valid: invalidRows === 0 && duplicateIds === 0,
+      row_count: rows.length,
+      empty: rows.length === 0,
+      file_id: file.getId(),
+      sheet: sheet.getName(),
+      invalid_rows: invalidRows,
+      duplicate_uuid_rows: duplicateIds
+    });
+  });
+
+  if (!masterRows.length) errors.push('Receivables Aging must contain at least one data row.');
+
+  const masterIds = {};
+  const masterDuplicateIds = {};
+  masterRows.forEach(function(row) {
+    if (masterIds[row.__blaze_job_id]) masterDuplicateIds[row.__blaze_job_id] = true;
+    masterIds[row.__blaze_job_id] = true;
+  });
+  const masterDuplicateCount = Object.keys(masterDuplicateIds).length;
+  if (masterDuplicateCount) errors.push('Receivables Aging contains ' + masterDuplicateCount + ' duplicate Blaze UUID(s).');
+
+  let orphanMemberships = 0;
+  membershipRows.forEach(function(row) {
+    if (row.__report_name !== LIEN_MASTER_REPORT_NAME && !masterIds[row.__blaze_job_id]) orphanMemberships++;
+  });
+  if (orphanMemberships) errors.push(orphanMemberships + ' specialized-report row(s) are not present in Receivables Aging.');
+
+  const statusesByJob = {};
+  const jobIdsByNumber = {};
+  membershipRows.forEach(function(row) {
+    if (!statusesByJob[row.__blaze_job_id]) statusesByJob[row.__blaze_job_id] = {};
+    statusesByJob[row.__blaze_job_id][row.__report_status] = true;
+    if (row.__job_number) {
+      const jobKey = row.__job_number.toLowerCase();
+      if (!jobIdsByNumber[jobKey]) jobIdsByNumber[jobKey] = {};
+      jobIdsByNumber[jobKey][row.__blaze_job_id] = true;
+    }
+  });
+
+  const multiStatusJobs = Object.keys(statusesByJob).filter(function(id) {
+    return Object.keys(statusesByJob[id]).length > 1;
+  }).length;
+  const jobNumberCollisions = Object.keys(jobIdsByNumber).filter(function(jobNumber) {
+    return Object.keys(jobIdsByNumber[jobNumber]).length > 1;
+  }).length;
+  const emptyReports = reports.filter(function(report) { return report.present && report.empty; });
+
+  if (emptyReports.length) warnings.push(emptyReports.length + ' report(s) are valid but contain zero rows.');
+  if (multiStatusJobs) warnings.push(multiStatusJobs + ' job(s) appear in more than one saved view; every membership will be retained.');
+  if (jobNumberCollisions) warnings.push(jobNumberCollisions + ' job number(s) map to multiple Blaze UUIDs; UUID matching will be used.');
+  if (extras.length) warnings.push('Ignored non-manifest spreadsheet(s): ' + extras.join(', '));
+
+  return {
+    ready: errors.length === 0,
+    reports: reports,
+    reports_found: reports.filter(function(report) { return report.present; }).length,
+    reports_required: LIEN_REPORT_MANIFEST.length,
+    source_rows: membershipRows.length,
+    master_rows: masterRows.length,
+    unique_jobs: Object.keys(masterIds).length,
+    multi_status_jobs: multiStatusJobs,
+    job_number_collisions: jobNumberCollisions,
+    empty_reports: emptyReports.map(function(report) { return report.name; }),
+    warnings: warnings,
+    errors: errors,
+    masterRows: masterRows,
+    membershipRows: membershipRows
+  };
+}
+
+function setupLienImporter_() {
+  const recordSheet = getRequiredSheet_(SPREADSHEETS.liens, SHEETS.lienRecords);
+  ensureLienRecordColumns_(recordSheet);
+  ensureSheetWithHeaders_(SPREADSHEETS.liens, SHEETS.lienImportLog, LIEN_IMPORT_LOG_HEADERS);
+  ensureSheetWithHeaders_(SPREADSHEETS.liens, SHEETS.lienReportMemberships, LIEN_REPORT_MEMBERSHIP_HEADERS);
+}
+
+function latestLienImportLog_() {
+  if (!sheetExists_(SPREADSHEETS.liens, SHEETS.lienImportLog)) return null;
+  const rows = readSheetObjects_(SPREADSHEETS.liens, SHEETS.lienImportLog);
+  return rows.length ? rows[rows.length - 1] : null;
+}
+
+function getLienImportStatus() {
+  const scan = scanLienReportSet_();
+  return {
+    ready: scan.ready,
+    reports: scan.reports,
+    reports_found: scan.reports_found,
+    reports_required: scan.reports_required,
+    source_rows: scan.source_rows,
+    master_rows: scan.master_rows,
+    unique_jobs: scan.unique_jobs,
+    multi_status_jobs: scan.multi_status_jobs,
+    job_number_collisions: scan.job_number_collisions,
+    empty_reports: scan.empty_reports,
+    warnings: scan.warnings,
+    errors: scan.errors,
+    latest_import: latestLienImportLog_()
+  };
+}
+
+function primaryLienStatus_(statuses) {
+  const present = {};
+  (statuses || []).forEach(function(status) { present[String(status || '')] = true; });
+  const match = LIEN_REPORT_MANIFEST
+    .filter(function(report) { return !report.master && present[report.status]; })
+    .sort(function(left, right) { return left.priority - right.priority; })[0];
+  return match ? match.status : 'Receivable';
+}
+
+
+
+
+
+function syncLienSourceRecords_(records, importedAt) {
+  const sheet = getRequiredSheet_(SPREADSHEETS.liens, SHEETS.lienRecords);
+  ensureLienRecordColumns_(sheet);
+  const existing = readSheetObjects_(SPREADSHEETS.liens, SHEETS.lienRecords);
+  const activeLienIds = {};
+  records.forEach(function(record) { activeLienIds[String(record.lien_id)] = true; });
+
+  const preserved = existing
+    .filter(function(record) { return !activeLienIds[String(record.lien_id)]; })
+    .map(function(record) {
+      const copy = Object.assign({}, record);
+      copy.active = false;
+      copy.source_removed_at = copy.source_removed_at || importedAt;
+      copy.last_updated = today_();
+      return copy;
+    });
+
+  const output = records.concat(preserved);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(normalizeHeader_);
+  if (sheet.getLastRow() > 1) sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+  if (output.length) {
+    sheet.getRange(2, 1, output.length, headers.length).setValues(output.map(function(record) {
+      return headers.map(function(header) {
+        return Object.prototype.hasOwnProperty.call(record, header) ? record[header] : '';
+      });
+    }));
+  }
+  return { active_records: records.length, inactive_records: preserved.length };
+}
+
+function runLienImport(payload) {
+  payload = payload || {};
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) throw new Error('A Liens import is already running. Please wait and try again.');
+
+  const importId = 'LIEN-' + Date.now().toString(36).toUpperCase();
+  const startedAt = new Date().toISOString();
+  let scan = null;
+  let log = {
+    import_id: importId,
+    started_at: startedAt,
+    completed_at: '',
+    imported_by: String(payload.imported_by || 'Citadel user').trim(),
+    source_folder_id: LIEN_STATUS_REPORTS_FOLDER_ID,
+    report_count: 0,
+    source_rows: 0,
+    master_rows: 0,
+    active_records: 0,
+    inactive_records: 0,
+    membership_rows: 0,
+    multi_status_jobs: 0,
+    job_number_collision_count: 0,
+    empty_report_count: 0,
+    status: 'Running',
+    warnings: '',
+    error: ''
+  };
+
+  try {
+    setupLienImporter_();
+    scan = scanLienReportSet_();
+    log.report_count = scan.reports_found;
+    log.source_rows = scan.source_rows;
+    log.master_rows = scan.master_rows;
+    log.multi_status_jobs = scan.multi_status_jobs;
+    log.job_number_collision_count = scan.job_number_collisions;
+    log.empty_report_count = scan.empty_reports.length;
+    log.warnings = scan.warnings.join(' ');
+
+    if (!scan.ready) throw new Error(scan.errors.join(' '));
+
+    const existingRows = readSheetObjects_(SPREADSHEETS.liens, SHEETS.lienRecords);
+    const existingByBlazeId = {};
+    existingRows.forEach(function(record) {
+      const blazeJobId = lienBlazeJobId_(record);
+      if (blazeJobId && !existingByBlazeId[blazeJobId]) existingByBlazeId[blazeJobId] = record;
+    });
+
+    const statusesByJob = {};
+    scan.membershipRows.forEach(function(row) {
+      if (!statusesByJob[row.__blaze_job_id]) statusesByJob[row.__blaze_job_id] = {};
+      statusesByJob[row.__blaze_job_id][row.__report_status] = true;
+    });
+
+    const recordsByBlazeId = {};
+    const records = scan.masterRows.map(function(row) {
+      const blazeJobId = row.__blaze_job_id;
+      const statuses = Object.keys(statusesByJob[blazeJobId] || { Receivable: true });
+      const status = primaryLienStatus_(statuses);
+      const record = mapReceivableToLienRecord_(row, status, blazeJobId, statuses, existingByBlazeId[blazeJobId] || null, importId);
+      recordsByBlazeId[blazeJobId] = record;
+      return record;
+    });
+
+    const importedAt = new Date().toISOString();
+    const memberships = scan.membershipRows.map(function(row) {
+      const record = recordsByBlazeId[row.__blaze_job_id];
+      return {
+        import_id: importId,
+        blaze_job_id: row.__blaze_job_id,
+        lien_id: record ? record.lien_id : '',
+        job_number: row.__job_number,
+        report_name: row.__report_name,
+        report_status: row.__report_status,
+        source_file_id: row.__source_file_id,
+        source_sheet: row.__source_sheet,
+        source_row_number: row.__source_row_number,
+        imported_at: importedAt,
+        active: true
+      };
+    });
+
+    const sync = syncLienSourceRecords_(records, importedAt);
+    replaceSheetObjects_(SPREADSHEETS.liens, SHEETS.lienReportMemberships, LIEN_REPORT_MEMBERSHIP_HEADERS, memberships);
+
+    log.completed_at = new Date().toISOString();
+    log.active_records = sync.active_records;
+    log.inactive_records = sync.inactive_records;
+    log.membership_rows = memberships.length;
+    log.status = scan.warnings.length ? 'Completed with warnings' : 'Completed';
+    appendObject_(SPREADSHEETS.liens, SHEETS.lienImportLog, log);
+
+    return {
+      import_id: importId,
+      status: log.status,
+      imported_at: log.completed_at,
+      report_count: scan.reports_found,
+      source_rows: scan.source_rows,
+      active_records: sync.active_records,
+      inactive_records: sync.inactive_records,
+      membership_rows: memberships.length,
+      multi_status_jobs: scan.multi_status_jobs,
+      job_number_collisions: scan.job_number_collisions,
+      empty_reports: scan.empty_reports,
+      warnings: scan.warnings,
+      reports: scan.reports
+    };
+  } catch (error) {
+    log.completed_at = new Date().toISOString();
+    log.status = 'Failed';
+    log.error = error && error.message ? error.message : String(error);
+    try {
+      setupLienImporter_();
+      appendObject_(SPREADSHEETS.liens, SHEETS.lienImportLog, log);
+    } catch (ignored) {}
+    throw error;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function importLienStatusReports() {
+  return runLienImport({ imported_by: 'Apps Script' });
+}
+
+
 
 function ensureLienRecordColumns_(sheet) {
   const existing = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map(normalizeHeader_);
@@ -2503,64 +2842,60 @@ function ensureLienRecordColumns_(sheet) {
   sheet.getRange(1, existing.length + 1, 1, missing.length).setValues([missing]);
 }
 
-function replaceSourceRecords_(records) {
-  const sheet = getRequiredSheet_(SPREADSHEETS.liens, SHEETS.lienRecords);
-  ensureLienRecordColumns_(sheet);
-  const values = sheet.getDataRange().getValues();
-  if (!values.length) throw new Error('LienRecords is missing headers.');
-  const headers = values[0].map(normalizeHeader_);
-  if (sheet.getLastRow() > 1) {
-    sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
-  }
-  if (!records.length) return;
-  sheet.getRange(2, 1, records.length, headers.length).setValues(records.map(function(record) {
-    return headers.map(function(header) {
-      return Object.prototype.hasOwnProperty.call(record, header) ? record[header] : '';
-    });
-  }));
-}
 
-function mapReceivableToLienRecord_(row, status, key) {
+
+function mapReceivableToLienRecord_(row, status, blazeJobId, statuses, existing, importId) {
+  const record = Object.assign({}, existing || {});
   const customer = getField_(row, ['customer', 'customer_name', 'name', 'account', 'account_name']);
-  const account = getField_(row, ['job_number', 'job', 'job_number_', 'job #', 'account_name', 'account', 'account_number']);
-  const blazeUrl = getField_(row, ['job_link', 'job link', 'Job Link', 'blaze_url', 'blaze link', 'blaze_link', 'url', 'job_url', 'record_url']);
-  const balance = getField_(row, ['balance', 'total_balance', 'total revenue', 'amount', 'invoice_balance', 'ar_balance']);
+  const account = getField_(row, ['job_number', 'job number', 'job', 'account_name', 'account', 'account_number']);
+  const blazeUrl = getField_(row, ['job_link', 'job link', 'blaze_url', 'blaze_link', 'url', 'job_url', 'record_url']);
+  const balance = getField_(row, ['balance', 'total_balance', 'amount', 'invoice_balance', 'ar_balance']);
   const contractedAmount = getField_(row, ['total_revenue', 'total revenue', 'contracted_amount', 'contracted amount', 'contract value', 'contracted value']);
   const invoiceDates = getInvoiceSentDates_(row);
-  const firstInvoiceDate = invoiceDates.length ? invoiceDates[0] : getField_(row, ['first_invoice_date', 'first invoice date', 'first invoice', 'invoice 1 sent date', 'invoice_1_sent_date', 'oldest_invoice_date', 'oldest invoice date', 'oldest invoice', 'first_invoice_dt']);
-  const latestInvoiceDate = invoiceDates.length ? invoiceDates[invoiceDates.length - 1] : getField_(row, ['latest_invoice_date', 'latest invoice date', 'latest invoice', 'last_invoice_date', 'last invoice date', 'last invoice', 'newest invoice date']);
-  const invoiceCount = invoiceDates.length || getField_(row, ['invoice_count', 'invoice count', 'invoice count ', 'invoices', '# invoices', 'number of invoices']);
-  const days = getField_(row, ['days_past_due', 'days past due', 'days past due date', 'days past due balance', 'past due days', 'dpd', '60+ days', '60_days', 'aging_days', 'days', 'age']) || daysSince_(firstInvoiceDate);
-  const noPaymentReceived = getNoPaymentReceived_(row);
-  const paymentReceived = getField_(row, ['payments', 'payment_received', 'payment received', 'payments_received', 'payments received', 'amount_paid', 'amount paid', 'paid_amount', 'paid amount', 'total_paid', 'total paid', 'payment amount']);
-  return {
-    lien_id: 'REC-' + key,
-    customer: customer,
-    account_name: account || customer,
-    blaze_url: blazeUrl,
-    region: getField_(row, ['region', 'market', 'branch', 'office']),
-    owner: getField_(row, ['owner', 'sales_rep', 'sales rep', 'rep', 'assigned_to']) || 'Carlynn',
-    status: status,
-    stage: getStageFromReceivable_(row, status, days),
-    balance: balance,
-    contracted_amount: contractedAmount,
-    days_past_due: days,
-    first_invoice_date: firstInvoiceDate,
-    latest_invoice_date: latestInvoiceDate,
-    invoice_count: invoiceCount,
-    no_payment_received: noPaymentReceived,
-    payment_received: paymentReceived,
-    last_payment_date: getField_(row, ['last_payment_date', 'last payment date', 'last payment', 'latest payment date']),
-    payment_status: getField_(row, ['payment_status', 'payment status', 'payment filter', 'payment']),
-    filing_date: getField_(row, ['filing_date', 'filed_date', 'lien_filed']),
-    release_due_date: getField_(row, ['release_due_date', 'due_date', 'deadline']),
-    release_status: status,
-    legal_hold: /attorney|legal|hold/i.test(String(status || '')),
-    source_system: 'Blaze / Receivables Aging',
-    source_record_id: account || key,
-    last_updated: today_(),
-    active: true
-  };
+  const firstInvoiceDate = invoiceDates.length ? invoiceDates[0] : getField_(row, ['first_invoice_date', 'first invoice date', 'first invoice', 'oldest_invoice_date']);
+  const latestInvoiceDate = invoiceDates.length ? invoiceDates[invoiceDates.length - 1] : getField_(row, ['latest_invoice_date', 'latest invoice date', 'latest invoice', 'last_invoice_date']);
+  const invoiceCount = invoiceDates.length || getField_(row, ['invoice_count', 'invoice count', 'invoices', 'number of invoices']);
+  const agingValue = getField_(row, ['aging', 'days_past_due', 'days past due', 'aging_days', 'age', 'days']);
+  const days = String(agingValue == null ? '' : agingValue).trim() === '' ? daysSince_(firstInvoiceDate) : Math.max(0, Math.floor(Number(agingValue) || 0));
+  const sourceStage = getField_(row, ['current_stage', 'current stage', 'blaze_stage']);
+  const paymentReceived = getField_(row, ['payments', 'payment_received', 'payments received', 'amount_paid', 'total_paid']);
+  const allStatuses = (statuses || ['Receivable']).filter(Boolean);
+
+  record.lien_id = record.lien_id || ('REC-' + blazeJobId);
+  record.customer = customer;
+  record.account_name = account || customer;
+  record.job_number = account;
+  record.blaze_job_id = blazeJobId;
+  record.blaze_url = blazeUrl;
+  record.region = getField_(row, ['region', 'market', 'branch', 'office']);
+  record.owner = getField_(row, ['sales_rep', 'sales rep', 'owner', 'rep', 'assigned_to']) || record.owner || 'Carlynn';
+  record.status = status;
+  record.stage = getStageFromReceivable_(row, status, days);
+  record.balance = balance;
+  record.contracted_amount = contractedAmount;
+  record.days_past_due = days;
+  record.first_invoice_date = firstInvoiceDate;
+  record.latest_invoice_date = latestInvoiceDate;
+  record.invoice_count = invoiceCount;
+  record.no_payment_received = getNoPaymentReceived_(row);
+  record.payment_received = paymentReceived;
+  record.source_current_stage = sourceStage;
+  record.source_last_note = getField_(row, ['lastnote', 'last_note', 'last note']);
+  record.profit_percentage = getField_(row, ['profit_percentage', 'profit percentage']);
+  record.source_statuses = allStatuses.join(' | ');
+  record.source_report_count = allStatuses.length;
+  record.filing_date = record.filing_date || '';
+  record.release_due_date = record.release_due_date || '';
+  record.release_status = allStatuses.indexOf('Lien Released') >= 0 ? 'Lien Released' : status;
+  record.legal_hold = allStatuses.some(function(value) { return /attorney|bankruptcy|foreclosure|legal|hold/i.test(String(value)); });
+  record.source_system = 'Blaze / Receivables Reports';
+  record.source_record_id = blazeJobId;
+  record.import_batch_id = importId;
+  record.source_row_number = row.__source_row_number || '';
+  record.source_removed_at = '';
+  record.last_updated = today_();
+  record.active = true;
+  return record;
 }
 
 function getInvoiceSentDates_(row) {
@@ -2606,15 +2941,7 @@ function getStageFromReceivable_(row, status, days) {
   return 'Monitor';
 }
 
-function makeReceivableKey_(row) {
-  const parts = [
-    getField_(row, ['job_number', 'job', 'job #', 'account', 'account_name', 'account number']),
-    getField_(row, ['customer', 'customer_name', 'name']),
-    getField_(row, ['first_invoice_date', 'first invoice', 'oldest_invoice_date', 'invoice_number', 'invoice #'])
-  ].map(function(value) { return String(value || '').trim().toLowerCase(); }).filter(Boolean);
-  const raw = parts.length ? parts.join('|') : JSON.stringify(row);
-  return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw)).slice(0, 16);
-}
+
 
 function getField_(row, names) {
   const normalized = {};
@@ -2634,31 +2961,9 @@ function sameName_(left, right) {
 
 
 function inspectLienStatusReports() {
-  const folder = DriveApp.getFolderById(LIEN_STATUS_REPORTS_FOLDER_ID);
-  const files = folder.getFilesByType(MimeType.GOOGLE_SHEETS);
-  const output = [];
-  while (files.hasNext()) {
-    const file = files.next();
-    const ss = SpreadsheetApp.openById(file.getId());
-    const book = { file: file.getName(), id: file.getId(), sheets: [] };
-    ss.getSheets().forEach(function(sheet) {
-      const values = sheet.getDataRange().getValues();
-      const headers = values.length ? values[0].map(normalizeHeader_) : [];
-      const dataRows = values.slice(1).filter(function(row) {
-        return row.some(function(cell) { return cell !== '' && cell !== null; });
-      }).length;
-      book.sheets.push({
-        sheet: sheet.getName(),
-        last_row: sheet.getLastRow(),
-        last_column: sheet.getLastColumn(),
-        readable_data_rows: dataRows,
-        headers: headers.slice(0, 25)
-      });
-    });
-    output.push(book);
-  }
-  Logger.log(JSON.stringify(output, null, 2));
-  return output;
+  const status = getLienImportStatus();
+  Logger.log(JSON.stringify(status, null, 2));
+  return status;
 }
 
 function testInspectLienStatusReports() {
