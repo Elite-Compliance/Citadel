@@ -871,3 +871,15 @@ body[data-theme="light"] .supplier-item-list button{background:#12365b;color:#ff
   .supplier-action-row{grid-template-columns:1fr}
   .supplier-account-form-grid fieldset>div{grid-template-columns:1fr}
 }
+
+
+/* Liens automated source freshness */
+.lien-freshness-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:42px;margin:0 0 8px;padding:8px 11px;border:1px solid var(--line);border-left:4px solid var(--blue-300);background:var(--card-bg);color:var(--text)}
+.lien-freshness-banner>div{display:grid;gap:2px;min-width:0}
+.lien-freshness-banner strong{font-size:12px;line-height:1.2}
+.lien-freshness-banner span{color:var(--muted);font-size:11px;line-height:1.25}
+.lien-freshness-banner em{flex:0 0 auto;color:var(--muted);font-size:10px;font-style:normal;text-align:right}
+.lien-freshness-banner.is-current{border-left-color:#2f8f6d;background:rgba(47,143,109,.08)}
+.lien-freshness-banner.is-stale{border-left-color:#c5a15b;background:rgba(197,161,91,.1)}
+.lien-freshness-banner.is-error{border-left-color:#c46f74;background:rgba(196,111,116,.1)}
+@media(max-width:720px){.lien-freshness-banner{align-items:flex-start;display:grid}.lien-freshness-banner em{text-align:left}}
