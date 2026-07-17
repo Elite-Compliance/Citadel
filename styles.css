@@ -883,3 +883,33 @@ body[data-theme="light"] .supplier-item-list button{background:#12365b;color:#ff
 .lien-freshness-banner.is-stale{border-left-color:#c5a15b;background:rgba(197,161,91,.1)}
 .lien-freshness-banner.is-error{border-left-color:#c46f74;background:rgba(196,111,116,.1)}
 @media(max-width:720px){.lien-freshness-banner{align-items:flex-start;display:grid}.lien-freshness-banner em{text-align:left}}
+
+
+/* Data Connections and viewport-safe import controls */
+.data-connections-page{display:grid;align-content:start;gap:12px}
+.data-connections-intro,.data-connections-section{border:1px solid var(--line);border-radius:8px;background:var(--card-bg);padding:14px}
+.data-connections-intro h2,.data-connections-intro p{margin:0}
+.data-connections-intro h2{margin-top:2px;font-size:22px}
+.data-connections-intro p:last-child{margin-top:4px;color:var(--muted);font-size:12px}
+.data-connections-section .card-heading{margin-bottom:12px}
+.data-import-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.data-import-card{display:flex;align-items:center;justify-content:space-between;gap:18px;min-width:0;border:1px solid var(--line);background:var(--field-bg);padding:14px}
+.data-import-card span,.data-connection-card span{color:var(--blue-300);font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.data-import-card h3,.data-import-card p,.data-connection-card h3,.data-connection-card p{margin:0}
+.data-import-card h3{margin-top:2px;font-size:15px}
+.data-import-card p{margin-top:4px;color:var(--muted);font-size:11px;line-height:1.4}
+.data-import-card button{flex:0 0 auto;min-width:126px;height:36px;border:1px solid var(--citadel-deep-blue-2);background:var(--citadel-deep-blue);color:#f8fbff;padding:0 14px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.data-connection-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.data-connection-card{position:relative;min-width:0;border:1px solid var(--line);background:var(--field-bg);padding:11px}
+.data-connection-card:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:#9aa9b8}
+.data-connection-card.is-live:before{background:#2d9f78}
+.data-connection-card h3{margin-top:2px;font-size:13px}
+.data-connection-card strong{display:block;margin-top:8px;color:var(--text);font-size:11px}
+.data-connection-card p{margin-top:3px;overflow:hidden;color:var(--muted);font-size:10px;line-height:1.35;text-overflow:ellipsis}
+.lien-import-modal-backdrop,.payment-import-modal-backdrop{align-items:center!important;padding:16px!important;overflow:hidden}
+.import-run-modal{display:flex;width:min(660px,calc(100vw - 32px));max-height:calc(100dvh - 32px);flex-direction:column;overflow:hidden}
+.import-run-modal .workspace-entry-form{display:flex;min-height:0;flex:1 1 auto;flex-direction:column;overflow:hidden}
+.import-run-modal .workspace-entry-body{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.import-run-modal .workspace-entry-actions{position:relative;z-index:1;flex:0 0 auto;box-shadow:0 -8px 18px rgba(7,17,31,.08)}
+@media(max-width:900px){.data-connection-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.data-import-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.data-connections-intro,.data-connections-section{padding:10px}.data-connection-grid{grid-template-columns:1fr}.data-import-card{align-items:stretch;flex-direction:column}.data-import-card button{width:100%}.lien-import-modal-backdrop,.payment-import-modal-backdrop{padding:8px!important}.import-run-modal{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}}
