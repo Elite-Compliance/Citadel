@@ -289,14 +289,14 @@ function isNoPaymentRecord(row){
   if(lastPayment)return false;
   return /no payment|no payments|no deposit|missing deposit/i.test([row.status,row.stage,row.note,row.alert,row.payment_status].join(" "))
 }
-function getLienMetricStats(records){records=records||[];var total=records.reduce(function(sum,row){return sum+moneyNumber(row.balance)},0);var openAlerts=records.filter(function(row){return Number(row.alerts_count||0)>0||Number(row.followups_count||0)>0}).length;var noDeposit=records.filter(isNoPaymentRecord).length;var sixty=records.filter(function(row){return Number(row.days||0)>=60}).length;var agency=records.filter(function(row){return /agency/i.test([row.status,row.stage,row.release_status,row.note,row.alert].join(" "))}).length;return [{key:"open_alerts",label:"Open Alerts",value:openAlerts,note:"Alerts + follow-ups"},{key:"active_accounts",label:"Active Accounts",value:records.length,note:"Current source records"},{key:"total_balance",label:"Total Balance",value:moneyLabel(total),note:"Active lien exposure"},{key:"no_deposit",label:"No Deposit",value:noDeposit,note:"Missing deposit"},{key:"sixty_days",label:"60+ Days",value:sixty,note:"Past due aging"},{key:"sent_to_agency",label:"Sent to Agency",value:agency,note:"Escalated accounts"}]}
+function getLienMetricStats(records){records=records||[];var total=records.reduce(function(sum,row){return sum+moneyNumber(row.balance)},0);var openAlerts=records.filter(function(row){return Number(row.alerts_count||0)>0||Number(row.followups_count||0)>0}).length;var noDeposit=records.filter(isNoPaymentRecord).length;var sixty=records.filter(function(row){return Number(row.days||0)>=60}).length;var agency=records.filter(function(row){return /agency/i.test([row.status,row.sourceStatuses,row.stage,row.release_status,row.note,row.alert].join(" "))}).length;return [{key:"open_alerts",label:"Open Alerts",value:openAlerts,note:"Alerts + follow-ups"},{key:"active_accounts",label:"Active Accounts",value:records.length,note:"Current source records"},{key:"total_balance",label:"Total Balance",value:moneyLabel(total),note:"Active lien exposure"},{key:"no_deposit",label:"No Deposit",value:noDeposit,note:"Missing deposit"},{key:"sixty_days",label:"60+ Days",value:sixty,note:"Past due aging"},{key:"sent_to_agency",label:"Sent to Agency",value:agency,note:"Escalated accounts"}]}
 function getVisibleLienRecords(){
   var records=liensData.records||[];
   if(activeLienMetric==="open_alerts")records=records.filter(function(row){return Number(row.alerts_count||0)>0||Number(row.followups_count||0)>0});
   if(activeLienMetric==="no_deposit")records=records.filter(isNoPaymentRecord);
   if(activeLienMetric==="sixty_days")records=records.filter(function(row){return Number(row.days||0)>=60});
-  if(activeLienMetric==="sent_to_agency")records=records.filter(function(row){return /agency/i.test([row.status,row.stage,row.release_status,row.note,row.alert].join(" "))});
-  if(lienFilters.status!=="All statuses")records=records.filter(function(row){return String(row.status)===lienFilters.status});
+  if(activeLienMetric==="sent_to_agency")records=records.filter(function(row){return /agency/i.test([row.status,row.sourceStatuses,row.stage,row.release_status,row.note,row.alert].join(" "))});
+  if(lienFilters.status!=="All statuses")records=records.filter(function(row){return String(row.sourceStatuses||row.status||"").split("|").some(function(value){return value.trim()===lienFilters.status})});
   if(lienFilters.stage!=="All stages")records=records.filter(function(row){return String(row.stage)===lienFilters.stage});
   if(lienFilters.region!=="All regions")records=records.filter(function(row){return String(row.region)===lienFilters.region});
   if(lienFilters.search){var q=lienFilters.search.toLowerCase();records=records.filter(function(row){return [row.jobNumber,row.id,row.customer,row.region,row.status,row.owner,row.balance].join(" ").toLowerCase().indexOf(q)>=0})}
@@ -780,7 +780,7 @@ function getQuickLienReportRecords(type){
   if(type==='open_alerts')return records.filter(function(row){return Number(row.alerts_count||0)+Number(row.followups_count||0)>0});
   if(type==='sixty_days')return records.filter(function(row){return Number(row.days||0)>=60});
   if(type==='no_deposit')return records.filter(isNoPaymentRecord);
-  if(type==='sent_to_agency')return records.filter(function(row){return /agency/i.test([row.status,row.stage,row.release_status,row.note,row.alert].join(' '))});
+  if(type==='sent_to_agency')return records.filter(function(row){return /agency/i.test([row.status,row.sourceStatuses,row.stage,row.release_status,row.note,row.alert].join(' '))});
   if(type==='critical')return records.filter(function(row){return String(row.stage||'')==='Critical'});
   return records
 }
