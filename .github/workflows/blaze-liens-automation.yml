@@ -1,0 +1,54 @@
+name: Blaze Liens and Payments Automation
+
+on:
+  schedule:
+    # Paired UTC hours cover Eastern Standard and Daylight Time. The runner
+    # verifies the local America/New_York hour before exporting anything.
+    - cron: '0 11,12,16,17,21,22 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: blaze-liens-payments-automation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pull-and-import:
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.LIEN_AUTOMATION_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: automation
+    env:
+      GITHUB_EVENT_NAME: ${{ github.event_name }}
+      BLAZE_EMAIL: ${{ secrets.BLAZE_EMAIL }}
+      BLAZE_PASSWORD: ${{ secrets.BLAZE_PASSWORD }}
+      BLAZE_TOTP_SECRET: ${{ secrets.BLAZE_TOTP_SECRET }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      CITADEL_AUTOMATION_TOKEN: ${{ secrets.CITADEL_AUTOMATION_TOKEN }}
+      LIEN_REPORTS_FOLDER_ID: 1XcllT_u0WP7H5Cr9zvw9G6NNcOUTYcTH
+      PAYMENT_SPREADSHEET_ID: 1peF6ujpJGi_vugM7hanoL06KLNUC_tarAOoW2dW6QfQ
+      CITADEL_APPS_SCRIPT_URL: https://script.google.com/macros/s/AKfycbzKIMMrIFdmS3xKUHzSzwR-Y-Z4FebDLBod1OWmORqDC-_J9pXH2azFVrONruv1djvIhw/exec
+    steps:
+      - name: Check out Citadel
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install automation dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check automation code
+        run: npm run check
+
+      - name: Export and import all 12 Blaze reports
+        run: npm run run
