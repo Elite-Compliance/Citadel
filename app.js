@@ -394,28 +394,35 @@ function formatLienImportTimestamp(value){
   return date.toLocaleString([], {month:"numeric",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});
 }
 
+function getLienAutomationStatus(){
+  var health=liensData.importStatus||{};
+  var schedule=(health.schedule||[]).join(', ');
+  var scheduleLabel=(health.weekdays||'Monday-Friday')+(schedule?' at '+schedule:'')+(health.timezone?' '+health.timezone.replace('America/',''):'');
+  return {
+    enabled:!!health.automation_enabled,
+    label:health.automation_enabled?'Scheduled imports enabled: '+scheduleLabel:'Scheduled imports prepared; activation is pending successful validation.'
+  }
+}
+
 function renderLienFreshnessBanner(){
   if(!liensData.importStatus)return "";
   var health=liensData.importStatus;
   var success=health.latest_success||{};
   var latest=health.latest_import||{};
   var lastGood=formatLienImportTimestamp(success.completed_at||success.started_at);
-  var schedule=(health.schedule||[]).join(", ");
-  var scheduleLabel=(health.weekdays||"Monday-Friday")+(schedule?" at "+schedule:"")+(health.timezone?" "+health.timezone.replace("America/",""):"");
   var stateClass="is-current";
   var title="Liens data current";
   var detail="Last successful import: "+lastGood;
   if(health.failed_after_success){
     stateClass="is-error";
-    title="Latest Liens automation failed";
+    title="Latest Liens data refresh failed";
     detail="The protected last-good data remains available from "+lastGood+". Review the import log before retrying.";
   }else if(health.stale){
     stateClass="is-stale";
     title="Liens data may be stale";
     detail="Last successful import: "+lastGood+". The last-good data remains protected while the next run is investigated.";
   }
-  var automationLabel=health.automation_enabled?"Automatic schedule: "+scheduleLabel:"Automatic schedule is ready but not active yet";
-  return '<section class="lien-freshness-banner '+stateClass+'" role="status"><div><strong>'+escapeHtml(title)+'</strong><span>'+escapeHtml(detail)+'</span></div><em>'+escapeHtml(automationLabel)+'</em></section>';
+  return '<section class="lien-freshness-banner '+stateClass+'" role="status"><div><strong>'+escapeHtml(title)+'</strong><span>'+escapeHtml(detail)+'</span></div></section>';
 }
 function saveLiensCache(data){try{localStorage.setItem(LIENS_CACHE_KEY,JSON.stringify({savedAt:Date.now(),data:data}))}catch(error){console.warn("Liens cache save failed",error)}}
 function hydrateLiensFromCache(){try{var cached=JSON.parse(localStorage.getItem(LIENS_CACHE_KEY)||"null");if(!cached||!cached.data||!(cached.data.records||[]).length)return false;applyLiensPayload(cached.data);liensLoading=false;liensLoadError="";liensLastUpdated=cached.savedAt?new Date(cached.savedAt).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):liensLastUpdated;return true}catch(error){console.warn("Liens cache read failed",error);return false}}
@@ -1843,9 +1850,11 @@ function getDataConnectionModules(){
 function renderDataConnectionsPage(){
   var modules=getDataConnectionModules();
   var connected=modules.filter(function(module){return module.live}).length;
+  var automation=getLienAutomationStatus();
   pagePanel.className='page-panel data-connections-page';
   pagePanel.innerHTML=renderModuleStatusLine(connected+' of '+modules.length+' source connections available')+
     '<section class="data-connections-intro"><div><p class="section-label">Source management</p><h2>Data Connections</h2><p>Review source health and run protected imports away from the daily Liens workflow.</p></div></section>'+
+    '<section class="data-connections-automation '+(automation.enabled?'is-enabled':'is-pending')+'"><div><span>Import schedule</span><strong>'+escapeHtml(automation.label)+'</strong></div><p>This operational setup status is intentionally shown only on Data Connections.</p></section>'+
     '<section class="data-connections-section"><div class="card-heading"><h3>Protected Import Tools</h3><span>Manual controls</span></div><div class="data-import-grid">'+
       '<article class="data-import-card"><div><span>Blaze Receivables</span><h3>Liens Saved Views</h3><p>Validate all 11 protected CRM reports and publish the combined Liens snapshot.</p></div><button type="button" data-run-lien-import>Liens Import</button></article>'+
       '<article class="data-import-card"><div><span>Blaze Deposit Report</span><h3>Payment Transactions</h3><p>Validate the protected staging report and rebuild payment history summaries.</p></div><button type="button" data-run-payment-import>Payment Import</button></article>'+
