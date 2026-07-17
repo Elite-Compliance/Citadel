@@ -51,6 +51,9 @@ const SHEETS = {
   reviewFollowUps: 'ReviewFollowUps',
   reviewMetrics: 'ReviewMetrics',
   fleet: 'Fleet',
+  fleetImport: 'FleetImport',
+  fleetImportLog: 'FleetImportLog',
+  fleetAutomationLog: 'FleetAutomationLog',
   fleetVehicles: 'FleetVehicles',
   fleetDrivers: 'FleetDrivers',
   fleetNotes: 'FleetNotes',
@@ -91,6 +94,9 @@ const REVIEW_ALERT_HEADERS = ['alert_id', 'review_id', 'alert_type', 'alert_text
 const REVIEW_FOLLOWUP_HEADERS = ['followup_id', 'review_id', 'assigned_to', 'due_date', 'followup_type', 'followup_text', 'status', 'created_by', 'created_date', 'completed_date', 'active'];
 const REVIEW_METRIC_HEADERS = ['metric_key', 'label', 'value', 'note', 'tone', 'sort_order'];
 const FLEET_SOURCE_HEADERS = ['Device', 'Device Group', 'First Name', 'Last Name', 'Current Driver', 'Work time', 'Current Activity', 'In Privacy Mode', 'Last Stop Address', 'Last Stop Zone Types', 'Current Odometer', 'Current Engine Hours', 'Active from', 'Active to', 'Is Archived (Historical)', 'Plan', 'Device Type', 'Firmware Version', 'Serial No.', 'License Plate', 'License State/Province', 'VIN', 'Time Zone', 'Device Comment', 'Download Status', 'Last Trip', 'Last Communication Date'];
+const FLEET_RECORD_HEADERS = FLEET_SOURCE_HEADERS.concat(['fleet_record_key', 'source_row_hash', 'source_row_number', 'duplicate_group_size', 'duplicate_sequence', 'duplicate_status', 'validation_error', 'import_batch_id', 'imported_at', 'active']);
+const FLEET_IMPORT_LOG_HEADERS = ['import_id', 'started_at', 'completed_at', 'imported_by', 'source_sheet', 'source_rows', 'retained_rows', 'unique_devices', 'duplicate_rows', 'validation_error_rows', 'status', 'warnings', 'error'];
+const FLEET_AUTOMATION_LOG_HEADERS = ['run_id', 'started_at', 'completed_at', 'status', 'source_rows', 'fleet_import_id', 'message', 'source'];
 const FLEET_VEHICLE_HEADERS = ['vehicle_id', 'unit_number', 'device_group', 'region', 'status', 'service_status', 'registration_status', 'vin', 'plate', 'license_state', 'make', 'model', 'year', 'assigned_driver', 'current_activity', 'last_stop_address', 'current_odometer', 'current_engine_hours', 'active_from', 'active_to', 'is_archived', 'plan', 'device_type', 'firmware_version', 'serial_no', 'time_zone', 'device_comment', 'download_status', 'last_trip', 'last_communication_date', 'last_updated'];
 const FLEET_DRIVER_HEADERS = ['driver_id', 'driver_name', 'first_name', 'last_name', 'region', 'status', 'phone', 'email', 'license_expiry', 'medical_card_expiry', 'insurance_expiry', 'assigned_vehicle', 'current_activity', 'work_time', 'last_stop_address', 'next_action', 'last_updated'];
 const FLEET_NOTE_HEADERS = ['note_id', 'fleet_record_id', 'record_type', 'note_date', 'note_by', 'note_type', 'note_text', 'follow_up_date', 'active'];
@@ -178,6 +184,20 @@ function doGet(e) {
 
     if (action === 'getFleet') {
       return output_(e, { ok: true, data: getFleet(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'getFleetImportStatus') {
+      return output_(e, { ok: true, data: getFleetImportStatus(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'runFleetImport') {
+      return output_(e, {
+        ok: true,
+        data: runFleetImport({
+          imported_by: getParam_(e, 'imported_by') || 'Citadel user'
+        }),
+        version: CITADEL_VERSION
+      });
     }
 
     if (action === 'getRegistrations') {
@@ -2045,14 +2065,17 @@ function getContractorsSpreadsheetId_() {
 
 function setupFleetSheet() {
   const spreadsheetId = getFleetSpreadsheetId_();
-  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleet, FLEET_SOURCE_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleet, FLEET_RECORD_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetImport, FLEET_SOURCE_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetImportLog, FLEET_IMPORT_LOG_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetAutomationLog, FLEET_AUTOMATION_LOG_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetVehicles, FLEET_VEHICLE_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetDrivers, FLEET_DRIVER_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetNotes, FLEET_NOTE_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetAlerts, FLEET_ALERT_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetFollowUps, FLEET_FOLLOWUP_HEADERS);
   ensureSheetWithHeaders_(spreadsheetId, SHEETS.fleetMetrics, FLEET_METRIC_HEADERS);
-  return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.fleet, SHEETS.fleetVehicles, SHEETS.fleetDrivers, SHEETS.fleetNotes, SHEETS.fleetAlerts, SHEETS.fleetFollowUps, SHEETS.fleetMetrics] };
+  return { spreadsheet_id: spreadsheetId, sheets: [SHEETS.fleetImport, SHEETS.fleet, SHEETS.fleetImportLog, SHEETS.fleetAutomationLog, SHEETS.fleetVehicles, SHEETS.fleetDrivers, SHEETS.fleetNotes, SHEETS.fleetAlerts, SHEETS.fleetFollowUps, SHEETS.fleetMetrics] };
 }
 
 function getFleet() {
@@ -2065,7 +2088,194 @@ function getFleet() {
   const alerts = sheetExists_(spreadsheetId, SHEETS.fleetAlerts) ? readSheetObjects_(spreadsheetId, SHEETS.fleetAlerts).filter(isActiveRow_) : [];
   const followUps = sheetExists_(spreadsheetId, SHEETS.fleetFollowUps) ? readSheetObjects_(spreadsheetId, SHEETS.fleetFollowUps).filter(isActiveRow_) : [];
   const metrics = sheetExists_(spreadsheetId, SHEETS.fleetMetrics) ? readSheetObjects_(spreadsheetId, SHEETS.fleetMetrics).sort(sortByOrder_) : buildFleetMetrics_(vehicles, drivers, alerts, followUps);
-  return { metrics: metrics, fleetRecords: sourceRows.map(mapFleetSource_), vehicles: vehicles, drivers: drivers, notes: notes, alerts: alerts, followUps: followUps, source_rows: sourceRows.length, source_tab: fleetSource.name };
+  return { metrics: metrics, fleetRecords: sourceRows.map(mapFleetSource_), vehicles: vehicles, drivers: drivers, notes: notes, alerts: alerts, followUps: followUps, source_rows: sourceRows.length, source_tab: fleetSource.name, import_status: getFleetImportHealth_() };
+}
+
+function getFleetImportStatus() {
+  const spreadsheetId = getFleetSpreadsheetId_();
+  setupFleetSheet();
+  const stagingSheet = getRequiredSheet_(spreadsheetId, SHEETS.fleetImport);
+  const headerResult = validateFleetImportHeaders_(stagingSheet);
+  const rows = readSheetObjects_(spreadsheetId, SHEETS.fleetImport);
+  const keyCounts = {};
+  let missingKeyRows = 0;
+  rows.forEach(function(row) {
+    const key = fleetStableKey_(row);
+    if (!key) {
+      missingKeyRows += 1;
+      return;
+    }
+    keyCounts[key] = (keyCounts[key] || 0) + 1;
+  });
+  const duplicateRows = Object.keys(keyCounts).reduce(function(total, key) {
+    return total + Math.max(keyCounts[key] - 1, 0);
+  }, 0);
+  const logs = readSheetObjects_(spreadsheetId, SHEETS.fleetImportLog);
+  const errors = headerResult.missing.map(function(header) { return 'Missing required column: ' + header; });
+  if (!rows.length) errors.push('FleetImport has no source rows.');
+  if (missingKeyRows) errors.push(missingKeyRows + ' row(s) do not have a usable VIN, serial number, or device name.');
+  const warnings = [];
+  if (duplicateRows) warnings.push(duplicateRows + ' duplicate device row(s) will be retained and flagged for review.');
+  return {
+    ready: errors.length === 0,
+    source_sheet: SHEETS.fleetImport,
+    staging_rows: rows.length,
+    unique_devices: Object.keys(keyCounts).length,
+    duplicate_rows: duplicateRows,
+    missing_key_rows: missingKeyRows,
+    errors: errors,
+    warnings: warnings,
+    latest_import: logs.length ? logs[logs.length - 1] : null,
+    recent_imports: logs.slice(-5).reverse(),
+    spreadsheet_url: 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit'
+  };
+}
+
+function getFleetImportHealth_() {
+  const spreadsheetId = getFleetSpreadsheetId_();
+  if (!sheetExists_(spreadsheetId, SHEETS.fleetImportLog)) return { status: 'Not configured', latest_import: null };
+  const logs = readSheetObjects_(spreadsheetId, SHEETS.fleetImportLog);
+  const latest = logs.length ? logs[logs.length - 1] : null;
+  return {
+    status: latest ? latest.status : 'Not run',
+    latest_import: latest,
+    schedule_enabled: false,
+    schedule_label: 'Geotab source connection pending'
+  };
+}
+
+function runFleetImport(options) {
+  const context = options || {};
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw new Error('Another protected import is already running. Please wait a moment and try again.');
+
+  const spreadsheetId = getFleetSpreadsheetId_();
+  const startedAt = timestamp_();
+  const importedBy = String(context.imported_by || 'Citadel user').trim() || 'Citadel user';
+  const importId = makeId_('fleet-import');
+  let sourceRows = 0;
+
+  try {
+    setupFleetSheet();
+    const stagingSheet = getRequiredSheet_(spreadsheetId, SHEETS.fleetImport);
+    const headerResult = validateFleetImportHeaders_(stagingSheet);
+    if (headerResult.missing.length) throw new Error('FleetImport is missing required columns: ' + headerResult.missing.join(', '));
+
+    const rawRows = readSheetObjects_(spreadsheetId, SHEETS.fleetImport);
+    sourceRows = rawRows.length;
+    if (!rawRows.length) throw new Error('FleetImport is empty. Load a fresh Geotab fleet report before running the import.');
+
+    const keyCounts = {};
+    const sourceHashCounts = {};
+    rawRows.forEach(function(row) {
+      const key = fleetStableKey_(row);
+      const hash = fleetSourceRowHash_(row);
+      if (key) keyCounts[key] = (keyCounts[key] || 0) + 1;
+      sourceHashCounts[hash] = (sourceHashCounts[hash] || 0) + 1;
+    });
+
+    const missingKeyRows = rawRows.filter(function(row) { return !fleetStableKey_(row); }).length;
+    if (missingKeyRows) throw new Error(missingKeyRows + ' FleetImport row(s) do not have a usable VIN, serial number, or device name. The current Fleet snapshot was not changed.');
+
+    const keySequences = {};
+    const sourceHashSequences = {};
+    const importedAt = timestamp_();
+    const records = rawRows.map(function(row, index) {
+      const key = fleetStableKey_(row);
+      const sourceHash = fleetSourceRowHash_(row);
+      keySequences[key] = (keySequences[key] || 0) + 1;
+      sourceHashSequences[sourceHash] = (sourceHashSequences[sourceHash] || 0) + 1;
+      const duplicateGroupSize = keyCounts[key] || 1;
+      const exactDuplicateGroupSize = sourceHashCounts[sourceHash] || 1;
+      const duplicateStatus = duplicateGroupSize < 2
+        ? ''
+        : exactDuplicateGroupSize > 1
+          ? 'Exact duplicate source row - retained for review'
+          : 'Duplicate device identifier - retained for review';
+      const record = {};
+      FLEET_SOURCE_HEADERS.forEach(function(header) { record[header] = row[header]; });
+      record.fleet_record_key = key;
+      record.source_row_hash = sourceHash;
+      record.source_row_number = index + 2;
+      record.duplicate_group_size = duplicateGroupSize;
+      record.duplicate_sequence = keySequences[key];
+      record.duplicate_status = duplicateStatus;
+      record.validation_error = '';
+      record.import_batch_id = importId;
+      record.imported_at = importedAt;
+      record.active = true;
+      return record;
+    });
+
+    const duplicateRows = records.filter(function(row) { return Number(row.duplicate_sequence) > 1; }).length;
+    replaceSheetObjects_(spreadsheetId, SHEETS.fleet, FLEET_RECORD_HEADERS, records);
+
+    const warnings = duplicateRows ? duplicateRows + ' duplicate device row(s) retained and flagged.' : '';
+    const log = {
+      import_id: importId,
+      started_at: startedAt,
+      completed_at: timestamp_(),
+      imported_by: importedBy,
+      source_sheet: SHEETS.fleetImport,
+      source_rows: rawRows.length,
+      retained_rows: records.length,
+      unique_devices: Object.keys(keyCounts).length,
+      duplicate_rows: duplicateRows,
+      validation_error_rows: 0,
+      status: duplicateRows ? 'Completed with warnings' : 'Completed',
+      warnings: warnings,
+      error: ''
+    };
+    appendObject_(spreadsheetId, SHEETS.fleetImportLog, log);
+    return log;
+  } catch (error) {
+    try {
+      setupFleetSheet();
+      appendObject_(spreadsheetId, SHEETS.fleetImportLog, {
+        import_id: importId,
+        started_at: startedAt,
+        completed_at: timestamp_(),
+        imported_by: importedBy,
+        source_sheet: SHEETS.fleetImport,
+        source_rows: sourceRows,
+        retained_rows: '',
+        unique_devices: '',
+        duplicate_rows: '',
+        validation_error_rows: '',
+        status: 'Failed',
+        warnings: '',
+        error: error && error.message ? error.message : String(error)
+      });
+    } catch (logError) {
+      Logger.log('Unable to write failed Fleet import log: ' + (logError.message || String(logError)));
+    }
+    throw error;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function validateFleetImportHeaders_(sheet) {
+  const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getDisplayValues()[0].map(function(value) {
+    return String(value || '').trim();
+  });
+  const required = ['Device', 'Device Group', 'Serial No.', 'VIN'];
+  return { headers: headers, missing: required.filter(function(header) { return headers.indexOf(header) === -1; }) };
+}
+
+function fleetStableKey_(row) {
+  const vin = String(getFleetField_(row, ['vin']) || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (vin && vin !== '0') return 'VIN:' + vin;
+  const serial = String(getFleetField_(row, ['serial_no', 'serial no', 'serial number']) || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (serial && serial !== '0') return 'SERIAL:' + serial;
+  const device = String(getFleetField_(row, ['device']) || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  return device && device !== '0' ? 'DEVICE:' + device : '';
+}
+
+function fleetSourceRowHash_(row) {
+  return sha256Hex_(FLEET_SOURCE_HEADERS.map(function(header) {
+    return String(row[header] === null || row[header] === undefined ? '' : row[header]).trim();
+  }).join('\u001f'));
 }
 
 function readFleetSource_(spreadsheetId) {
@@ -2090,7 +2300,7 @@ function findFleetSourceSheet_(ss) {
 
 function sheetLooksLikeFleetSource_(sheet) {
   if (!sheet || sheet.getLastRow() < 1 || sheet.getLastColumn() < 1) return false;
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(normalizeHeader_);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(normalizeFleetHeader_);
   return headers.indexOf('device') > -1 && headers.indexOf('device_group') > -1 && headers.indexOf('vin') > -1;
 }
 
@@ -2122,7 +2332,11 @@ function mapFleetSource_(row) {
     device_comment: getFleetField_(row, ['device_comment', 'device comment']),
     download_status: getFleetField_(row, ['download_status', 'download status']),
     last_trip: getFleetField_(row, ['last_trip', 'last trip']),
-    last_communication_date: getFleetField_(row, ['last_communication_date', 'last communication date'])
+    last_communication_date: getFleetField_(row, ['last_communication_date', 'last communication date']),
+    fleet_record_key: getFleetField_(row, ['fleet_record_key']),
+    duplicate_status: getFleetField_(row, ['duplicate_status']),
+    validation_error: getFleetField_(row, ['validation_error']),
+    imported_at: getFleetField_(row, ['imported_at'])
   };
 }
 
@@ -2132,7 +2346,7 @@ function mapFleetVehicle_(row) {
   const archived = getFleetField_(row, ['is_archived_historical', 'is archived historical', 'is_archived', 'archived']);
   const activity = getFleetField_(row, ['current_activity', 'current activity', 'status', 'vehicle_status']);
   return {
-    vehicle_id: getFleetField_(row, ['vehicle_id', 'id']) || makeIdFromText_('vehicle', device),
+    vehicle_id: getFleetField_(row, ['vehicle_id', 'fleet_record_key', 'id']) || makeIdFromText_('vehicle', device),
     unit_number: device,
     device_group: group,
     region: fleetRegionFromGroup_(group),
@@ -2193,13 +2407,17 @@ function getFleetField_(row, names) {
   if (!row) return '';
   const normalized = {};
   Object.keys(row).forEach(function(key) {
-    normalized[normalizeHeader_(key)] = row[key];
+    normalized[normalizeFleetHeader_(key)] = row[key];
   });
   for (let i = 0; i < names.length; i++) {
-    const key = normalizeHeader_(names[i]);
+    const key = normalizeFleetHeader_(names[i]);
     if (Object.prototype.hasOwnProperty.call(normalized, key) && normalized[key] !== '') return normalized[key];
   }
   return '';
+}
+
+function normalizeFleetHeader_(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
 function fleetDriverNameFromRow_(row) {
