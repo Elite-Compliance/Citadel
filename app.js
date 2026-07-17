@@ -2,6 +2,7 @@ var CITADEL_VERSION="2.1.2";
 var CITADEL_API_URL="https://script.google.com/macros/s/AKfycbzKIMMrIFdmS3xKUHzSzwR-Y-Z4FebDLBod1OWmORqDC-_J9pXH2azFVrONruv1djvIhw/exec";
 var PAYMENT_IMPORT_SHEET_URL="https://docs.google.com/spreadsheets/d/1peF6ujpJGi_vugM7hanoL06KLNUC_tarAOoW2dW6QfQ/edit#gid=261509484";
 var LIEN_REPORTS_FOLDER_URL="https://drive.google.com/drive/folders/1XcllT_u0WP7H5Cr9zvw9G6NNcOUTYcTH";
+var FLEET_IMPORT_SHEET_URL="https://docs.google.com/spreadsheets/d/1cUbzbYW_7UCwD4oD9_pSWZBLDZYF3VpvqBijUOMBhuo/edit";
 var COMMAND_FOCUS_NOTE_PREFIX="citadel_command_focus_note_";
 var selectedCommandModule="liens";
 var liensWorkspaceStatus="";
@@ -20,6 +21,7 @@ var liensData={metrics:[],notes:[],alerts:[],followUps:[],importStatus:null,sele
 var lienPaymentHistoryCache={};
 var paymentImportRunning=false;
 var lienImportRunning=false;
+var fleetImportRunning=false;
 var liensLoading=!!CITADEL_API_URL;
 var liensLoadError="";
 var liensLastUpdated="";
@@ -44,7 +46,7 @@ var pricingState={headers:[],keys:[],rows:[],allRows:[],total:0,offset:0,limit:7
 var REVIEWS_CACHE_KEY="citadel_reviews_cache_v1";
 var reviewsData={records:[],notes:[],alerts:[],followUps:[],metrics:[],selectedIndex:0};var reviewsLoading=!!CITADEL_API_URL;var reviewsLoadError='';var reviewsLastUpdated='';var reviewFilters={platform:'All platforms',rating:'All ratings',status:'All statuses',sort:'Newest first',search:''};var activeReviewMetric='all';var reviewsPageEventsBound=false;var reviewWorkspaceStatus='';var reviewSearchTimer=null;
 var FLEET_CACHE_KEY="citadel_fleet_cache_v1";
-var fleetData={sourceRows:[],vehicles:[],drivers:[],notes:[],alerts:[],followUps:[],metrics:[],selectedFleetIndex:0,selectedVehicleIndex:0,selectedDriverIndex:0};
+var fleetData={sourceRows:[],vehicles:[],drivers:[],notes:[],alerts:[],followUps:[],metrics:[],importStatus:null,selectedFleetIndex:0,selectedVehicleIndex:0,selectedDriverIndex:0};
 var fleetLoading=!!CITADEL_API_URL;
 var fleetLoadError="";
 var fleetLastUpdated="";
@@ -650,6 +652,75 @@ function openLienPaymentImportModal(){
   });
   form.elements.source_label.focus();
   form.elements.source_label.select()
+}
+
+function closeFleetImportModal(){
+  var modal=document.querySelector('.fleet-import-modal-backdrop');
+  if(modal)modal.remove()
+}
+
+function fleetImportStatusMarkup(status){
+  status=status||{};
+  var latest=status.latest_import||{};
+  var warningMarkup=(status.warnings||[]).map(function(message){return '<div class="report-callout">'+escapeHtml(message)+'</div>'}).join('');
+  var errorMarkup=(status.errors||[]).map(function(message){return '<div class="report-callout"><strong>Check:</strong> '+escapeHtml(message)+'</div>'}).join('');
+  var latestLabel=latest.status?(latest.status+(latest.completed_at?' &middot; '+latest.completed_at:'')):'No protected Fleet import yet';
+  return '<div class="liens-detail-grid"><article><span>Staging Rows</span><strong>'+escapeHtml(status.staging_rows||0)+'</strong></article><article><span>Unique Devices</span><strong>'+escapeHtml(status.unique_devices||0)+'</strong></article><article><span>Duplicate Rows</span><strong>'+escapeHtml(status.duplicate_rows||0)+'</strong></article><article><span>Missing Keys</span><strong>'+escapeHtml(status.missing_key_rows||0)+'</strong></article><article><span>Status</span><strong>'+escapeHtml(status.ready?'Ready to import':'Needs review')+'</strong></article></div><div class="report-callout"><strong>Latest import:</strong> '+latestLabel+'</div>'+warningMarkup+errorMarkup
+}
+
+function fleetImportResultMarkup(result){
+  result=result||{};
+  var warning=result.warnings?'<div class="report-callout">'+escapeHtml(result.warnings)+'</div>':'';
+  return '<div class="report-callout"><strong>'+escapeHtml(result.status||'Completed')+'</strong> &middot; '+escapeHtml(result.import_id||'Fleet import')+'</div><div class="liens-detail-grid"><article><span>Source Rows</span><strong>'+escapeHtml(result.source_rows||0)+'</strong></article><article><span>Retained Rows</span><strong>'+escapeHtml(result.retained_rows||0)+'</strong></article><article><span>Unique Devices</span><strong>'+escapeHtml(result.unique_devices||0)+'</strong></article><article><span>Duplicate Rows</span><strong>'+escapeHtml(result.duplicate_rows||0)+'</strong></article><article><span>Validation Errors</span><strong>'+escapeHtml(result.validation_error_rows||0)+'</strong></article></div>'+warning
+}
+
+function openFleetImportModal(){
+  closeFleetImportModal();
+  var modal=document.createElement('div');
+  modal.className='citadel-modal-backdrop workspace-entry-backdrop fleet-import-modal-backdrop';
+  modal.innerHTML='<section class="workspace-entry-modal import-run-modal" role="dialog" aria-modal="true" aria-label="Run Fleet Import"><div class="modal-head"><div><h3>Run Fleet Import</h3><p>Validate the Geotab staging report and publish the protected Fleet snapshot.</p></div><button type="button" data-close-fleet-import aria-label="Close">X</button></div><form class="workspace-entry-form" data-fleet-import-form><div class="workspace-entry-body"><div class="report-callout">VIN is the preferred matching key, followed by Geotab serial number and device name. Every source row is retained; duplicate device identifiers are marked for review.</div><p><a class="record-link" href="'+escapeHtml(FLEET_IMPORT_SHEET_URL)+'" target="_blank" rel="noopener">Open protected Fleet workbook</a></p><div data-fleet-import-status><p class="liens-empty">Checking the FleetImport staging tab...</p></div><div class="workspace-status" data-fleet-import-feedback></div></div><div class="workspace-entry-actions"><button type="button" data-close-fleet-import>Cancel</button><button type="submit" class="primary" data-run-fleet-import-now disabled>Run Fleet Import</button></div></form></section>';
+  var form=modal.querySelector('[data-fleet-import-form]');
+  var statusBox=modal.querySelector('[data-fleet-import-status]');
+  var feedback=modal.querySelector('[data-fleet-import-feedback]');
+  var runButton=modal.querySelector('[data-run-fleet-import-now]');
+  var onKeydown=function(event){if(event.key==='Escape'&&!fleetImportRunning)close()};
+  function close(){
+    if(fleetImportRunning)return;
+    document.removeEventListener('keydown',onKeydown);
+    modal.remove()
+  }
+  modal.querySelectorAll('[data-close-fleet-import]').forEach(function(button){button.addEventListener('click',close)});
+  modal.addEventListener('click',function(event){if(event.target===modal)close()});
+  form.addEventListener('submit',function(event){
+    event.preventDefault();
+    if(fleetImportRunning||runButton.disabled)return;
+    fleetImportRunning=true;
+    runButton.disabled=true;
+    runButton.textContent='Importing...';
+    feedback.textContent='Validating device identities, duplicates, and the protected snapshot...';
+    jsonp(CITADEL_API_URL+'?action=runFleetImport&imported_by='+encodeURIComponent('Citadel user')).then(function(response){
+      if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:'Fleet import failed');
+      statusBox.innerHTML=fleetImportResultMarkup(response.data);
+      feedback.textContent='Fleet import completed. The Fleet page is refreshing from the protected snapshot.';
+      loadFleetData()
+    }).catch(function(error){
+      feedback.textContent='Import failed: '+(error.message||'Please review the FleetImport tab and try again.')
+    }).finally(function(){
+      fleetImportRunning=false;
+      runButton.disabled=false;
+      runButton.textContent='Run Fleet Import'
+    })
+  });
+  document.body.appendChild(modal);
+  document.addEventListener('keydown',onKeydown);
+  jsonp(CITADEL_API_URL+'?action=getFleetImportStatus').then(function(response){
+    if(!response||!response.ok||!response.data)throw new Error(response&&response.error?response.error:'Status unavailable');
+    if(!document.body.contains(modal))return;
+    statusBox.innerHTML=fleetImportStatusMarkup(response.data);
+    runButton.disabled=!response.data.ready
+  }).catch(function(error){
+    if(document.body.contains(modal))statusBox.innerHTML='<p class="liens-empty">Unable to validate FleetImport. '+escapeHtml(error.message||'Please try again.')+'</p>'
+  })
 }
 
 function openLienPaymentHistoryModal(record){
@@ -1372,7 +1443,7 @@ function getRegionHealthRows(){
 function normalizeFleetSource(row){return {device:row.device||'',deviceGroup:row.device_group||'',firstName:row.first_name||'',lastName:row.last_name||'',currentDriver:row.current_driver||'',workTime:row.work_time||'',currentActivity:row.current_activity||'',privacyMode:row.in_privacy_mode||'',lastStopAddress:row.last_stop_address||'',lastStopZoneTypes:row.last_stop_zone_types||'',currentOdometer:row.current_odometer||'',currentEngineHours:row.current_engine_hours||'',activeFrom:row.active_from||'',activeTo:row.active_to||'',isArchived:row.is_archived||'',plan:row.plan||'',deviceType:row.device_type||'',firmwareVersion:row.firmware_version||'',serialNo:row.serial_no||'',licensePlate:row.license_plate||'',licenseState:row.license_state||'',vin:row.vin||'',timeZone:row.time_zone||'',deviceComment:row.device_comment||'',downloadStatus:row.download_status||'',lastTrip:row.last_trip||'',lastCommunicationDate:row.last_communication_date||''}}
 function normalizeFleetVehicle(row){return {id:row.vehicle_id||row.id||'',unit:row.unit_number||row.unit||row.vehicle_id||'',deviceGroup:row.device_group||'',region:row.region||'',status:row.status||'Active',serviceStatus:row.service_status||'',registrationStatus:row.registration_status||'',vin:row.vin||'',plate:row.plate||'',licenseState:row.license_state||'',make:row.make||'',model:row.model||'',year:row.year||'',assignedDriver:row.assigned_driver||'',currentActivity:row.current_activity||'',lastStopAddress:row.last_stop_address||'',currentOdometer:row.current_odometer||'',currentEngineHours:row.current_engine_hours||'',activeFrom:row.active_from||'',activeTo:row.active_to||'',isArchived:row.is_archived||'',plan:row.plan||'',deviceType:row.device_type||'',firmwareVersion:row.firmware_version||'',serialNo:row.serial_no||'',timeZone:row.time_zone||'',deviceComment:row.device_comment||'',downloadStatus:row.download_status||'',lastTrip:row.last_trip||'',lastCommunicationDate:row.last_communication_date||'',nextServiceDate:row.next_service_date||'',lastUpdated:row.last_updated||''}}
 function normalizeFleetDriver(row){return {id:row.driver_id||row.id||'',name:row.driver_name||row.name||'',region:row.region||'',status:row.status||'Active',phone:row.phone||'',email:row.email||'',licenseExpiry:row.license_expiry||'',medicalExpiry:row.medical_card_expiry||'',insuranceExpiry:row.insurance_expiry||'',assignedVehicle:row.assigned_vehicle||'',nextAction:row.next_action||'',lastUpdated:row.last_updated||''}}
-function applyFleetPayload(data){fleetData.sourceRows=(data.fleetRecords||[]).map(normalizeFleetSource);fleetData.vehicles=(data.vehicles||[]).map(normalizeFleetVehicle);fleetData.drivers=(data.drivers||[]).map(normalizeFleetDriver);fleetData.notes=data.notes||[];fleetData.alerts=data.alerts||[];fleetData.followUps=data.followUps||[];fleetData.metrics=data.metrics||[];fleetData.selectedFleetIndex=0;fleetData.selectedVehicleIndex=0;fleetData.selectedDriverIndex=0;fleetLastUpdated=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}
+function applyFleetPayload(data){fleetData.sourceRows=(data.fleetRecords||[]).map(normalizeFleetSource);fleetData.vehicles=(data.vehicles||[]).map(normalizeFleetVehicle);fleetData.drivers=(data.drivers||[]).map(normalizeFleetDriver);fleetData.notes=data.notes||[];fleetData.alerts=data.alerts||[];fleetData.followUps=data.followUps||[];fleetData.metrics=data.metrics||[];fleetData.importStatus=data.import_status||null;fleetData.selectedFleetIndex=0;fleetData.selectedVehicleIndex=0;fleetData.selectedDriverIndex=0;fleetLastUpdated=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}
 function saveFleetCache(data){try{localStorage.setItem(FLEET_CACHE_KEY,JSON.stringify({savedAt:Date.now(),data:data}))}catch(error){}}
 function hydrateFleetFromCache(){try{var cached=JSON.parse(localStorage.getItem(FLEET_CACHE_KEY)||'null');if(!cached||!cached.data)return false;applyFleetPayload(cached.data);fleetLoading=false;fleetLoadError='';fleetLastUpdated=cached.savedAt?new Date(cached.savedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):fleetLastUpdated;return true}catch(error){console.warn('Fleet cache read failed',error);return false}}
 function fleetOpenWorkflowCount(){return (fleetData.alerts||[]).length+(fleetData.followUps||[]).length}
@@ -1858,6 +1929,7 @@ function renderDataConnectionsPage(){
     '<section class="data-connections-section"><div class="card-heading"><h3>Protected Import Tools</h3><span>Manual controls</span></div><div class="data-import-grid">'+
       '<article class="data-import-card"><div><span>Blaze Receivables</span><h3>Liens Saved Views</h3><p>Validate all 11 protected CRM reports and publish the combined Liens snapshot.</p></div><button type="button" data-run-lien-import>Liens Import</button></article>'+
       '<article class="data-import-card"><div><span>Blaze Deposit Report</span><h3>Payment Transactions</h3><p>Validate the protected staging report and rebuild payment history summaries.</p></div><button type="button" data-run-payment-import>Payment Import</button></article>'+
+      '<article class="data-import-card"><div><span>Geotab Fleet Report</span><h3>Fleet Devices</h3><p>Validate VINs, serial numbers, duplicate devices, and publish the protected Fleet snapshot.</p></div><button type="button" data-run-fleet-import>Fleet Import</button></article>'+
     '</div></section>'+
     '<section class="data-connections-section"><div class="card-heading"><h3>Connection Health</h3><span>'+escapeHtml(connected)+' live</span></div><div class="data-connection-grid">'+modules.map(function(module){return '<article class="data-connection-card '+(module.live?'is-live':'is-unavailable')+'"><div><span>'+escapeHtml(module.statusLabel||'Connection')+'</span><h3>'+escapeHtml(module.label)+'</h3></div><strong>'+(module.live?'Available':'Unavailable')+'</strong><p>'+escapeHtml(module.primary)+' &middot; '+escapeHtml(module.secondary)+'</p></article>'}).join('')+'</div></section>'
 }
@@ -1867,7 +1939,8 @@ function bindDataConnectionsPage(){
   pagePanel.addEventListener('click',function(event){
     if(activePage!=='data-connections')return;
     if(event.target.closest('[data-run-lien-import]')){openLienImportModal();return}
-    if(event.target.closest('[data-run-payment-import]'))openLienPaymentImportModal()
+    if(event.target.closest('[data-run-payment-import]')){openLienPaymentImportModal();return}
+    if(event.target.closest('[data-run-fleet-import]'))openFleetImportModal()
   })
 }
 function bindStandardPage(){if(standardPageEventsBound)return;standardPageEventsBound=true;pagePanel.addEventListener("click",function(event){if(activePage==="command-center"||activePage==="liens"||activePage==="contractors")return;var metric=event.target.closest("[data-standard-metric]");if(metric){activeStandardMetric=metric.getAttribute("data-standard-metric")||"";renderStandardContent();return}if(event.target.closest("[data-standard-report]")){openStandardReportsModal();return}})}
