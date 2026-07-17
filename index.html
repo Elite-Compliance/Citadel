@@ -3,8 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <title>Citadel App Shell</title>
   <link rel="stylesheet" href="./styles.css?v=2.1.2.29" />
+  <style>
+    .citadel-login-overlay{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:linear-gradient(145deg,#07182b,#102d4a)}
+    .citadel-login-card{width:min(440px,100%);padding:34px;border:1px solid #b9c9d9;background:#fff;color:#10243a;box-shadow:0 24px 70px rgba(0,0,0,.34);text-align:center}
+    .citadel-login-mark{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 18px;border:1px solid #8eabc5;background:#123a62;color:#fff;font-size:30px;font-weight:800}
+    .citadel-login-card p{margin:0 0 4px;color:#1c6aa3;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+    .citadel-login-card h1{margin:0 0 10px;font-size:30px}.citadel-login-card>span{display:block;color:#526579;line-height:1.5}
+    .citadel-login-message{min-height:22px;margin:16px 0 8px;color:#922b35;font-weight:700}.citadel-login-card [data-google-signin]{display:flex;justify-content:center;min-height:44px}
+    .citadel-login-card small{display:block;margin-top:18px;color:#66788b}.citadel-auth-required .app-shell{visibility:hidden}
+    .citadel-account-settings{display:grid;gap:4px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(130,150,170,.35)}
+    .citadel-account-settings span,.citadel-account-settings small{color:inherit;opacity:.78}.citadel-account-settings button{margin-top:8px;padding:9px 12px;border:1px solid currentColor;background:transparent;color:inherit;font-weight:700;cursor:pointer}
+    .citadel-users-modal{width:min(1000px,94vw);max-height:88vh;overflow:auto}.citadel-users-layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:18px;padding:18px}
+    .citadel-user-list{display:grid;align-content:start;gap:7px}.citadel-user-list button{display:grid;gap:3px;padding:12px;border:1px solid #bdcbd8;background:#fff;color:#132b44;text-align:left;cursor:pointer}.citadel-user-list span,.citadel-user-list small{color:#5c6f82}
+    .citadel-user-form{display:grid;gap:14px}.citadel-user-form>label,.citadel-user-form-row>label{display:grid;gap:5px;font-weight:700}.citadel-user-form input,.citadel-user-form select{min-height:42px;padding:8px 10px;border:1px solid #aebfce;background:#fff;color:#11263c}
+    .citadel-user-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.citadel-user-form fieldset{margin:0;padding:12px;border:1px solid #bdcbd8}.citadel-user-form legend{padding:0 6px;font-weight:800}
+    .citadel-access-checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.citadel-access-checks label{display:flex;align-items:center;gap:7px;font-weight:600}.citadel-access-checks input{min-height:0}.citadel-user-form-status{min-height:20px;color:#922b35;font-weight:700}
+    @media(max-width:760px){.citadel-users-layout{grid-template-columns:1fr}.citadel-user-form-row,.citadel-access-checks{grid-template-columns:1fr 1fr}}
+  </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -34,7 +53,7 @@
     </main>
   </div>
   <script src="./data/pricing-data.js?v=2.1.2"></script>
-  <script src="./app.js?v=2.1.2.40"></script>
+  <script src="./app.js?v=2.1.2.41"></script>
 </body>
 </html>
 
