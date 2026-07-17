@@ -342,6 +342,7 @@ function normalizeLienRecord(record){
     region:record.region,
     contractedAmount:record.contracted_amount||record.total_revenue||record['Total Revenue']||"",
     status:record.status||record.release_status,
+    sourceStatuses:record.source_statuses||record.status||record.release_status||"",
     stage:record.stage||record.priority,
     balance:record.balance,
     owner:record.owner,
