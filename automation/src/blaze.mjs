@@ -41,8 +41,11 @@ async function firstVisibleButton(page, labels) {
   return firstVisible(page, ['button[type="submit"]', 'input[type="submit"]']);
 }
 
-async function dismissPushNotificationPrompt(page) {
+async function dismissPushNotificationPrompt(page, waitTimeout = 0) {
   const prompt = page.locator('app-push-notification').first();
+  if (waitTimeout) {
+    await prompt.waitFor({ state: 'visible', timeout: waitTimeout }).catch(() => {});
+  }
   if (!(await prompt.count()) || !(await prompt.isVisible())) return;
 
   for (const label of ['Not Now', 'No Thanks', 'Later', 'Dismiss', 'Close']) {
@@ -188,10 +191,11 @@ export async function exportContractorsReport(outputDirectory, credentials) {
     await ensureAuthenticated(page, credentials);
     await page.goto(CONTRACTORS_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-    await dismissPushNotificationPrompt(page);
+    await page.locator('ng-http-loader .backdrop').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
+    await dismissPushNotificationPrompt(page, 15000);
     const runButton = page.getByRole('button', { name: 'Run Report', exact: true });
     await runButton.waitFor({ state: 'visible', timeout: 60000 });
-    await runButton.click({ force: true });
+    await runButton.click();
 
     const exportButton = page.getByRole('button', { name: 'Export to Excel', exact: true });
     await exportButton.waitFor({ state: 'visible', timeout: 120000 });
