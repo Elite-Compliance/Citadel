@@ -42,25 +42,28 @@ async function firstVisibleButton(page, labels) {
 }
 
 async function dismissPushNotificationPrompt(page, waitTimeout = 0) {
-  const visiblePrompt = page.locator('app-push-notification:visible').first();
   if (waitTimeout) {
-    await visiblePrompt.waitFor({ state: 'visible', timeout: waitTimeout }).catch(() => {});
-  }
-  if (!(await visiblePrompt.count())) return;
-
-  for (const label of ['Not Now', 'No Thanks', 'Later', 'Dismiss', 'Close']) {
-    const button = visiblePrompt.getByRole('button', { name: label, exact: false });
-    if (await button.count() && await button.first().isVisible()) {
-      await button.first().click({ force: true });
-      break;
-    }
+    await page.waitForFunction(() => {
+      return [...document.querySelectorAll('app-push-notification')].some((element) => {
+        const bounds = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        return bounds.width > 0 && bounds.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+      });
+    }, null, { timeout: waitTimeout }).catch(() => {});
   }
 
-  if (await page.locator('app-push-notification:visible').count()) {
-    await page.locator('app-push-notification').evaluateAll((elements) => {
-      elements.forEach((element) => element.remove());
+  await page.evaluate(() => {
+    const visiblePrompts = [...document.querySelectorAll('app-push-notification')].filter((element) => {
+      const bounds = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      return bounds.width > 0 && bounds.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
     });
-  }
+    if (visiblePrompts.length) {
+      document.querySelectorAll('app-push-notification').forEach((element) => {
+        element.remove();
+      });
+    }
+  });
 }
 
 async function ensureAuthenticated(page, credentials) {
@@ -188,21 +191,13 @@ export async function exportContractorsReport(outputDirectory, credentials) {
   const context = await browser.newContext({ acceptDownloads: true });
   const page = await context.newPage();
   page.setDefaultTimeout(30000);
-  await page.addLocatorHandler(
-    page.locator('app-push-notification:visible').first(),
-    async () => {
-      await page.locator('app-push-notification').evaluateAll((elements) => {
-        elements.forEach((element) => element.remove());
-      });
-    }
-  );
 
   try {
     await ensureAuthenticated(page, credentials);
     await page.goto(CONTRACTORS_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     await page.locator('ng-http-loader .backdrop').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
-    await dismissPushNotificationPrompt(page, 15000);
+    await dismissPushNotificationPrompt(page, 45000);
     const runButton = page.getByRole('button', { name: 'Run Report', exact: true });
     await runButton.waitFor({ state: 'visible', timeout: 60000 });
     await runButton.click();
