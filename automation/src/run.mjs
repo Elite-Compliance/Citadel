@@ -81,7 +81,7 @@ async function main() {
       liens_import_id: imports.liens.import_id,
       payment_import_id: imports.payments.import_id,
       source: 'GitHub Actions',
-      message: `${lienValidation.activeJobs} active Liens jobs, ${lienValidation.membershipRows} memberships, ${depositValidation.rowCount} payment rows.`
+      message: `${lienValidation.activeJobs} active Liens jobs, ${lienValidation.membershipRows} memberships, ${lienValidation.repeatedJobRows} repeated job rows retained, ${depositValidation.rowCount} payment rows.`
     });
 
     console.log(`Citadel automation ${runId} completed: 12 reports exported and both protected imports succeeded.`);
