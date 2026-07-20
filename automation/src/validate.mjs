@@ -59,10 +59,15 @@ export function validateLienReportSet(filesByName) {
     }
 
     if (invalidRows) throw new Error(`${report.fileName} has ${invalidRows} row(s) without a Blaze UUID in Job Link.`);
-    if (duplicateIds) throw new Error(`${report.fileName} has ${duplicateIds} duplicate Blaze UUID row(s).`);
     if (report.master && !ids.size) throw new Error('Receivables Aging is empty. The previous protected data was not replaced.');
     idsByReport.set(report.fileName, ids);
-    results.push({ name: report.fileName, rows: rows.length, uniqueJobs: ids.size, empty: rows.length === 0 });
+    results.push({
+      name: report.fileName,
+      rows: rows.length,
+      uniqueJobs: ids.size,
+      repeatedJobRows: duplicateIds,
+      empty: rows.length === 0
+    });
   }
 
   const masterIds = idsByReport.get(LIEN_REPORTS.find((report) => report.master).fileName);
@@ -83,6 +88,7 @@ export function validateLienReportSet(filesByName) {
     reports: results,
     activeJobs: masterIds.size,
     membershipRows: [...idsByReport.values()].reduce((sum, ids) => sum + ids.size, 0),
+    repeatedJobRows: results.reduce((sum, report) => sum + report.repeatedJobRows, 0),
     multiStatusJobs: [...memberships.values()].filter((statuses) => statuses.size > 1).length,
     jobNumberCollisions: [...jobNumbers.values()].filter((ids) => ids.size > 1).length,
     emptyReports: results.filter((report) => report.empty).map((report) => report.name)
