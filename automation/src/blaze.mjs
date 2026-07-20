@@ -188,6 +188,14 @@ export async function exportContractorsReport(outputDirectory, credentials) {
   const context = await browser.newContext({ acceptDownloads: true });
   const page = await context.newPage();
   page.setDefaultTimeout(30000);
+  await page.addLocatorHandler(
+    page.locator('app-push-notification:visible').first(),
+    async () => {
+      await page.locator('app-push-notification').evaluateAll((elements) => {
+        elements.forEach((element) => element.remove());
+      });
+    }
+  );
 
   try {
     await ensureAuthenticated(page, credentials);
