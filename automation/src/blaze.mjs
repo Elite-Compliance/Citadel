@@ -5,12 +5,16 @@ import { authenticator } from 'otplib';
 import { DEPOSIT_REPORT, DEPOSITS_URL, LIEN_REPORTS, RECEIVABLES_URL } from './config.mjs';
 
 async function firstVisible(page, selectors) {
-  const scopes = [page, ...page.frames().filter((frame) => frame !== page.mainFrame())];
-  for (const scope of scopes) {
-    for (const selector of selectors) {
-      const locator = scope.locator(selector);
-      if (await locator.count() && await locator.first().isVisible()) return locator.first();
+  try {
+    const scopes = [page, ...page.frames().filter((frame) => frame !== page.mainFrame())];
+    for (const scope of scopes) {
+      for (const selector of selectors) {
+        const locator = scope.locator(selector);
+        if (await locator.count() && await locator.first().isVisible()) return locator.first();
+      }
     }
+  } catch (error) {
+    if (!/Execution context was destroyed|Target page, context or browser has been closed/i.test(error.message)) throw error;
   }
   return null;
 }
@@ -27,8 +31,12 @@ async function waitForVisible(page, selectors, timeout = 30000) {
 
 async function firstVisibleButton(page, labels) {
   for (const label of labels) {
-    const locator = page.getByRole('button', { name: label, exact: false });
-    if (await locator.count() && await locator.first().isVisible()) return locator.first();
+    try {
+      const locator = page.getByRole('button', { name: label, exact: false });
+      if (await locator.count() && await locator.first().isVisible()) return locator.first();
+    } catch (error) {
+      if (!/Execution context was destroyed|Target page, context or browser has been closed/i.test(error.message)) throw error;
+    }
   }
   return firstVisible(page, ['button[type="submit"]', 'input[type="submit"]']);
 }
