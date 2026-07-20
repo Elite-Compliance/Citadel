@@ -1,0 +1,49 @@
+name: Removify Reviews Automation
+
+on:
+  schedule:
+    # Paired UTC hours cover 7:30 AM Eastern Standard and Daylight Time.
+    - cron: '30 11,12 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: removify-reviews-automation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  export-and-import:
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.REVIEWS_AUTOMATION_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: automation
+    env:
+      GITHUB_EVENT_NAME: ${{ github.event_name }}
+      REMOVIFY_EMAIL: ${{ secrets.REMOVIFY_EMAIL }}
+      REMOVIFY_PASSWORD: ${{ secrets.REMOVIFY_PASSWORD }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      REVIEWS_SPREADSHEET_ID: 1EjRpoie4MP8eE4SmYi0xqXIbGavH3ffz5DTb-MUdE1U
+    steps:
+      - name: Check out Citadel
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install automation dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check Reviews automation code
+        run: npm run check:reviews
+
+      - name: Export and import protected Reviews data
+        run: npm run run:reviews
