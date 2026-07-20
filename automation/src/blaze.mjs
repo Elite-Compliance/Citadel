@@ -41,6 +41,23 @@ async function firstVisibleButton(page, labels) {
   return firstVisible(page, ['button[type="submit"]', 'input[type="submit"]']);
 }
 
+async function dismissPushNotificationPrompt(page) {
+  const prompt = page.locator('app-push-notification').first();
+  if (!(await prompt.count()) || !(await prompt.isVisible())) return;
+
+  for (const label of ['Not Now', 'No Thanks', 'Later', 'Dismiss', 'Close']) {
+    const button = prompt.getByRole('button', { name: label, exact: false });
+    if (await button.count() && await button.first().isVisible()) {
+      await button.first().click({ force: true });
+      break;
+    }
+  }
+
+  if (await prompt.isVisible().catch(() => false)) {
+    await prompt.evaluate((element) => element.remove());
+  }
+}
+
 async function ensureAuthenticated(page, credentials) {
   await page.goto(RECEIVABLES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
@@ -170,12 +187,14 @@ export async function exportContractorsReport(outputDirectory, credentials) {
   try {
     await ensureAuthenticated(page, credentials);
     await page.goto(CONTRACTORS_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await dismissPushNotificationPrompt(page);
     const runButton = page.getByRole('button', { name: 'Run Report', exact: true });
     await runButton.waitFor({ state: 'visible', timeout: 60000 });
     await runButton.click();
 
     const exportButton = page.getByRole('button', { name: 'Export to Excel', exact: true });
     await exportButton.waitFor({ state: 'visible', timeout: 120000 });
+    await dismissPushNotificationPrompt(page);
     const downloadPromise = page.waitForEvent('download', { timeout: 120000 });
     await exportButton.click();
     const download = await downloadPromise;
