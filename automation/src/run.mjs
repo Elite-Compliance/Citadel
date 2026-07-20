@@ -67,7 +67,7 @@ async function main() {
     const paymentValues = paymentSheetValues(depositValidation);
     const { drive, sheets } = createGoogleClients(environment.googleCredentials);
 
-    await publishLienReports(drive, environment.lienFolderId, exported.lienFiles, runId);
+    await publishLienReports(drive, sheets, environment.lienFolderId, exported.lienFiles);
     await publishPaymentImport(sheets, environment.paymentSpreadsheetId, paymentValues, runId);
     imports = await runCitadelImports(environment.appsScriptUrl, runId);
 
