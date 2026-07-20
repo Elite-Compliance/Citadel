@@ -44,25 +44,14 @@ async function firstVisibleButton(page, labels) {
 async function dismissPushNotificationPrompt(page, waitTimeout = 0) {
   if (waitTimeout) {
     await page.waitForFunction(() => {
-      return [...document.querySelectorAll('app-push-notification')].some((element) => {
-        const bounds = element.getBoundingClientRect();
-        const style = window.getComputedStyle(element);
-        return bounds.width > 0 && bounds.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
-      });
+      return document.body?.innerText.includes('Do you want to enable push notifications?');
     }, null, { timeout: waitTimeout }).catch(() => {});
   }
 
   await page.evaluate(() => {
-    const visiblePrompts = [...document.querySelectorAll('app-push-notification')].filter((element) => {
-      const bounds = element.getBoundingClientRect();
-      const style = window.getComputedStyle(element);
-      return bounds.width > 0 && bounds.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+    document.querySelectorAll('app-push-notification').forEach((element) => {
+      element.remove();
     });
-    if (visiblePrompts.length) {
-      document.querySelectorAll('app-push-notification').forEach((element) => {
-        element.remove();
-      });
-    }
   });
 }
 
