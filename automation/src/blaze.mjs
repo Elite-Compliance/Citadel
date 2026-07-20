@@ -187,16 +187,17 @@ export async function exportContractorsReport(outputDirectory, credentials) {
   try {
     await ensureAuthenticated(page, credentials);
     await page.goto(CONTRACTORS_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     await dismissPushNotificationPrompt(page);
     const runButton = page.getByRole('button', { name: 'Run Report', exact: true });
     await runButton.waitFor({ state: 'visible', timeout: 60000 });
-    await runButton.click();
+    await runButton.click({ force: true });
 
     const exportButton = page.getByRole('button', { name: 'Export to Excel', exact: true });
     await exportButton.waitFor({ state: 'visible', timeout: 120000 });
     await dismissPushNotificationPrompt(page);
     const downloadPromise = page.waitForEvent('download', { timeout: 120000 });
-    await exportButton.click();
+    await exportButton.click({ force: true });
     const download = await downloadPromise;
     const outputPath = path.join(outputDirectory, 'Subcontractor Details.xlsx');
     await download.saveAs(outputPath);
