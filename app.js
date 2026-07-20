@@ -427,7 +427,7 @@ function formatLienImportTimestamp(value){
 function getLienAutomationStatus(){
   var health=liensData.importStatus||{};
   var schedule=(health.schedule||[]).join(', ');
-  var scheduleLabel=(health.weekdays||'Monday-Friday')+(schedule?' at '+schedule:'')+(health.timezone?' '+health.timezone.replace('America/',''):'');
+  var scheduleLabel=(health.weekdays||'Monday-Friday')+(schedule?' at '+schedule:'')+(health.timezone?' ET':'');
   return {
     enabled:!!health.automation_enabled,
     label:health.automation_enabled?'Scheduled imports enabled: '+scheduleLabel:'Scheduled imports prepared; activation is pending successful validation.'
