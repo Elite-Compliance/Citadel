@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { authenticator } from 'otplib';
-import { DEPOSIT_REPORT, DEPOSITS_URL, LIEN_REPORTS, RECEIVABLES_URL } from './config.mjs';
+import { CONTRACTORS_URL, DEPOSIT_REPORT, DEPOSITS_URL, LIEN_REPORTS, RECEIVABLES_URL } from './config.mjs';
 
 async function firstVisible(page, selectors) {
   try {
@@ -160,3 +160,32 @@ export async function exportBlazeReports(outputDirectory, credentials) {
   }
 }
 
+export async function exportContractorsReport(outputDirectory, credentials) {
+  fs.mkdirSync(outputDirectory, { recursive: true });
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ acceptDownloads: true });
+  const page = await context.newPage();
+  page.setDefaultTimeout(30000);
+
+  try {
+    await ensureAuthenticated(page, credentials);
+    await page.goto(CONTRACTORS_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const runButton = page.getByRole('button', { name: 'Run Report', exact: true });
+    await runButton.waitFor({ state: 'visible', timeout: 60000 });
+    await runButton.click();
+
+    const exportButton = page.getByRole('button', { name: 'Export to Excel', exact: true });
+    await exportButton.waitFor({ state: 'visible', timeout: 120000 });
+    const downloadPromise = page.waitForEvent('download', { timeout: 120000 });
+    await exportButton.click();
+    const download = await downloadPromise;
+    const outputPath = path.join(outputDirectory, 'Subcontractor Details.xlsx');
+    await download.saveAs(outputPath);
+    const failure = await download.failure();
+    if (failure) throw new Error(`Blaze subcontractor export failed: ${failure}`);
+    return outputPath;
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
