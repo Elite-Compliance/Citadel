@@ -16,7 +16,7 @@ This unattended runner exports the eleven protected Receivables saved views plus
 
 ## Schedule
 
-The workflow runs at 7:00 AM, 12:00 PM, and 5:00 PM America/New_York, Monday through Friday. Its paired UTC schedules cover daylight-saving changes, and the runner exits without accessing Blaze unless the local Eastern hour matches one of those three times.
+The workflow runs at 7:00 AM, 12:00 PM, and 3:00 PM America/New_York, Monday through Friday. Its paired UTC schedules cover daylight-saving changes, and the runner exits without accessing Blaze unless the local Eastern hour matches one of those three times.
 
 Scheduled pulls remain safely disabled until the repository variable `LIEN_AUTOMATION_ENABLED` is set to `true`. Manual **Run workflow** tests work before that switch is enabled.
 
