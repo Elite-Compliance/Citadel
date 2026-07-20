@@ -97,8 +97,17 @@ export function validateLienReportSet(filesByName) {
 
 export function validateDepositReport(filePath) {
   if (!filePath || !fs.existsSync(filePath)) throw new Error('The Deposit report was not exported.');
-  const text = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
-  const rows = parse(text, { columns: true, skip_empty_lines: true, relax_column_count: true, bom: true });
+  const signature = fs.readFileSync(filePath).subarray(0, 4).toString('hex');
+  let rows;
+  if (signature.startsWith('504b')) {
+    const workbook = XLSX.readFile(filePath, { cellDates: false });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) throw new Error('The Deposit report workbook has no worksheet.');
+    rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '', raw: false });
+  } else {
+    const text = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
+    rows = parse(text, { columns: true, skip_empty_lines: true, relax_column_count: true, bom: true });
+  }
   if (!rows.length) throw new Error('The Deposit report is empty. The previous protected payment data was not replaced.');
   const headers = Object.keys(rows[0] || {});
   const missing = PAYMENT_HEADERS.filter((required) => !headers.some((header) => normalizedKey(header) === normalizedKey(required)));
