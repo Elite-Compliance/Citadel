@@ -3,8 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check src/run.mjs && node --check src/blaze.mjs && node --check src/google.mjs && node --check src/validate.mjs",
-    "run": "node src/run.mjs"
+    "check": "node --check src/run.mjs && node --check src/blaze.mjs && node --check src/google.mjs && node --check src/validate.mjs && npm run check:reviews",
+    "check:reviews": "node --check src/run-reviews.mjs && node --check src/removify.mjs && node --check src/reviews-google.mjs && node --check src/reviews-validate.mjs",
+    "run": "node src/run.mjs",
+    "run:reviews": "node src/run-reviews.mjs"
   },
   "dependencies": {
     "csv-parse": "5.6.0",
