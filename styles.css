@@ -903,7 +903,17 @@ body[data-theme="light"] .supplier-item-list button{background:#12365b;color:#ff
 .data-import-card h3,.data-import-card p,.data-connection-card h3,.data-connection-card p{margin:0}
 .data-import-card h3{margin-top:2px;font-size:15px}
 .data-import-card p{margin-top:4px;color:var(--muted);font-size:11px;line-height:1.4}
-.data-import-card button{flex:0 0 auto;min-width:126px;height:36px;border:1px solid var(--citadel-deep-blue-2);background:var(--citadel-deep-blue);color:#f8fbff;padding:0 14px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.data-card-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));gap:7px;flex:0 0 min(300px,46%)}
+.data-import-card button,.data-link-button{display:inline-flex;align-items:center;justify-content:center;min-width:126px;height:36px;border:1px solid var(--citadel-deep-blue-2);background:var(--citadel-deep-blue);color:#f8fbff;padding:0 14px;font:inherit;font-size:12px;font-weight:800;line-height:1;text-align:center;text-decoration:none;cursor:pointer}
+.data-link-button.is-secondary{border-color:var(--line);background:var(--field-bg);color:var(--text)}
+.data-resource-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.data-resource-card{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-width:0;border:1px solid var(--line);background:var(--field-bg);padding:11px}
+.data-resource-card span{color:var(--blue-300);font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.data-resource-card h3,.data-resource-card p{margin:0}
+.data-resource-card h3{margin-top:2px;font-size:13px}
+.data-resource-card p{margin-top:3px;color:var(--muted);font-size:10px;line-height:1.35}
+.data-resource-card .data-link-button{flex:0 0 auto;min-width:92px;height:32px;padding:0 10px;font-size:10px}
+.data-admin-links{display:flex;flex-wrap:wrap;gap:8px}
 .data-connection-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .data-connection-card{position:relative;min-width:0;border:1px solid var(--line);background:var(--field-bg);padding:11px}
 .data-connection-card:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:#9aa9b8}
@@ -916,5 +926,5 @@ body[data-theme="light"] .supplier-item-list button{background:#12365b;color:#ff
 .import-run-modal .workspace-entry-form{display:flex;min-height:0;flex:1 1 auto;flex-direction:column;overflow:hidden}
 .import-run-modal .workspace-entry-body{min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .import-run-modal .workspace-entry-actions{position:relative;z-index:1;flex:0 0 auto;box-shadow:0 -8px 18px rgba(7,17,31,.08)}
-@media(max-width:900px){.data-connection-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.data-import-grid{grid-template-columns:1fr}}
-@media(max-width:560px){.data-connections-intro,.data-connections-section{padding:10px}.data-connection-grid{grid-template-columns:1fr}.data-import-card{align-items:stretch;flex-direction:column}.data-import-card button{width:100%}.lien-import-modal-backdrop,.payment-import-modal-backdrop{padding:8px!important}.import-run-modal{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}}
+@media(max-width:1100px){.data-resource-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}\n@media(max-width:900px){.data-connection-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.data-import-grid{grid-template-columns:1fr}.data-card-actions{flex-basis:min(320px,48%)}}
+@media(max-width:560px){.data-connections-intro,.data-connections-section{padding:10px}.data-connection-grid,.data-resource-grid{grid-template-columns:1fr}.data-import-card,.data-resource-card{align-items:stretch;flex-direction:column}.data-card-actions{grid-template-columns:1fr;flex-basis:auto}.data-import-card button,.data-import-card .data-link-button,.data-resource-card .data-link-button{width:100%}.data-admin-links{display:grid;grid-template-columns:1fr}.lien-import-modal-backdrop,.payment-import-modal-backdrop{padding:8px!important}.import-run-modal{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}}
