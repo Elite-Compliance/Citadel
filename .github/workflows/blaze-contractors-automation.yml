@@ -1,0 +1,50 @@
+name: Blaze Contractors Automation
+
+on:
+  schedule:
+    # Paired UTC hours cover 7:15 AM Eastern Standard and Daylight Time.
+    - cron: '15 11,12 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: blaze-contractors-automation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  export-and-import:
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.CONTRACTORS_AUTOMATION_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: automation
+    env:
+      GITHUB_EVENT_NAME: ${{ github.event_name }}
+      BLAZE_EMAIL: ${{ secrets.BLAZE_EMAIL }}
+      BLAZE_PASSWORD: ${{ secrets.BLAZE_PASSWORD }}
+      BLAZE_TOTP_SECRET: ${{ secrets.BLAZE_TOTP_SECRET }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      CONTRACTORS_SPREADSHEET_ID: 1qsMCA_kC129S4FbbMiLt1X9_VJlkwPRqGxx0WRrPuTg
+    steps:
+      - name: Check out Citadel
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install automation dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check Contractors automation code
+        run: npm run check:contractors
+
+      - name: Export and import protected Contractors data
+        run: npm run run:contractors
