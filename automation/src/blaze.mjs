@@ -42,22 +42,24 @@ async function firstVisibleButton(page, labels) {
 }
 
 async function dismissPushNotificationPrompt(page, waitTimeout = 0) {
-  const prompt = page.locator('app-push-notification').first();
+  const visiblePrompt = page.locator('app-push-notification:visible').first();
   if (waitTimeout) {
-    await prompt.waitFor({ state: 'visible', timeout: waitTimeout }).catch(() => {});
+    await visiblePrompt.waitFor({ state: 'visible', timeout: waitTimeout }).catch(() => {});
   }
-  if (!(await prompt.count()) || !(await prompt.isVisible())) return;
+  if (!(await visiblePrompt.count())) return;
 
   for (const label of ['Not Now', 'No Thanks', 'Later', 'Dismiss', 'Close']) {
-    const button = prompt.getByRole('button', { name: label, exact: false });
+    const button = visiblePrompt.getByRole('button', { name: label, exact: false });
     if (await button.count() && await button.first().isVisible()) {
       await button.first().click({ force: true });
       break;
     }
   }
 
-  if (await prompt.isVisible().catch(() => false)) {
-    await prompt.evaluate((element) => element.remove());
+  if (await page.locator('app-push-notification:visible').count()) {
+    await page.locator('app-push-notification').evaluateAll((elements) => {
+      elements.forEach((element) => element.remove());
+    });
   }
 }
 
