@@ -39,7 +39,7 @@ export const PAYMENT_HEADERS = [
 export const SCHEDULE = {
   timezone: 'America/New_York',
   weekdays: [1, 2, 3, 4, 5],
-  hours: [7, 12, 17]
+  hours: [7, 12, 15]
 };
 
 export function requiredEnvironment() {
