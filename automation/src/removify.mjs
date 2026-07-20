@@ -50,7 +50,8 @@ async function login(page, credentials) {
   if (await submit.count()) await submit.click();
   else await password.press('Enter');
 
-  await page.goto(MONITORS_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForURL((url) => !/\/login(?:[/?#]|$)/i.test(url.toString()), { timeout: 60000, waitUntil: 'domcontentloaded' }).catch(() => {});
+  if (page.url() !== MONITORS_URL) await page.goto(MONITORS_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
   await exportButton.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {});
   if (!await exportButton.count() || !await exportButton.isVisible()) {
