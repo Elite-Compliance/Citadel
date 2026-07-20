@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx';
 import { parse } from 'csv-parse/sync';
 import { LIEN_REPORTS, PAYMENT_HEADERS } from './config.mjs';
 
