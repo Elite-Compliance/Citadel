@@ -5,47 +5,91 @@ import { authenticator } from 'otplib';
 import { DEPOSIT_REPORT, DEPOSITS_URL, LIEN_REPORTS, RECEIVABLES_URL } from './config.mjs';
 
 async function firstVisible(page, selectors) {
-  for (const selector of selectors) {
-    const locator = page.locator(selector);
-    if (await locator.count() && await locator.first().isVisible()) return locator.first();
+  const scopes = [page, ...page.frames().filter((frame) => frame !== page.mainFrame())];
+  for (const scope of scopes) {
+    for (const selector of selectors) {
+      const locator = scope.locator(selector);
+      if (await locator.count() && await locator.first().isVisible()) return locator.first();
+    }
+  }
+  return null;
+}
+
+async function waitForVisible(page, selectors, timeout = 30000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const locator = await firstVisible(page, selectors);
+    if (locator) return locator;
+    await page.waitForTimeout(250);
   }
   return null;
 }
 
 async function firstVisibleButton(page, labels) {
   for (const label of labels) {
-    const locator = page.getByRole('button', { name: label, exact: true });
-    if (await locator.count() === 1 && await locator.isVisible()) return locator;
+    const locator = page.getByRole('button', { name: label, exact: false });
+    if (await locator.count() && await locator.first().isVisible()) return locator.first();
   }
-  return null;
+  return firstVisible(page, ['button[type="submit"]', 'input[type="submit"]']);
 }
 
 async function ensureAuthenticated(page, credentials) {
   await page.goto(RECEIVABLES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
   const savedView = page.getByRole('button', { name: LIEN_REPORTS[0].view, exact: true });
   if (await savedView.count() === 1 && await savedView.isVisible()) return;
 
-  const email = await firstVisible(page, ['input[type="email"]', 'input[name="email"]', 'input[autocomplete="username"]']);
-  const password = await firstVisible(page, ['input[type="password"]', 'input[name="password"]', 'input[autocomplete="current-password"]']);
-  if (!email || !password) {
-    throw new Error('Blaze authentication is required, but the login form was not recognized. Refresh the stored credentials or authentication session.');
-  }
   if (!credentials.blazeEmail || !credentials.blazePassword) {
     throw new Error('BLAZE_EMAIL and BLAZE_PASSWORD GitHub secrets are required.');
   }
 
-  await email.fill(credentials.blazeEmail);
+  const emailSelectors = [
+    'input[type="email"]',
+    'input[name="email"]',
+    'input[name="identifier"]',
+    'input[autocomplete="email"]',
+    'input[autocomplete="username"]',
+    'input[id*="email" i]'
+  ];
+  const passwordSelectors = [
+    'input[type="password"]',
+    'input[name="password"]',
+    'input[autocomplete="current-password"]',
+    'input[id*="password" i]'
+  ];
+  const email = await waitForVisible(page, emailSelectors, 30000);
+  let password = await firstVisible(page, passwordSelectors);
+  if (!email && !password) {
+    throw new Error(`Blaze authentication page was not recognized (URL: ${page.url()}, title: ${await page.title()}).`);
+  }
+
+  if (email) {
+    await email.fill(credentials.blazeEmail);
+    if (!password) {
+      const continueButton = await firstVisibleButton(page, ['Continue', 'Next', 'Sign In', 'Log In', 'Login']);
+      if (continueButton) await continueButton.click();
+      else await email.press('Enter');
+      password = await waitForVisible(page, passwordSelectors, 30000);
+    }
+  }
+  if (!password) throw new Error(`Blaze did not present a password field after the email step (URL: ${page.url()}).`);
+
   await password.fill(credentials.blazePassword);
-  const loginButton = await firstVisibleButton(page, ['Log In', 'Login', 'Sign In', 'Continue']);
+  const loginButton = await firstVisibleButton(page, ['Log In', 'Login', 'Sign In', 'Continue', 'Submit']);
   if (!loginButton) throw new Error('The Blaze login button was not recognized.');
   await loginButton.click();
 
-  const totpInput = await firstVisible(page, [
+  const totpSelectors = [
     'input[autocomplete="one-time-code"]',
     'input[name="code"]',
     'input[name="otp"]',
     'input[inputmode="numeric"]'
+  ];
+  await Promise.race([
+    savedView.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {}),
+    waitForVisible(page, totpSelectors, 60000)
   ]);
+  const totpInput = await firstVisible(page, totpSelectors);
   if (totpInput) {
     if (!credentials.blazeTotpSecret) throw new Error('Blaze requested a verification code. Configure the BLAZE_TOTP_SECRET GitHub secret.');
     await totpInput.fill(authenticator.generate(credentials.blazeTotpSecret));
@@ -107,3 +151,4 @@ export async function exportBlazeReports(outputDirectory, credentials) {
     await browser.close();
   }
 }
+
