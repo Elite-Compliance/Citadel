@@ -4,7 +4,7 @@ on:
   schedule:
     # Paired UTC hours cover Eastern Standard and Daylight Time. The runner
     # verifies the local America/New_York hour before exporting anything.
-    - cron: '0 11,12,16,17,21,22 * * 1-5'
+    - cron: '0 11,12,16,17,19,20 * * 1-5'
   workflow_dispatch:
 
 concurrency:
