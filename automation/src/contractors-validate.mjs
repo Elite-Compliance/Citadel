@@ -109,7 +109,7 @@ function readRows(filePath) {
   return XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '', raw: false, blankrows: false });
 }
 
-export function validateContractorsExport(filePath, now = new Date()) {
+export function validateContractorsExport(filePath, now = new Date(), directoryRows = []) {
   if (!filePath || !fs.existsSync(filePath)) throw new Error('Blaze did not produce a subcontractor Excel export.');
   const sourceRows = readRows(filePath);
   if (!sourceRows.length) throw new Error('The Blaze subcontractor export contains no rows.');
@@ -124,6 +124,7 @@ export function validateContractorsExport(filePath, now = new Date()) {
   let duplicateContractors = 0;
   let unparsedCrews = 0;
   const updatedAt = now.toISOString();
+  const directoryByName = new Map(directoryRows.map((row) => [text(row.name).toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(), row]));
 
   for (const [index, source] of sourceRows.entries()) {
     const name = text(source.Subcontractor);
@@ -133,17 +134,19 @@ export function validateContractorsExport(filePath, now = new Date()) {
     seenNames.add(normalizedName);
 
     const contractorId = stableId('contractor', name);
+    const directory = directoryByName.get(name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim()) || {};
     const glExpiry = dateValue(source['General Liability Expiration Date']);
     const wcExpiry = dateValue(source['Workers Compensation Expiration Date']);
     const compliance = complianceStatus(glExpiry, wcExpiry, now);
     const crews = splitCrews(source.Crews);
     const regions = uniqueList([
+      ...(Array.isArray(directory.regions) ? directory.regions : [directory.regions]),
       sourceValue(source, ['Regions', 'Region', 'Service Regions', 'Coverage Regions']),
       ...crews.map((crew) => crew.region)
     ]).join(', ');
-    const phone = sourceValue(source, ['Phone', 'Phone Number', 'Primary Phone', 'Office Phone', 'Mobile Phone', 'Cell Phone']);
-    const email = sourceValue(source, ['Email', 'Email Address', 'Primary Email']);
-    const address = sourceValue(source, ['Address', 'Business Address', 'Mailing Address', 'Street Address', 'Address 1']);
+    const phone = text(directory.phone) || sourceValue(source, ['Phone', 'Phone Number', 'Primary Phone', 'Office Phone', 'Mobile Phone', 'Cell Phone']);
+    const email = text(directory.email) || sourceValue(source, ['Email', 'Email Address', 'Primary Email']);
+    const address = text(directory.address) || sourceValue(source, ['Address', 'Business Address', 'Mailing Address', 'Street Address', 'Address 1']);
     unparsedCrews += crews.filter((crew) => crew.status === 'UNKNOWN').length;
 
     contractorRows.push([
