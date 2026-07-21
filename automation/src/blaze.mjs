@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.8 seconds
+Output:
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
@@ -249,8 +252,14 @@ async function readContractorDetail(page, record) {
   }
   if (!loaded) throw loadError || new Error('Contractor detail page did not load.');
   const checkedRegions = await page.locator('input[type="checkbox"]:checked').evaluateAll((inputs) => inputs.map((input) => {
-    const label = input.getAttribute('aria-label') || input.closest('label')?.innerText || input.parentElement?.parentElement?.innerText || '';
-    return label.trim();
+    const labelledBy = String(input.getAttribute('aria-labelledby') || '')
+      .split(/\s+/)
+      .map((id) => document.getElementById(id)?.textContent?.trim() || '')
+      .filter(Boolean)
+      .join(' ');
+    const nativeLabel = Array.from(input.labels || []).map((label) => label.textContent?.trim() || '').find(Boolean) || '';
+    const componentLabel = input.closest('mat-checkbox')?.querySelector('.mat-checkbox-label')?.textContent?.trim() || '';
+    return String(input.getAttribute('aria-label') || labelledBy || nativeLabel || componentLabel).trim();
   }).filter((label) => label && label.toLowerCase() !== 'active'));
   const heading = page.getByRole('heading', { name: 'Billing Address', exact: true });
   let address = '';
@@ -268,7 +277,7 @@ async function enrichContractors(context, page, reportPath) {
   const directory = await readContractorDirectory(page, contractorNamesFromReport(reportPath));
   const output = new Array(directory.length);
   let cursor = 0;
-  const workerCount = Math.min(4, directory.length);
+  const workerCount = Math.min(2, directory.length);
   await Promise.all(Array.from({ length: workerCount }, async () => {
     const worker = await context.newPage();
     try {
@@ -281,6 +290,7 @@ async function enrichContractors(context, page, reportPath) {
           console.warn(`Blaze contractor detail unavailable for ${directory[index].name}: ${error.message}`);
           output[index] = directory[index];
         }
+        await worker.waitForTimeout(250);
       }
     } finally {
       await worker.close();
@@ -323,3 +333,4 @@ export async function exportContractorsReport(outputDirectory, credentials) {
     await browser.close();
   }
 }
+
