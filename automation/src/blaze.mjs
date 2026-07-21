@@ -204,22 +204,25 @@ async function readContractorDirectory(page, reportNames) {
   while (true) {
     const rows = page.locator('table tbody tr');
     await rows.first().waitFor({ state: 'visible', timeout: 30000 });
-    const count = await rows.count();
-    for (let index = 0; index < count; index += 1) {
-      const cells = rows.nth(index).locator('td');
-      const link = cells.nth(1).getByRole('link');
-      const name = String(await link.textContent() || '').trim();
+    const pageRecords = await rows.evaluateAll((elements) => elements.map((row) => {
+      const cells = row.querySelectorAll('td');
+      const link = cells[1]?.querySelector('a');
+      if (!link) return null;
+      return {
+        name: link.textContent?.trim() || '',
+        phone: cells[3]?.textContent?.trim() || '',
+        email: cells[4]?.textContent?.trim() || '',
+        href: link.getAttribute('href') || ''
+      };
+    }).filter(Boolean));
+    for (const record of pageRecords) {
+      const name = record.name;
       if (!reportNames.has(contractorNameKey(name))) continue;
-      records.push({
-        name,
-        phone: String(await cells.nth(3).textContent() || '').trim(),
-        email: String(await cells.nth(4).textContent() || '').trim(),
-        href: await link.getAttribute('href')
-      });
+      records.push(record);
     }
     const next = page.getByRole('button', { name: 'Next page', exact: true });
     if (!(await next.count()) || await next.isDisabled()) break;
-    const firstHref = count ? await rows.first().locator('td').nth(1).getByRole('link').getAttribute('href') : '';
+    const firstHref = pageRecords[0]?.href || '';
     await next.click();
     await page.waitForFunction((previous) => {
       const anchor = document.querySelector('table tbody tr td:nth-child(2) a');
