@@ -3,6 +3,7 @@ export const BLAZE_BASE_URL = `https://blaze-crm.com/${BLAZE_ORGANIZATION_ID}/to
 export const RECEIVABLES_URL = `${BLAZE_BASE_URL}/receivables-report`;
 export const DEPOSITS_URL = `${BLAZE_BASE_URL}/payment-report`;
 export const CONTRACTORS_URL = `https://blaze-crm.com/${BLAZE_ORGANIZATION_ID}/dashboard/reports-dashboard/dynamic-reports/execute/ab6e0ea6-f955-4aad-8d33-797c9bc55faa`;
+export const CONTRACTOR_DIRECTORY_URL = `https://blaze-crm.com/${BLAZE_ORGANIZATION_ID}/tool-dashboard/subcontractors-crews/subcontractors/list`;
 
 export const LIEN_REPORTS = [
   { view: 'Receivables Aging', fileName: 'Receivables Aging', status: 'Receivable', master: true },
