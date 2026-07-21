@@ -46,8 +46,8 @@ async function main() {
   let validation = null;
   let sheets = null;
   try {
-    const reportPath = await exportContractorsReport(outputDirectory, credentials);
-    validation = validateContractorsExport(reportPath);
+    const exported = await exportContractorsReport(outputDirectory, credentials);
+    validation = validateContractorsExport(exported.reportPath, new Date(), exported.directory);
     ({ sheets } = createGoogleClients(credentials.googleCredentials));
     const result = await publishContractors(sheets, CONTRACTORS_SPREADSHEET_ID, validation, runId, startedAt);
     console.log(`Contractors automation ${runId} completed: ${result.message}`);
