@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.8 seconds
-Output:
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
