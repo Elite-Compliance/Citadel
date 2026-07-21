@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.8 seconds
+Output:
 const RECORD_TAB = 'ContractorRecords';
 const CREW_TAB = 'ContractorCrews';
 const IMPORT_LOG_TAB = 'ContractorImportLog';
@@ -68,6 +71,11 @@ function mergeUniqueList(...values) {
   return [...found.values()].join(', ');
 }
 
+function cleanProtectedRegions(value) {
+  const regions = String(value ?? '').trim();
+  return /active\s*[\r\n]+cancel\s*[\r\n]+save/i.test(regions) ? '' : regions;
+}
+
 export function preserveContractorContactDetails(incomingValues, existingValues) {
   if (incomingValues.length < 2 || existingValues.length < 2) return incomingValues;
 
@@ -101,7 +109,7 @@ export function preserveContractorContactDetails(incomingValues, existingValues)
     const regionTarget = incomingIndex.get('Regions');
     const regionSource = existingIndex.get('Regions');
     if (regionTarget !== undefined && regionSource !== undefined) {
-      merged[regionTarget] = mergeUniqueList(previous[regionSource], merged[regionTarget]);
+      merged[regionTarget] = mergeUniqueList(cleanProtectedRegions(previous[regionSource]), merged[regionTarget]);
     }
     return merged;
   })];
@@ -135,3 +143,4 @@ export async function recordContractorsFailure(sheets, spreadsheetId, record) {
   await ensureTab(sheets, spreadsheetId, AUTOMATION_LOG_TAB, AUTOMATION_LOG_HEADERS);
   await append(sheets, spreadsheetId, AUTOMATION_LOG_TAB, [record.runId, record.startedAt, new Date().toISOString(), 'Failed', record.contractorCount || 0, record.crewCount || 0, 'GitHub Actions', record.message]);
 }
+
