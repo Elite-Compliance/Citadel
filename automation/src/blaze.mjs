@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { authenticator } from 'otplib';
-import { CONTRACTORS_URL, DEPOSIT_REPORT, DEPOSITS_URL, LIEN_REPORTS, RECEIVABLES_URL } from './config.mjs';
+import XLSX from 'xlsx';
+import { CONTRACTOR_DIRECTORY_URL, CONTRACTORS_URL, DEPOSIT_REPORT, DEPOSITS_URL, LIEN_REPORTS, RECEIVABLES_URL } from './config.mjs';
 
 async function firstVisible(page, selectors) {
   try {
@@ -174,6 +175,100 @@ export async function exportBlazeReports(outputDirectory, credentials) {
   }
 }
 
+function contractorNameKey(value) {
+  return String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function contractorNamesFromReport(reportPath) {
+  const workbook = XLSX.readFile(reportPath, { cellDates: false });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  return new Set(XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false }).map((row) => contractorNameKey(row.Subcontractor)).filter(Boolean));
+}
+
+async function setLargestPageSize(page) {
+  const picker = page.getByRole('combobox', { name: /Items per page/i });
+  if (!(await picker.count())) return;
+  await picker.click();
+  const options = page.getByRole('option');
+  const labels = await options.allTextContents();
+  const largest = labels.map((label) => Number(String(label).trim())).filter(Number.isFinite).sort((a, b) => b - a)[0];
+  if (largest) await page.getByRole('option', { name: String(largest), exact: true }).click();
+}
+
+async function readContractorDirectory(page, reportNames) {
+  await page.goto(CONTRACTOR_DIRECTORY_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.getByRole('columnheader', { name: 'Company Name', exact: true }).waitFor({ state: 'visible', timeout: 60000 });
+  await setLargestPageSize(page).catch(() => {});
+  const records = [];
+
+  while (true) {
+    const rows = page.locator('table tbody tr');
+    await rows.first().waitFor({ state: 'visible', timeout: 30000 });
+    const count = await rows.count();
+    for (let index = 0; index < count; index += 1) {
+      const cells = rows.nth(index).locator('td');
+      const link = cells.nth(1).getByRole('link');
+      const name = String(await link.textContent() || '').trim();
+      if (!reportNames.has(contractorNameKey(name))) continue;
+      records.push({
+        name,
+        phone: String(await cells.nth(3).textContent() || '').trim(),
+        email: String(await cells.nth(4).textContent() || '').trim(),
+        href: await link.getAttribute('href')
+      });
+    }
+    const next = page.getByRole('button', { name: 'Next page', exact: true });
+    if (!(await next.count()) || await next.isDisabled()) break;
+    const firstHref = count ? await rows.first().locator('td').nth(1).getByRole('link').getAttribute('href') : '';
+    await next.click();
+    await page.waitForFunction((previous) => {
+      const anchor = document.querySelector('table tbody tr td:nth-child(2) a');
+      return anchor && anchor.getAttribute('href') !== previous;
+    }, firstHref, { timeout: 30000 });
+  }
+  return records;
+}
+
+async function readContractorDetail(page, record) {
+  if (!record.href) return record;
+  await page.goto(new URL(record.href, CONTRACTOR_DIRECTORY_URL).href, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.getByRole('textbox', { name: 'Company Name', exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+  const checkedRegions = await page.locator('input[type="checkbox"]:checked').evaluateAll((inputs) => inputs.map((input) => {
+    const label = input.getAttribute('aria-label') || input.closest('label')?.innerText || input.parentElement?.parentElement?.innerText || '';
+    return label.trim();
+  }).filter((label) => label && label.toLowerCase() !== 'active'));
+  const heading = page.getByRole('heading', { name: 'Billing Address', exact: true });
+  let address = '';
+  if (await heading.count()) {
+    const parentText = String(await heading.locator('xpath=..').innerText().catch(() => '') || '');
+    address = parentText.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !/^(billing address|edit)$/i.test(line)).join(', ');
+    if (!address) {
+      address = String(await heading.locator('xpath=following-sibling::*[1]').innerText().catch(() => '') || '').trim();
+    }
+  }
+  return { ...record, regions: checkedRegions, address };
+}
+
+async function enrichContractors(context, page, reportPath) {
+  const directory = await readContractorDirectory(page, contractorNamesFromReport(reportPath));
+  const output = new Array(directory.length);
+  let cursor = 0;
+  const workerCount = Math.min(6, directory.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    const worker = await context.newPage();
+    try {
+      while (cursor < directory.length) {
+        const index = cursor;
+        cursor += 1;
+        output[index] = await readContractorDetail(worker, directory[index]);
+      }
+    } finally {
+      await worker.close();
+    }
+  }));
+  return output.filter(Boolean);
+}
+
 export async function exportContractorsReport(outputDirectory, credentials) {
   fs.mkdirSync(outputDirectory, { recursive: true });
   const browser = await chromium.launch({ headless: true });
@@ -201,7 +296,8 @@ export async function exportContractorsReport(outputDirectory, credentials) {
     await download.saveAs(outputPath);
     const failure = await download.failure();
     if (failure) throw new Error(`Blaze subcontractor export failed: ${failure}`);
-    return outputPath;
+    const directory = await enrichContractors(context, page, outputPath);
+    return { reportPath: outputPath, directory };
   } finally {
     await context.close();
     await browser.close();
