@@ -5,7 +5,8 @@
   "scripts": {
     "check": "node --check src/run.mjs && node --check src/blaze.mjs && node --check src/google.mjs && node --check src/validate.mjs && npm run check:reviews && npm run check:contractors",
     "check:reviews": "node --check src/run-reviews.mjs && node --check src/removify.mjs && node --check src/reviews-google.mjs && node --check src/reviews-validate.mjs",
-    "check:contractors": "node --check src/run-contractors.mjs && node --check src/contractors-google.mjs && node --check src/contractors-validate.mjs",
+    "check:contractors": "node --check src/run-contractors.mjs && node --check src/blaze.mjs && node --check src/config.mjs && node --check src/contractors-google.mjs && node --check src/contractors-validate.mjs",
+    "test:contractors": "node --test test/contractors-validate.test.mjs",
     "run": "node src/run.mjs",
     "run:reviews": "node src/run-reviews.mjs",
     "run:contractors": "node src/run-contractors.mjs"
