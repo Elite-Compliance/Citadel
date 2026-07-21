@@ -234,8 +234,20 @@ async function readContractorDirectory(page, reportNames) {
 
 async function readContractorDetail(page, record) {
   if (!record.href) return record;
-  await page.goto(new URL(record.href, CONTRACTOR_DIRECTORY_URL).href, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.getByRole('textbox', { name: 'Company Name', exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+  const detailUrl = new URL(record.href, CONTRACTOR_DIRECTORY_URL).href;
+  let loaded = false;
+  let loadError = null;
+  for (let attempt = 1; attempt <= 2 && !loaded; attempt += 1) {
+    try {
+      await page.goto(detailUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await page.getByRole('textbox', { name: 'Company Name', exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+      loaded = true;
+    } catch (error) {
+      loadError = error;
+      if (attempt < 2) await page.waitForTimeout(750);
+    }
+  }
+  if (!loaded) throw loadError || new Error('Contractor detail page did not load.');
   const checkedRegions = await page.locator('input[type="checkbox"]:checked').evaluateAll((inputs) => inputs.map((input) => {
     const label = input.getAttribute('aria-label') || input.closest('label')?.innerText || input.parentElement?.parentElement?.innerText || '';
     return label.trim();
@@ -256,14 +268,19 @@ async function enrichContractors(context, page, reportPath) {
   const directory = await readContractorDirectory(page, contractorNamesFromReport(reportPath));
   const output = new Array(directory.length);
   let cursor = 0;
-  const workerCount = Math.min(6, directory.length);
+  const workerCount = Math.min(4, directory.length);
   await Promise.all(Array.from({ length: workerCount }, async () => {
     const worker = await context.newPage();
     try {
       while (cursor < directory.length) {
         const index = cursor;
         cursor += 1;
-        output[index] = await readContractorDetail(worker, directory[index]);
+        try {
+          output[index] = await readContractorDetail(worker, directory[index]);
+        } catch (error) {
+          console.warn(`Blaze contractor detail unavailable for ${directory[index].name}: ${error.message}`);
+          output[index] = directory[index];
+        }
       }
     } finally {
       await worker.close();
