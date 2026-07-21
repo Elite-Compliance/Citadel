@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.8 seconds
+Output:
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -83,3 +86,12 @@ test('preserves protected contact details when the Blaze export leaves them blan
     'contractor-1', 'Example Contractor', '555-0100', 'office@example.com', 'Minnesota, Wisconsin', '100 Main St'
   ]);
 });
+
+test('removes an invalid region block left by a prior Blaze page scrape', () => {
+  const headers = ['contractor_id', 'Contractor', 'Phone', 'Email', 'Regions', 'Address'];
+  const incoming = [headers, ['contractor-1', 'Example Contractor', '', '', 'Wisconsin - Aspen', '']];
+  const existing = [headers, ['contractor-1', 'Example Contractor', '', '', 'Active\nCancel\nSave, All regions', '']];
+  const result = preserveContractorContactDetails(incoming, existing);
+  assert.equal(result[1][4], 'Wisconsin - Aspen');
+});
+
