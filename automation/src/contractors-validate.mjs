@@ -43,6 +43,25 @@ function text(value) {
   return String(value ?? '').trim();
 }
 
+function normalizedHeader(value) {
+  return text(value).toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function sourceValue(source, aliases) {
+  const wanted = new Set(aliases.map(normalizedHeader));
+  const entry = Object.entries(source).find(([header]) => wanted.has(normalizedHeader(header)));
+  return entry ? text(entry[1]) : '';
+}
+
+function uniqueList(values) {
+  const found = new Map();
+  for (const value of values.flatMap((item) => text(item).split(/[,;|]+/))) {
+    const cleaned = text(value);
+    if (cleaned && !found.has(cleaned.toLowerCase())) found.set(cleaned.toLowerCase(), cleaned);
+  }
+  return [...found.values()];
+}
+
 function stableId(prefix, value) {
   return `${prefix}-${crypto.createHash('sha256').update(text(value).toLowerCase()).digest('hex').slice(0, 16)}`;
 }
@@ -76,8 +95,10 @@ function splitCrews(value) {
   const raw = text(value);
   if (!raw) return [];
   return raw.split(/,\s*(?=[^,]+\((?:ACTIVE|INACTIVE)\)\s*(?:,|$))/i).map((part) => {
-    const match = text(part).match(/^(.*?)\s*\((ACTIVE|INACTIVE)\)\s*$/i);
-    return match ? { name: text(match[1]), status: match[2].toUpperCase() } : { name: text(part), status: 'UNKNOWN' };
+    const match = text(part).match(/^(.*?)\s*(?:\(([^()]+)\))?\s*\((ACTIVE|INACTIVE)\)\s*$/i);
+    return match
+      ? { name: text(match[1]), region: text(match[2]), status: match[3].toUpperCase() }
+      : { name: text(part), region: '', status: 'UNKNOWN' };
   }).filter((crew) => crew.name);
 }
 
@@ -116,16 +137,23 @@ export function validateContractorsExport(filePath, now = new Date()) {
     const wcExpiry = dateValue(source['Workers Compensation Expiration Date']);
     const compliance = complianceStatus(glExpiry, wcExpiry, now);
     const crews = splitCrews(source.Crews);
+    const regions = uniqueList([
+      sourceValue(source, ['Regions', 'Region', 'Service Regions', 'Coverage Regions']),
+      ...crews.map((crew) => crew.region)
+    ]).join(', ');
+    const phone = sourceValue(source, ['Phone', 'Phone Number', 'Primary Phone', 'Office Phone', 'Mobile Phone', 'Cell Phone']);
+    const email = sourceValue(source, ['Email', 'Email Address', 'Primary Email']);
+    const address = sourceValue(source, ['Address', 'Business Address', 'Mailing Address', 'Street Address', 'Address 1']);
     unparsedCrews += crews.filter((crew) => crew.status === 'UNKNOWN').length;
 
     contractorRows.push([
-      contractorId, name, '', '', '', compliance.risk, compliance.documents, glExpiry, wcExpiry,
-      compliance.action, '', normalizedStatus(source.Active), crews.length, updatedAt, 'Blaze Subcontractor Details'
+      contractorId, name, phone, email, regions, compliance.risk, compliance.documents, glExpiry, wcExpiry,
+      compliance.action, address, normalizedStatus(source.Active), crews.length, updatedAt, 'Blaze Subcontractor Details'
     ]);
 
     for (const crew of crews) {
       crewRows.push([
-        stableId('crew', `${contractorId}|${crew.name}`), contractorId, name, crew.name, crew.status, '', updatedAt,
+        stableId('crew', `${contractorId}|${crew.name}`), contractorId, name, crew.name, crew.status, crew.region, updatedAt,
         crew.status === 'ACTIVE' ? 'Yes' : 'No'
       ]);
     }
