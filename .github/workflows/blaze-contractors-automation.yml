@@ -17,7 +17,7 @@ jobs:
   export-and-import:
     if: ${{ github.event_name == 'workflow_dispatch' || vars.CONTRACTORS_AUTOMATION_ENABLED == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: automation
@@ -45,6 +45,9 @@ jobs:
 
       - name: Check Contractors automation code
         run: npm run check:contractors
+
+      - name: Test Contractors data mapping
+        run: npm run test:contractors
 
       - name: Export and import protected Contractors data
         run: npm run run:contractors
