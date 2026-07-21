@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.8 seconds
-Output:
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
