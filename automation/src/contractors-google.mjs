@@ -55,20 +55,74 @@ async function append(sheets, spreadsheetId, title, row) {
   });
 }
 
+function normalizedKey(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function mergeUniqueList(...values) {
+  const found = new Map();
+  for (const value of values.flatMap((item) => String(item ?? '').split(/[,;|]+/))) {
+    const cleaned = value.trim();
+    if (cleaned && !found.has(cleaned.toLowerCase())) found.set(cleaned.toLowerCase(), cleaned);
+  }
+  return [...found.values()].join(', ');
+}
+
+export function preserveContractorContactDetails(incomingValues, existingValues) {
+  if (incomingValues.length < 2 || existingValues.length < 2) return incomingValues;
+
+  const incomingHeaders = incomingValues[0];
+  const existingHeaders = existingValues[0];
+  const incomingIndex = new Map(incomingHeaders.map((header, index) => [header, index]));
+  const existingIndex = new Map(existingHeaders.map((header, index) => [header, index]));
+  const existingById = new Map();
+  const existingByName = new Map();
+
+  for (const row of existingValues.slice(1)) {
+    const id = normalizedKey(row[existingIndex.get('contractor_id')]);
+    const name = normalizedKey(row[existingIndex.get('Contractor')]);
+    if (id) existingById.set(id, row);
+    if (name) existingByName.set(name, row);
+  }
+
+  return [incomingHeaders, ...incomingValues.slice(1).map((row) => {
+    const merged = [...row];
+    const id = normalizedKey(row[incomingIndex.get('contractor_id')]);
+    const name = normalizedKey(row[incomingIndex.get('Contractor')]);
+    const previous = existingById.get(id) || existingByName.get(name);
+    if (!previous) return merged;
+
+    for (const field of ['Phone', 'Email', 'Address']) {
+      const target = incomingIndex.get(field);
+      const source = existingIndex.get(field);
+      if (target !== undefined && source !== undefined && !String(merged[target] ?? '').trim()) merged[target] = previous[source] ?? '';
+    }
+
+    const regionTarget = incomingIndex.get('Regions');
+    const regionSource = existingIndex.get('Regions');
+    if (regionTarget !== undefined && regionSource !== undefined) {
+      merged[regionTarget] = mergeUniqueList(previous[regionSource], merged[regionTarget]);
+    }
+    return merged;
+  })];
+}
+
 export async function publishContractors(sheets, spreadsheetId, validation, runId, startedAt) {
   await ensureTab(sheets, spreadsheetId, RECORD_TAB, validation.contractorValues[0]);
   await ensureTab(sheets, spreadsheetId, CREW_TAB, validation.crewValues[0]);
   await ensureTab(sheets, spreadsheetId, IMPORT_LOG_TAB, IMPORT_LOG_HEADERS);
   await ensureTab(sheets, spreadsheetId, AUTOMATION_LOG_TAB, AUTOMATION_LOG_HEADERS);
 
-  const existing = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${quote(RECORD_TAB)}!A:A` });
-  const existingCount = Math.max((existing.data.values || []).length - 1, 0);
+  const existing = await sheets.spreadsheets.values.get({ spreadsheetId, range: quote(RECORD_TAB) });
+  const existingValues = existing.data.values || [];
+  const existingCount = Math.max(existingValues.length - 1, 0);
   const minimumExpected = existingCount >= 100 ? Math.floor(existingCount * 0.6) : 100;
   if (validation.contractorCount < minimumExpected && process.env.FORCE_CONTRACTORS_IMPORT !== 'true') {
     throw new Error(`The subcontractor export has ${validation.contractorCount} rows; at least ${minimumExpected} were expected. Protected contractor data was left unchanged.`);
   }
 
-  await replaceValues(sheets, spreadsheetId, RECORD_TAB, validation.contractorValues);
+  const contractorValues = preserveContractorContactDetails(validation.contractorValues, existingValues);
+  await replaceValues(sheets, spreadsheetId, RECORD_TAB, contractorValues);
   await replaceValues(sheets, spreadsheetId, CREW_TAB, validation.crewValues);
   const completedAt = new Date().toISOString();
   const message = `${validation.contractorCount} subcontractors and ${validation.crewCount} crews retained; ${validation.duplicateContractors} duplicate subcontractor rows and ${validation.unparsedCrews} crew statuses require review.`;
