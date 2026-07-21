@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.8 seconds
-Output:
 const RECORD_TAB = 'ContractorRecords';
 const CREW_TAB = 'ContractorCrews';
 const IMPORT_LOG_TAB = 'ContractorImportLog';
