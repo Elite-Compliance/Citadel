@@ -53,12 +53,18 @@ test('extracts crew regions and maps optional contractor contact columns', () =>
     XLSX.utils.book_append_sheet(workbook, sheet, 'Report');
     XLSX.writeFile(workbook, filePath);
 
-    const result = validateContractorsExport(filePath, new Date('2026-07-20T12:00:00Z'));
+    const result = validateContractorsExport(filePath, new Date('2026-07-20T12:00:00Z'), [{
+      name: 'BK Seamless Gutters',
+      phone: '(555) 010-0200',
+      email: 'directory@example.com',
+      address: '200 Directory Ave',
+      regions: ['Wisconsin - Aspen', 'Minnesota - Aspen']
+    }]);
     const contractor = result.contractorValues[1];
-    assert.equal(contractor[2], '555-0100');
-    assert.equal(contractor[3], 'office@example.com');
-    assert.equal(contractor[4], 'Wisconsin, Minnesota');
-    assert.equal(contractor[10], '100 Main St');
+    assert.equal(contractor[2], '(555) 010-0200');
+    assert.equal(contractor[3], 'directory@example.com');
+    assert.equal(contractor[4], 'Wisconsin - Aspen, Minnesota - Aspen, Wisconsin, Minnesota');
+    assert.equal(contractor[10], '200 Directory Ave');
     assert.deepEqual(result.crewValues.slice(1).map((row) => [row[3], row[5]]), [
       ['BK Seamless Gutters', 'Wisconsin'],
       ['BK Seamless Gutters North', 'Minnesota']
