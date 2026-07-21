@@ -12,7 +12,12 @@ function shouldRun(date = new Date()) {
   if (process.env.GITHUB_EVENT_NAME === 'workflow_dispatch' || process.env.FORCE_RUN === 'true') return true;
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false })
     .formatToParts(date).reduce((result, part) => { result[part.type] = part.value; return result; }, {});
-  return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(parts.weekday) && Number(parts.hour) % 24 === 7 && Number(parts.minute) === 15;
+  const hour = Number(parts.hour) % 24;
+  const minute = Number(parts.minute);
+  const isScheduledTime = [[6, 30], [9, 30], [14, 0]].some(([scheduledHour, scheduledMinute]) => (
+    hour === scheduledHour && minute === scheduledMinute
+  ));
+  return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(parts.weekday) && isScheduledTime;
 }
 
 function environment() {
