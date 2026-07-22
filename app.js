@@ -2330,8 +2330,8 @@ function openSupplierDocumentModal(documentRow){
 }
 function saveSupplierWorkspace(action,payload){
   supplierWorkspaceStatus='Saving...';if(activePage==='suppliers')renderContent();
-  var params=Object.keys(payload).map(function(key){return encodeURIComponent(key)+'='+encodeURIComponent(payload[key]||'')}).join('&');
-  return jsonp(CITADEL_API_URL+'?action='+encodeURIComponent(action)+'&'+params).then(function(response){
+  var securedPayload=Object.assign({},payload,{action:action,session_token:citadelAuth.sessionToken,csrf_token:citadelAuth.csrfToken});
+  return postCitadelForm(securedPayload).then(function(response){
     if(!response||!response.ok)throw new Error(response&&response.error?response.error:'Save failed');
     supplierWorkspaceStatus='Saved';return loadSuppliersData()
   }).catch(function(error){supplierWorkspaceStatus='Save failed';console.warn('Supplier workspace save failed',error);if(activePage==='suppliers')renderContent()})
