@@ -3,7 +3,7 @@ const CITADEL_INITIAL_ADMIN_EMAIL = 'amashalom21@gmail.com';
 const CITADEL_ACCESS_MODULES = ['command-center', 'region-health', 'data-connections', 'inbox', 'tasks', 'legal', 'reviews', 'pricing', 'fleet', 'contractors', 'registrations', 'liens', 'suppliers', 'collections'];
 const CITADEL_APP_ORIGIN = 'https://elite-compliance.github.io';
 const CITADEL_SESSION_HOURS = 8;
-const CITADEL_PASSWORD_ITERATIONS = 12000;
+const CITADEL_PASSWORD_ITERATIONS = 600000;
 const CITADEL_MAX_FAILED_LOGINS = 5;
 const CITADEL_LOCKOUT_MINUTES = 15;
 let CITADEL_REQUEST_CONTEXT = null;
@@ -154,6 +154,9 @@ function doGet(e) {
     if (action === 'getAuthConfig') {
       return output_(e, { ok: true, data: getCitadelAuthConfig_(), version: CITADEL_VERSION });
     }
+    if (action === 'getPasswordChallenge') {
+      return output_(e, { ok: true, data: getCitadelPasswordChallenge_(getParam_(e, 'username')), version: CITADEL_VERSION });
+    }
 
     CITADEL_REQUEST_CONTEXT = authorizeCitadelRequest_(e, action);
 
@@ -166,11 +169,6 @@ function doGet(e) {
       return output_(e, { ok: true, data: getCitadelUsers_(), version: CITADEL_VERSION });
     }
 
-    if (action === 'saveCitadelUser') {
-      requireCitadelAdmin_(CITADEL_REQUEST_CONTEXT);
-      return output_(e, { ok: true, data: saveCitadelUser_(paramsToRegistrationPayload_(e), CITADEL_REQUEST_CONTEXT.user), version: CITADEL_VERSION });
-    }
-
     if (action === 'logout') {
       return output_(e, { ok: true, data: revokeCitadelSession_(CITADEL_REQUEST_CONTEXT), version: CITADEL_VERSION });
     }
@@ -180,7 +178,10 @@ function doGet(e) {
     }
 
     if (action === 'getLienPayments') {
-      return output_(e, { ok: true, data: getLienPayments(paramsToReg…49744 tokens truncated…orney|legal/i.test(String(status || ''))) return 'Review';
+      return output_(e, { ok: true, data: getLienPayments(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action…51391 tokens truncated…orney|legal/i.test(String(status || ''))) return 'Review';
   return 'Monitor';
 }
 
@@ -681,3 +682,4 @@ function testSetupFleetSheet() {
 function testGetFleet() {
   Logger.log(JSON.stringify(getFleet(), null, 2));
 }
+
