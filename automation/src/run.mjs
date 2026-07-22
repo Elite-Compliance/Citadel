@@ -26,8 +26,22 @@ function localScheduleParts(date = new Date()) {
   return { weekday, hour: Number(values.hour) % 24 };
 }
 
+function scheduledUtcHour() {
+  const match = String(process.env.GITHUB_SCHEDULE || '').trim().match(/^\d+\s+(\d+)\s/);
+  return match ? Number(match[1]) : null;
+}
+
 function shouldRun() {
   if (process.env.FORCE_RUN === 'true' || process.env.GITHUB_EVENT_NAME === 'workflow_dispatch') return true;
+
+  const utcHour = scheduledUtcHour();
+  if (utcHour !== null) {
+    const scheduledTime = new Date();
+    scheduledTime.setUTCHours(utcHour, 0, 0, 0);
+    const scheduledLocal = localScheduleParts(scheduledTime);
+    return SCHEDULE.weekdays.includes(scheduledLocal.weekday) && SCHEDULE.hours.includes(scheduledLocal.hour);
+  }
+
   const local = localScheduleParts();
   return SCHEDULE.weekdays.includes(local.weekday) && SCHEDULE.hours.includes(local.hour);
 }
@@ -47,7 +61,7 @@ function runIdentifier() {
 
 async function main() {
   if (!shouldRun()) {
-    console.log('No Citadel pull is scheduled for the current America/New_York hour.');
+    console.log('This paired UTC trigger is not one of today's Eastern-time import slots.');
     return;
   }
 
