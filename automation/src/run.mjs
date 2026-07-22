@@ -61,7 +61,7 @@ function runIdentifier() {
 
 async function main() {
   if (!shouldRun()) {
-    console.log('This paired UTC trigger is not one of today's Eastern-time import slots.');
+    console.log("This paired UTC trigger is not one of today's Eastern-time import slots.");
     return;
   }
 
