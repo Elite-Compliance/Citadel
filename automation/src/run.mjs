@@ -69,7 +69,7 @@ async function main() {
 
     await publishLienReports(drive, sheets, environment.lienFolderId, exported.lienFiles);
     await publishPaymentImport(sheets, environment.paymentSpreadsheetId, paymentValues, runId);
-    imports = await runCitadelImports(environment.appsScriptUrl, runId);
+    imports = await runCitadelImports(environment.appsScriptUrl, runId, environment.automationToken);
 
     await recordAutomationRun(environment.appsScriptUrl, environment.automationToken, {
       run_id: runId,
