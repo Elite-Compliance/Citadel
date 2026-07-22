@@ -1,0 +1,27 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Completing Citadel sign-in</title>
+</head>
+<body>
+  <p>Completing secure sign-inâ€¦</p>
+  <script>
+    (function () {
+      try {
+        var encoded = location.hash.slice(1).replace(/-/g, '+').replace(/_/g, '/');
+        while (encoded.length % 4) encoded += '=';
+        var binary = atob(encoded);
+        var bytes = Uint8Array.from(binary, function (character) { return character.charCodeAt(0); });
+        var payload = JSON.parse(new TextDecoder().decode(bytes));
+        window.top.postMessage({ type: 'citadel-auth', payload: payload }, location.origin);
+      } catch (error) {
+        window.top.postMessage({ type: 'citadel-auth', payload: { ok: false, error: 'Unable to complete secure sign-in.' } }, location.origin);
+      }
+    })();
+  </script>
+</body>
+</html>
+
