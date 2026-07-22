@@ -4011,7 +4011,15 @@ function getLienImportHealth_() {
     failureAt && !isNaN(failureAt.getTime()) &&
     (!successAt || isNaN(successAt.getTime()) || failureAt.getTime() > successAt.getTime())
   );
-  const automationFailed = !!(latestAutomation && /^Failed/i.test(String(latestAutomation.status || '')));
+  const automationAt = latestAutomation && (latestAutomation.completed_at || latestAutomation.started_at)
+    ? new Date(latestAutomation.completed_at || latestAutomation.started_at)
+    : null;
+  const automationFailed = !!(
+    latestAutomation &&
+    /^Failed/i.test(String(latestAutomation.status || '')) &&
+    automationAt && !isNaN(automationAt.getTime()) &&
+    (!successAt || isNaN(successAt.getTime()) || automationAt.getTime() > successAt.getTime())
+  );
   const failedAfterSuccess = importFailedAfterSuccess || automationFailed;
   return {
     latest_import: latest,
