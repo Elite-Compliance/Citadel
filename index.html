@@ -15,7 +15,7 @@
     .citadel-login-card h1{margin:0 0 10px;font-size:30px}.citadel-login-card>span{display:block;color:#526579;line-height:1.5}
     .citadel-login-form{display:grid;gap:13px;margin-top:22px;text-align:left}.citadel-login-form label{display:grid;gap:6px;font-weight:800}.citadel-login-form input{min-height:46px;padding:10px 12px;border:1px solid #aebfce;background:#fff;color:#10243a;font:inherit}.citadel-login-form button{min-height:46px;border:1px solid #0e3154;background:#123a62;color:#fff;font:inherit;font-weight:800;cursor:pointer}.citadel-login-form button:disabled{cursor:wait;opacity:.7}
     .citadel-login-message{min-height:22px;margin:14px 0 8px;color:#922b35;font-weight:700}
-    .citadel-login-card small{display:block;margin-top:18px;color:#66788b}.citadel-auth-required .app-shell{visibility:hidden}
+    .citadel-login-card small{display:block;margin-top:18px;color:#66788b}.citadel-auth-pending,.citadel-auth-required{min-height:100vh;background:linear-gradient(145deg,#07182b,#102d4a)}.citadel-auth-pending .app-shell,.citadel-auth-required .app-shell{visibility:hidden}
     .citadel-account-settings{display:grid;gap:4px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(130,150,170,.35)}
     .citadel-account-settings span,.citadel-account-settings small{color:inherit;opacity:.78}.citadel-account-settings button{margin-top:8px;padding:9px 12px;border:1px solid currentColor;background:transparent;color:inherit;font-weight:700;cursor:pointer}
     .citadel-users-modal{width:min(1000px,94vw);max-height:88vh;overflow:auto}.citadel-users-layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:18px;padding:18px}
@@ -26,7 +26,7 @@
     @media(max-width:760px){.citadel-users-layout{grid-template-columns:1fr}.citadel-user-form-row,.citadel-access-checks{grid-template-columns:1fr 1fr}}
   </style>
 </head>
-<body>
+<body class="citadel-auth-pending">
   <div class="app-shell">
     <aside class="sidebar" aria-label="Primary navigation">
       <div class="brand-block">
@@ -54,7 +54,7 @@
     </main>
   </div>
   <script src="./data/pricing-data.js?v=2.1.2"></script>
-  <script src="./app.js?v=2.1.2.53"></script>
+  <script src="./app.js?v=2.1.2.54"></script>
 </body>
 </html>
 
