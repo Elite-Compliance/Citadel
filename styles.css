@@ -844,7 +844,7 @@ body[data-theme="light"] .command-alert-list article{
 .supplier-action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
 .supplier-action-row button{min-height:38px;padding:8px 10px}
 .supplier-section{margin-top:10px}
-.supplier-section .liens-detail-grid{margin-top:10px}
+.supplier-section .liens-detail-grid{margin-top:10px}\n.suppliers-detail .liens-detail-grid{grid-template-columns:repeat(3,minmax(0,1fr))}\n.suppliers-detail .liens-detail-grid article{min-width:0}\n.suppliers-detail .liens-detail-grid strong{display:block;min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
 .supplier-item-list{display:grid;gap:7px;margin-top:9px}
 .supplier-item-list article{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;border:1px solid var(--line);background:var(--field-bg);padding:9px 10px}
 .supplier-item-list article div{display:grid;gap:2px;min-width:0}
