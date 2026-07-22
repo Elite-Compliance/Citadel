@@ -198,9 +198,14 @@ async function citadelRequest(baseUrl, action, parameters = {}) {
   return payload.data;
 }
 
-export async function runCitadelImports(appsScriptUrl, runId) {
-  const liens = await citadelRequest(appsScriptUrl, 'runLienImport', { imported_by: `Scheduled automation ${runId}` });
+export async function runCitadelImports(appsScriptUrl, runId, automationToken) {
+  if (!automationToken) throw new Error('CITADEL_AUTOMATION_TOKEN GitHub secret is required.');
+  const liens = await citadelRequest(appsScriptUrl, 'runLienImport', {
+    automation_token: automationToken,
+    imported_by: `Scheduled automation ${runId}`
+  });
   const payments = await citadelRequest(appsScriptUrl, 'runPaymentImport', {
+    automation_token: automationToken,
     imported_by: `Scheduled automation ${runId}`,
     source_label: `Blaze Deposit Report ${runId}`
   });
