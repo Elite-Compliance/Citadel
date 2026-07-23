@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.6 seconds
-Output:
 const state = {
   selectedId: "87249bff-0579-42bf-b78f-a18efdf4303f",
   filters: { trade: "All trades", supplier: "All suppliers", sort: "Name A-Z", search: "", quick: "all" },
