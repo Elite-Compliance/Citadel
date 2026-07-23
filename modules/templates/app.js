@@ -131,13 +131,15 @@ function selectedRecord(visible) {
   return state.records.find(record => record.id === state.selectedId) || visible[0] || null;
 }
 
-function metric(label, value, caption) {
-  return `<article class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(caption)}</small></article>`;
+function metric(action, label, value, caption) {
+  return `<button class="metric" type="button" data-metric-action="${escapeHtml(action)}" aria-label="${escapeHtml(`${label}: ${value}. ${caption}`)}">
+    <span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(caption)}</small>
+  </button>`;
 }
 
-function detailSection(title, lines) {
+function detailSection(id, title, lines) {
   const items = lines || [];
-  return `<section class="detail-section">
+  return `<section class="detail-section" id="${escapeHtml(id)}">
     <header><h3>${escapeHtml(title)}</h3><span>${items.length} items</span></header>
     ${items.length ? `<div class="line-list">${items.map(line => `
       <article class="line-item">
@@ -154,10 +156,10 @@ function render() {
   app.innerHTML = `
     <div class="status-line"><span class="status-pill">${state.records.length} detailed template records available</span></div>
     <section class="metrics">
-      ${metric("Templates", state.records.length, "Indexed from Blaze")}
-      ${metric("Materials", materialCount, "Selected template")}
-      ${metric("Labor Items", selected ? (selected.labor || []).length : 0, "Selected template")}
-      ${metric("Trade", selected?.trade || "Not set", "Selected template")}
+      ${metric("templates", "Templates", state.records.length, "Indexed from Blaze")}
+      ${metric("materials", "Materials", materialCount, "Selected template")}
+      ${metric("labor", "Labor Items", selected ? (selected.labor || []).length : 0, "Selected template")}
+      ${metric("trade", "Trade", selected?.trade || "Not set", "Selected template")}
     </section>
     <section class="filter-card">
       <div><h2>Filters + Sort + Search</h2><p>Search template names, suppliers, materials, product rules, and labor lines.</p></div>
@@ -174,7 +176,7 @@ function render() {
       </div>
     </section>
     <div class="workspace">
-      <section class="records">
+      <section class="records" id="template-records">
         <header class="section-head"><div><h2>Order Templates</h2><p>Template-level information with complete material and labor detail.</p></div><strong>${visible.length} showing</strong></header>
         <div class="table-head"><span>Template</span><span>Trade</span><span>Supplier</span><span>Location</span><span>Created</span><span>Lines</span></div>
         ${visible.length ? visible.map(record => {
@@ -200,9 +202,9 @@ function render() {
               <header><h3>Template Instructions</h3><a href="${escapeHtml(selected.blazeUrl)}" target="_blank" rel="noopener">Open in Blaze</a></header>
               <p class="instructions">${escapeHtml(selected.instructions || "No instructions included.")}</p>
             </section>
-            ${detailSection("Custom Materials", selected.customMaterials)}
-            ${detailSection("Supplier Products", selected.materials)}
-            ${detailSection("Labor", selected.labor)}
+            ${detailSection("template-custom-materials", "Custom Materials", selected.customMaterials)}
+            ${detailSection("template-materials", "Supplier Products", selected.materials)}
+            ${detailSection("template-labor", "Labor", selected.labor)}
           </div>` : `<p class="empty">No template selected.</p>`}
       </aside>
     </div>`;
@@ -231,7 +233,43 @@ function openReportModal() {
   document.body.appendChild(modal);
 }
 
+function scrollToSection(id) {
+  requestAnimationFrame(() => {
+    const target = document.getElementById(id);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+function activateMetric(action) {
+  const selected = selectedRecord(visibleRecords());
+  if (action === "templates") {
+    state.filters.trade = "All trades";
+    state.filters.supplier = "All suppliers";
+    state.filters.search = "";
+    render();
+    scrollToSection("template-records");
+    return;
+  }
+  if (action === "trade") {
+    if (selected?.trade) state.filters.trade = selected.trade;
+    render();
+    scrollToSection("template-records");
+    return;
+  }
+  if (action === "materials") {
+    const target = selected?.customMaterials?.length ? "template-custom-materials" : "template-materials";
+    scrollToSection(target);
+    return;
+  }
+  if (action === "labor") scrollToSection("template-labor");
+}
+
 app.addEventListener("click", event => {
+  const metricButton = event.target.closest("[data-metric-action]");
+  if (metricButton) {
+    activateMetric(metricButton.dataset.metricAction);
+    return;
+  }
   if (event.target.closest("[data-report]")) {
     openReportModal();
     return;
