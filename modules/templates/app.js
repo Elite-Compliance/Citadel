@@ -59,6 +59,12 @@ state.selectedId = state.records[0]?.id || "";
 const app = document.querySelector("#app");
 let searchTimer = 0;
 let themeObserver = null;
+const pricingState = {
+  overrides: new Map(),
+  overridesLoaded: false,
+  overridesError: "",
+  index: null
+};
 
 function item(name, uom = "", rules = "") {
   return { name, uom, rules };
@@ -71,6 +77,193 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function normalizeMatchValue(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeUom(value) {
+  const normalized = normalizeMatchValue(value);
+  const aliases = {
+    ea: "each", each: "each", pc: "each", piece: "each",
+    bdl: "bundle", bundle: "bundle", bx: "box", box: "box",
+    rl: "roll", roll: "roll", sht: "sheet", sheet: "sheet",
+    sq: "square", square: "square", qt: "quantity"
+  };
+  return aliases[normalized] || normalized;
+}
+
+function pricingRows() {
+  try {
+    const source = window.parent !== window
+      ? window.parent.CITADEL_PRICING_DATA
+      : window.CITADEL_PRICING_DATA;
+    return Array.isArray(source?.rows) ? source.rows : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function matchTokens(value) {
+  const ignored = new Set([
+    "the", "and", "with", "per", "each", "piece", "pieces", "bundle", "roll", "box",
+    "square", "squares", "feet", "inch", "inches", "class", "product", "roofing",
+    "siding", "coverage", "color"
+  ]);
+  return normalizeMatchValue(value).split(" ")
+    .filter(token => token.length > 2 && !ignored.has(token) && !/^\d+$/.test(token));
+}
+
+function pricingIndex() {
+  if (pricingState.index) return pricingState.index;
+  const exact = new Map();
+  const token = new Map();
+  pricingRows().forEach(row => {
+    [row.elite_product_name, row.item_final, row.item_number, row.item].forEach(value => {
+      const key = normalizeMatchValue(value);
+      if (!key) return;
+      if (!exact.has(key)) exact.set(key, []);
+      exact.get(key).push(row);
+    });
+    matchTokens(row.elite_product_name).forEach(value => {
+      if (!token.has(value)) token.set(value, []);
+      token.get(value).push(row);
+    });
+  });
+  pricingState.index = { exact, token };
+  return pricingState.index;
+}
+
+function templateState(record) {
+  const text = `${record?.supplierLocation || ""} ${record?.name || ""}`.toUpperCase();
+  const stateNames = {
+    ARIZONA: "AZ", ILLINOIS: "IL", INDIANA: "IN", MINNESOTA: "MN", MISSOURI: "MO",
+    "NEW MEXICO": "NM", OHIO: "OH", OKLAHOMA: "OK", PENNSYLVANIA: "PA", WISCONSIN: "WI"
+  };
+  const fullName = Object.keys(stateNames).find(name => text.includes(name));
+  if (fullName) return stateNames[fullName];
+  const abbreviation = text.match(/(?:^|[\s,/-])(AZ|IL|IN|MN|MO|NM|OH|OK|PA|WI)(?:$|[\s,/-])/);
+  return abbreviation ? abbreviation[1] : "";
+}
+
+function supplierCode(value) {
+  const supplier = normalizeMatchValue(value);
+  if (supplier.includes("richards")) return "rbs";
+  if (supplier.includes("srs")) return "srs";
+  if (supplier.includes("abc")) return "abc";
+  if (supplier.includes("beacon")) return "beacon";
+  return supplier;
+}
+
+function lineKey(record, lineType, line) {
+  return [record.id, lineType, normalizeMatchValue(line.name), normalizeUom(line.uom)].join("|");
+}
+
+function moneyValue(value) {
+  const number = Number(String(value == null ? "" : value).replace(/[$,\s]/g, ""));
+  return Number.isFinite(number) ? number : null;
+}
+
+function formatMoney(value) {
+  return Number(value).toLocaleString("en-US", { style: "currency", currency: "USD" });
+}
+
+function materialPriceMatch(record, line) {
+  const name = normalizeMatchValue(line.name);
+  if (!name) return { status: "missing", candidates: [] };
+  const index = pricingIndex();
+  let candidates = (index.exact.get(name) || []).slice();
+  let matchMethod = "Exact product";
+  if (!candidates.length) {
+    const templateTokens = new Set(matchTokens(line.name));
+    const possible = new Set();
+    templateTokens.forEach(value => (index.token.get(value) || []).forEach(row => possible.add(row)));
+    candidates = [...possible].filter(row => {
+      const productTokens = matchTokens(row.elite_product_name);
+      const brand = normalizeMatchValue(row.brand);
+      const brandMatches = !brand || brand === "gen" || templateTokens.has(brand);
+      return brandMatches && productTokens.length > 0 && productTokens.length <= 5 &&
+        productTokens.every(value => templateTokens.has(value));
+    });
+    matchMethod = "Product name + brand";
+  }
+  if (!candidates.length) return { status: "missing", candidates: [] };
+
+  const stateCode = templateState(record);
+  const stateMatches = stateCode ? candidates.filter(row => String(row.state || "").toUpperCase() === stateCode) : [];
+  if (stateMatches.length) candidates = stateMatches;
+
+  const supplier = supplierCode(record.supplier);
+  const supplierMatches = supplier ? candidates.filter(row => supplierCode(row.supplier) === supplier) : [];
+  if (supplierMatches.length) candidates = supplierMatches;
+
+  const uom = normalizeUom(line.uom);
+  const uomMatches = uom ? candidates.filter(row => normalizeUom(row.uom) === uom) : [];
+  if (uomMatches.length) candidates = uomMatches;
+
+  const prices = [...new Set(candidates.map(row => moneyValue(row.price)).filter(value => value !== null))];
+  if (!prices.length) return { status: "missing", candidates };
+  if (prices.length === 1) {
+    const match = candidates.find(row => moneyValue(row.price) === prices[0]) || candidates[0];
+    return {
+      status: "matched",
+      price: prices[0],
+      candidates,
+      matchMethod,
+      matchKey: String(match.item_final || match.item_number || match.item || match.elite_product_name || "")
+    };
+  }
+  return { status: "varies", candidates, prices, matchMethod };
+}
+
+function resolvedLinePrice(record, lineType, line) {
+  const key = lineKey(record, lineType, line);
+  const override = pricingState.overrides.get(key);
+  if (override && moneyValue(override.manual_price) !== null) {
+    return { key, price: moneyValue(override.manual_price), source: "Manual override", status: "override", override };
+  }
+  const match = materialPriceMatch(record, line);
+  if (match.status === "matched") return { key, price: match.price, source: "Material Pricing", ...match };
+  if (match.status === "varies") return { key, price: null, source: "Color-dependent", ...match };
+  return { key, price: null, source: "Needs price", ...match };
+}
+
+function templatesApi(action, params = {}) {
+  try {
+    if (window.parent === window || !window.parent.CITADEL_API_URL || !window.parent.jsonp) {
+      return Promise.reject(new Error("Protected pricing service is unavailable."));
+    }
+    const query = new URLSearchParams({ action, ...params }).toString();
+    const url = `${window.parent.CITADEL_API_URL}?${query}`;
+    const securedUrl = window.parent.citadelAuthQuery ? window.parent.citadelAuthQuery(url) : url;
+    return window.parent.jsonp(securedUrl).then(response => {
+      if (!response?.ok) throw new Error(response?.error || "Pricing request failed.");
+      return response.data;
+    });
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+function loadTemplatePriceOverrides() {
+  templatesApi("getTemplatePriceOverrides")
+    .then(rows => {
+      pricingState.overrides = new Map((rows || []).map(row => [String(row.line_key || ""), row]));
+      pricingState.overridesLoaded = true;
+      pricingState.overridesError = "";
+      render();
+    })
+    .catch(error => {
+      pricingState.overridesLoaded = true;
+      pricingState.overridesError = error.message || "Manual overrides are unavailable.";
+      render();
+    });
 }
 
 function applyTheme(theme) {
@@ -164,15 +357,25 @@ function metric(action, label, value, caption, active = false) {
   </button>`;
 }
 
-function detailSection(id, title, lines) {
+function detailSection(id, title, lines, record, lineType = "", priceable = false) {
   const items = lines || [];
   return `<section class="detail-section" id="${escapeHtml(id)}">
     <header><h3>${escapeHtml(title)}</h3><span>${items.length} items</span></header>
-    ${items.length ? `<div class="line-list">${items.map(line => `
-      <article class="line-item">
+    ${items.length ? `<div class="line-list">${items.map(line => {
+      const resolved = priceable ? resolvedLinePrice(record, lineType, line) : null;
+      return `<article class="line-item">
         <div><strong>${escapeHtml(line.name)}</strong>${line.rules ? `<p>${escapeHtml(line.rules)}</p>` : ""}</div>
-        <span>${escapeHtml(line.uom || "—")}</span>
-      </article>`).join("")}</div>` : `<p class="empty">No ${escapeHtml(title.toLowerCase())} included.</p>`}
+        <div class="line-values">
+          <span class="line-uom">${escapeHtml(line.uom || "—")}</span>
+          ${priceable ? `<button class="line-price ${escapeHtml(resolved.status)}" type="button"
+            data-price-key="${escapeHtml(resolved.key)}" data-line-type="${escapeHtml(lineType)}"
+            data-product-name="${escapeHtml(line.name)}" data-uom="${escapeHtml(line.uom || "")}">
+            <strong>${resolved.price === null ? (resolved.status === "varies" ? "Varies" : "Add price") : formatMoney(resolved.price)}</strong>
+            <small>${escapeHtml(resolved.source)}</small>
+          </button>` : ""}
+        </div>
+      </article>`;
+    }).join("")}</div>` : `<p class="empty">No ${escapeHtml(title.toLowerCase())} included.</p>`}
   </section>`;
 }
 
@@ -231,12 +434,97 @@ function render() {
               <header><h3>Template Instructions</h3><a href="${escapeHtml(selected.blazeUrl)}" target="_blank" rel="noopener">Open in Blaze</a></header>
               <p class="instructions">${escapeHtml(selected.instructions || "No instructions included.")}</p>
             </section>
-            ${detailSection("template-custom-materials", "Custom Materials", selected.customMaterials)}
-            ${detailSection("template-materials", "Supplier Products", selected.materials)}
-            ${detailSection("template-labor", "Labor", selected.labor)}
+            ${pricingState.overridesError ? `<p class="pricing-warning">${escapeHtml(pricingState.overridesError)}</p>` : ""}
+            ${detailSection("template-custom-materials", "Custom Materials", selected.customMaterials, selected, "custom-material", true)}
+            ${detailSection("template-materials", "Supplier Products", selected.materials, selected, "supplier-product", true)}
+            ${detailSection("template-labor", "Labor", selected.labor, selected, "labor", false)}
           </div>` : `<p class="empty">No template selected.</p>`}
       </aside>
     </div>`;
+}
+
+function openPriceModal(button) {
+  const record = state.records.find(item => item.id === state.selectedId);
+  if (!record) return;
+  const lineType = button.dataset.lineType;
+  const productName = button.dataset.productName;
+  const uom = button.dataset.uom || "";
+  const lines = lineType === "custom-material" ? record.customMaterials : record.materials;
+  const line = (lines || []).find(item => item.name === productName && String(item.uom || "") === uom);
+  if (!line) return;
+
+  const resolved = resolvedLinePrice(record, lineType, line);
+  const currentOverride = pricingState.overrides.get(resolved.key);
+  const automaticText = resolved.status === "matched"
+    ? `${formatMoney(resolved.price)} from Material Pricing`
+    : resolved.status === "varies"
+      ? `${resolved.prices.length} color-dependent prices found`
+      : "No exact Material Pricing match";
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `<section class="modal price-modal" role="dialog" aria-modal="true" aria-label="Product price">
+    <header><div><h2>Product Price</h2><p>${escapeHtml(productName)}</p></div><button type="button" data-close aria-label="Close">X</button></header>
+    <form class="modal-body" data-price-form>
+      <div class="price-source-summary"><span>Automatic result</span><strong>${escapeHtml(automaticText)}</strong></div>
+      <label>Manual override
+        <input name="manual_price" inputmode="decimal" placeholder="0.00" value="${escapeHtml(currentOverride?.manual_price ?? "")}">
+      </label>
+      <label>Reason
+        <textarea name="reason" rows="3" placeholder="Why is this price different?">${escapeHtml(currentOverride?.reason || "")}</textarea>
+      </label>
+      <p class="form-message" aria-live="polite"></p>
+      <div class="modal-actions">
+        ${currentOverride ? `<button class="secondary" type="button" data-clear-price>Use Material Pricing</button>` : ""}
+        <button class="secondary" type="button" data-close>Cancel</button>
+        <button class="primary" type="submit">Save Override</button>
+      </div>
+    </form>
+  </section>`;
+
+  const close = () => modal.remove();
+  const save = clearOverride => {
+    const form = modal.querySelector("[data-price-form]");
+    const message = form.querySelector(".form-message");
+    const saveButton = form.querySelector('[type="submit"]');
+    const price = form.elements.manual_price.value;
+    const numericPrice = Number(price.replace(/[$,\s]/g, ""));
+    if (!clearOverride && (!price.trim() || !Number.isFinite(numericPrice) || numericPrice < 0)) {
+      message.textContent = "Enter a valid price.";
+      return;
+    }
+    saveButton.disabled = true;
+    message.textContent = "Saving protected override...";
+    templatesApi("saveTemplatePriceOverride", {
+      template_id: record.id,
+      template_name: record.name,
+      line_type: lineType,
+      line_key: resolved.key,
+      product_name: line.name,
+      uom: line.uom || "",
+      manual_price: price,
+      reason: form.elements.reason.value,
+      source_match_key: resolved.matchKey || "",
+      clear_override: clearOverride ? "true" : "false"
+    }).then(saved => {
+      if (clearOverride || !saved?.active) pricingState.overrides.delete(resolved.key);
+      else pricingState.overrides.set(resolved.key, saved);
+      close();
+      render();
+    }).catch(error => {
+      saveButton.disabled = false;
+      message.textContent = error.message || "Unable to save the override.";
+    });
+  };
+
+  modal.addEventListener("click", event => {
+    if (event.target === modal || event.target.closest("[data-close]")) close();
+    if (event.target.closest("[data-clear-price]")) save(true);
+  });
+  modal.querySelector("[data-price-form]").addEventListener("submit", event => {
+    event.preventDefault();
+    save(false);
+  });
+  document.body.appendChild(modal);
 }
 
 function openReportModal() {
@@ -290,6 +578,11 @@ app.addEventListener("click", event => {
     openReportModal();
     return;
   }
+  const priceButton = event.target.closest("[data-price-key]");
+  if (priceButton) {
+    openPriceModal(priceButton);
+    return;
+  }
   const row = event.target.closest("[data-template-id]");
   if (!row) return;
   state.selectedId = row.dataset.templateId;
@@ -320,3 +613,4 @@ app.addEventListener("input", event => {
 
 initializeTheme();
 render();
+loadTemplatePriceOverrides();
