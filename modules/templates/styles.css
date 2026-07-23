@@ -78,11 +78,12 @@ button { cursor: pointer; }
 .section-head h2, .detail-head h2 { font-size: 18px; }
 .section-head p, .detail-head p { margin-top: 3px; opacity: .86; }
 
-.table-head, .template-row { display: grid; grid-template-columns: 1.6fr .65fr 1.15fr 1.05fr .7fr .45fr; gap: 8px; align-items: center; }
-.table-head { padding: 10px 12px; background: var(--header); color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
-.template-row { width: 100%; padding: 11px 12px; border: 0; border-bottom: 1px solid var(--line); background: var(--panel); color: var(--text); text-align: left; }
+.table-head, .template-row { display: grid; grid-template-columns: 1.6fr .65fr 1.15fr 1.1fr .62fr .35fr; gap: 6px; align-items: center; }
+.table-head { padding: 8px 10px; background: var(--header); color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.template-row { width: 100%; padding: 8px 10px; border: 0; border-bottom: 1px solid var(--line); background: var(--panel); color: var(--text); text-align: left; font-size: 12px; }
 .template-row:hover, .template-row.active { background: var(--blue-soft); }
 .template-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.template-row strong { font-size: 12px; font-weight: 760; }
 .empty { padding: 24px; color: var(--muted); text-align: center; }
 
 .detail { max-height: 720px; overflow: auto; }
