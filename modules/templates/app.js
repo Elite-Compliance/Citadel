@@ -51,9 +51,18 @@ const preview = {
   ]
 };
 
-state.records = Array.isArray(window.CITADEL_TEMPLATE_DATA) && window.CITADEL_TEMPLATE_DATA.length
+function resolvedSupplier(record) {
+  if (String(record?.supplier || "").trim()) return String(record.supplier).trim();
+  const source = `${record?.name || ""} ${record?.supplierLocation || ""}`.toLowerCase();
+  if (source.includes("abc")) return "ABC Supply";
+  if (source.includes("richard")) return "Richards Building Supply";
+  if (source.includes("srs")) return "SRS Distribution Inc";
+  return "Supplier not set";
+}
+
+state.records = (Array.isArray(window.CITADEL_TEMPLATE_DATA) && window.CITADEL_TEMPLATE_DATA.length
   ? window.CITADEL_TEMPLATE_DATA
-  : [preview];
+  : [preview]).map(record => ({ ...record, supplier: resolvedSupplier(record) }));
 state.selectedId = state.records[0]?.id || "";
 
 const app = document.querySelector("#app");
