@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 1.8 seconds
-Output:
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -53,5 +50,4 @@ test('preserves unmatched lines for review', () => {
   const order = aggregateOrder({ order_id: 'order-1' }, [line]);
   assert.equal(order.comparison_status, 'Needs Review');
 });
-
 
