@@ -1,7 +1,4 @@
-Exit code: 0
-Wall time: 1.2 seconds
-Total output lines: 5011
-Output:
+
 const CITADEL_VERSION='2.1.2';
 const CITADEL_INITIAL_ADMIN_EMAIL = 'amashalom21@gmail.com';
 const CITADEL_ACCESS_MODULES = ['command-center', 'region-health', 'data-connections', 'inbox', 'tasks', 'legal', 'reviews', 'pricing', 'labor-pricing', 'templates', 'orders', 'fleet', 'contractors', 'registrations', 'liens', 'suppliers', 'collections'];
@@ -658,4 +655,3 @@ function testSetupFleetSheet() {
 function testGetFleet() {
   Logger.log(JSON.stringify(getFleet(), null, 2));
 }
-
