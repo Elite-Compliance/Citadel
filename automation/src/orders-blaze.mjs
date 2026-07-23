@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 1.8 seconds
-Output:
 import { chromium } from 'playwright';
 import { ensureAuthenticated } from './blaze.mjs';
 import { moneyNumber, stableId, stateCode } from './orders-compare.mjs';
@@ -269,4 +266,3 @@ export async function exportOrders(credentials) {
     await browser.close();
   }
 }
-
