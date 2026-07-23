@@ -91,8 +91,15 @@ async function readVisibleOrderRows(page, region, stage) {
 
 async function readAllStageRows(page, region, stage) {
   const rows = [];
-  const panel = stagePanel(page, stage);
-  const next = panel.getByRole('button', { name: 'Next page', exact: true });
+  const table = visibleStageTable(page, stage);
+  const paginator = table.locator('xpath=following::mat-paginator[1]');
+  const pageSize = paginator.getByRole('combobox', { name: /Items per page/ });
+  if (await pageSize.count()) {
+    await pageSize.click();
+    const twentyRows = page.getByRole('option', { name: '20', exact: true });
+    if (await twentyRows.count()) await twentyRows.click();
+  }
+  const next = paginator.getByRole('button', { name: 'Next page', exact: true });
   for (let pageNumber = 1; pageNumber <= 250; pageNumber += 1) {
     rows.push(...await readVisibleOrderRows(page, region, stage));
     if (!(await next.count()) || await next.isDisabled()) break;
@@ -101,13 +108,16 @@ async function readAllStageRows(page, region, stage) {
     await page.locator('ng-http-loader .backdrop').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
     await visibleStageTable(page, stage).locator('tbody').waitFor({ state: 'visible', timeout: 30000 });
     await page.waitForFunction(
-      ({ stageName, previous }) => {
-        const panels = [...document.querySelectorAll('[role="tabpanel"]')];
-        const panelElement = panels.find((candidate) => candidate.getAttribute('aria-label') === stageName);
-        const body = panelElement?.querySelector('table tbody');
+      (previous) => {
+        const tables = [...document.querySelectorAll('table')];
+        const visible = tables.find((candidate) => (
+          candidate.offsetParent !== null
+          && /Job Number/i.test(candidate.querySelector('thead')?.innerText || '')
+        ));
+        const body = visible?.querySelector('tbody');
         return body && body.innerText !== previous;
       },
-      { stageName: stage, previous: previousRows },
+      previousRows,
       { timeout: 30000 }
     ).catch(() => {});
   }
