@@ -22,8 +22,12 @@ function orderIdFromUrl(url) {
   return clean(url).match(/\/orders\/([^/?#]+)/)?.[1] || '';
 }
 
-async function waitForOrdersTable(page) {
-  await page.getByRole('columnheader', { name: 'Job Number', exact: true })
+function stagePanel(page, stage) {
+  return page.getByLabel(stage, { exact: true });
+}
+
+async function waitForOrdersTable(page, stage) {
+  await stagePanel(page, stage).getByRole('columnheader', { name: 'Job Number', exact: true })
     .waitFor({ state: 'visible', timeout: 60000 });
   await page.locator('ng-http-loader .backdrop').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
 }
@@ -40,17 +44,17 @@ async function selectRegion(page, region) {
   const picker = page.getByRole('combobox').first();
   await picker.click();
   await page.getByRole('option', { name: region, exact: true }).click();
-  await waitForOrdersTable(page);
+  await waitForOrdersTable(page, ORDER_STAGES[0]);
 }
 
 async function selectStage(page, stage) {
   const tab = page.getByRole('tab', { name: stage, exact: true });
   await tab.click();
-  await waitForOrdersTable(page);
+  await waitForOrdersTable(page, stage);
 }
 
 async function readVisibleOrderRows(page, region, stage) {
-  return page.locator('table tbody tr').evaluateAll((elements, context) => elements.map((row) => {
+  return stagePanel(page, stage).locator('table tbody tr').evaluateAll((elements, context) => elements.map((row) => {
     const cells = [...row.querySelectorAll('td')];
     const link = cells[4]?.querySelector('a');
     if (!link) return null;
