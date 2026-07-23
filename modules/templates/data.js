@@ -1,6 +1,3153 @@
 window.CITADEL_TEMPLATE_DATA = [
   {
     "active": "",
+    "created": "5/29/24",
+    "name": "ABC - DiamondKote",
+    "trade": "SIDING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/39d2d6f5-d1b7-4638-8904-38a0d7ff7173",
+    "id": "39d2d6f5-d1b7-4638-8904-38a0d7ff7173",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/39d2d6f5-d1b7-4638-8904-38a0d7ff7173",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "INSTALL LP SMARTSIDE SIDING",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "INSTALL LP BOARD & BATTEN",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "INSTALL LP OUTSIDE CORNER TRIM",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "INSTALL LP INSIDE CORNER TRIM",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "INSTALL LP WINDOW & DOOR TRIM",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "INSTALL LP TRIM NON- CORNERS AND WINDOWS & DOORS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "INSTALL LP BLOCKS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "LP BLOCK LIGHT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "LP BLOCK OUTLET",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GABLE VENTS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "INSTALL DRIP CAP",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "INSTALL COUNTER FLASHING",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "FASCIA",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "SOFFIT",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "REMOVE WOOD SIDING",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "DUMP TRAILER",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "REMOVE & REPLACE SIDING",
+        "rules": "",
+        "uom": "SQ"
+      }
+    ],
+    "materials": [
+      {
+        "name": "WAUSAU DIAMONDKOTE LAP SIDING CEDAR TEXTURE 3/8\" X 8\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE CEDAR TEXTURE TRIM BOARD 5/4\" X 2\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE CEDAR TEXTURE TRIM BOARD 5/4\" X 3\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE CEDAR TEXTURE TRIM BOARD 5/4\" X 4\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE CEDAR TEXTURE TRIM BOARD 5/4\" X 4\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE CEDAR TEXTURE TRIM BOARD 5/4\" X 6\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE CEDAR TEXTURE TRIM BOARD 5/4\" X 8\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE CEDAR TEXTURE TRIM BOARD 5/4\" X 10\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE CEDAR TEXTURE TRIM BOARD 5/4\" X 12\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "TYVEK HOUSEWRAP 3'X100' 3SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "TYVEK HOUSEWRAP 9'X100' 9SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "FANFOLD INSULATION 1/4\" 2SQ",
+        "rules": "",
+        "uom": "BD"
+      },
+      {
+        "name": "TYVEK, TAPE, HOUSEWRAP, TAPE",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "GRACE WINDOW FLASHING TAPE 4\"X75'",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "OSI, QUAD, CAULK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "OSI, QUAD, CAULK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "ACM, SMOOTH, TRIM COIL",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "HD GALVANIZED STEEL SIDING NAILS RING SHANK .092\" X 2-1/2\" 4800CT",
+        "rules": "",
+        "uom": "BX"
+      },
+      {
+        "name": "WAUSAU DIMAONDKOTE 8OZ TOUCH UP PAINT KIT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE 8.5\"X11\" UNIVERSAL BLOCK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE SPLIT BLOCK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "WAUSAU DIAMONDKOTE 16\"X9\" HORIZONTAL BLOCK",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "9/15/23",
+    "name": "ABC - IKO - Master",
+    "trade": "ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/863d6e3a-9a57-4592-be89-13925fd294b2",
+    "id": "863d6e3a-9a57-4592-be89-13925fd294b2",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/863d6e3a-9a57-4592-be89-13925fd294b2",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "REMOVE & REPLACE ROOFING",
+        "rules": "Product Type REMOVE SECOND LAYER Coverage 1 SQ",
+        "uom": "SQ"
+      },
+      {
+        "name": "DUMP FEE",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "REMOVE 2ND LAYER",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "REPLACE DECKING (PER SHEET)",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "materials": [
+      {
+        "name": "IKO, DYNASTY",
+        "rules": "Product Type SHINGLE Coverage 1 SQ",
+        "uom": "SQ"
+      },
+      {
+        "name": "IKO, CAMBRIDGE",
+        "rules": "Product Type SHINGLE Coverage 1 SQ",
+        "uom": "SQ"
+      },
+      {
+        "name": "IKO, DYNASTY HIP & RIDGE",
+        "rules": "Product Type HIP AND RIDGE SHINGLES Coverage 30 LF",
+        "uom": "BD"
+      },
+      {
+        "name": "IKO, CAMBRIDGE HIP & RIDGE",
+        "rules": "Product Type HIP AND RIDGE SHINGLES Coverage 30 LF",
+        "uom": "BD"
+      },
+      {
+        "name": "IKO LEADING EDGE PLUS STARTER STRIP",
+        "rules": "Product Type ROOFING STARTER Coverage 120 LF Product Options INCLUDE RAKES",
+        "uom": "BD"
+      },
+      {
+        "name": "RESISTO ICE & WATER SHIELD 2SQ",
+        "rules": "Product Type ICE AND WATER Coverage 60 LF",
+        "uom": "RL"
+      },
+      {
+        "name": "ABC PRO GUARD 20 SYNTHETIC 10SQ",
+        "rules": "Product Type FELT Coverage 10 SQ Product Options ROOF PITCH RANGE Minimum Pitch /12 Maximum Pitch /12",
+        "uom": "RL"
+      },
+      {
+        "name": "ACM, DRIP EDGE",
+        "rules": "Product Type DRIP EDGES Coverage 10 LF Product Options USING GUTTER APRON",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, GUTTER APRON",
+        "rules": "Product Type GUTTER APRON Coverage 10 LF",
+        "uom": "PC"
+      },
+      {
+        "name": "SLANT BACK, ROOF VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "AIRVENT SHINGLE RIDGE VENT 4'",
+        "rules": "Product Type RIDGE VENTS Coverage 4 LF",
+        "uom": "PC"
+      },
+      {
+        "name": "GENERIC LEAD BOOT 2\" PIPE JACK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC LEAD BOOT 3\" PIPE JACK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC LEAD BOOT 4\" PIPE JACK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC LEAD BOOT 5\" PIPE JACK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PIPE FLASHING PLASTIC 1\"-3\"",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PIPE FLASHING PLASTIC 3\"-4\"",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "QAP, SMOOTH TRIM COIL",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "OSI, QUAD, CAULK",
+        "rules": "Product Type ROOFING CAULK Coverage 20 SQ",
+        "uom": "EA"
+      },
+      {
+        "name": "7/16\" GENERIC OSB",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "STEP FLASHING 5\"X7\"",
+        "rules": "Product Type STEP FLASHING Coverage 58 LF",
+        "uom": "BD"
+      },
+      {
+        "name": "COIL NAILS 1-1/4\"",
+        "rules": "Product Type NAILS Coverage 15 SQ",
+        "uom": "BX"
+      },
+      {
+        "name": "GENERIC PLASTIC CAP NAILS 1-1/4\"",
+        "rules": "Product Type NAILS Coverage 20 SQ",
+        "uom": "BX"
+      },
+      {
+        "name": "GENERIC TOUCH UP SPRAY PAINT",
+        "rules": "Product Type SHINGLE Coverage 20 SQ",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC W VALLEY METAL",
+        "rules": "Product Type VALLEY METAL Coverage 10 LF",
+        "uom": "PC"
+      },
+      {
+        "name": "BROAN, 4\", EXHAUST VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN, 8\", EXHAUST VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC ROOF PLUG 8\"X8\"",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "2/6/24",
+    "name": "ABC - LP SmartSide",
+    "trade": "SIDING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/c1641b3c-b5bc-4693-9771-b8fd4ebeef11",
+    "id": "c1641b3c-b5bc-4693-9771-b8fd4ebeef11",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/c1641b3c-b5bc-4693-9771-b8fd4ebeef11",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "INSTALL LP SMARTSIDE SIDING",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "INSTALL LP BOARD & BATTEN",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "INSTALL LP OUTSIDE CORNER TRIM",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "INSTALL LP INSIDE CORNER TRIM",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "INSTALL LP WINDOW & DOOR TRIM",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "INSTALL LP TRIM NON- CORNERS AND WINDOWS & DOORS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "INSTALL LP BLOCKS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "LP BLOCK LIGHT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "LP BLOCK OUTLET",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GABLE VENTS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "INSTALL DRIP CAP",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "INSTALL COUNTER FLASHING",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "FASCIA",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "SOFFIT",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "REMOVE WOOD SIDING",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "DUMP TRAILER",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "REMOVE & REPLACE SIDING",
+        "rules": "",
+        "uom": "SQ"
+      }
+    ],
+    "materials": [
+      {
+        "name": "LP EXPERT FINISH SMARTSIDE LAP SIDING CEDAR TEXTURE 3/8\" X 8\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "LP EXPERT FINISH SMARTSIDE CEDAR TEXTURE TRIM BOARD 5/4\" X 4\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "LP EXPERT FINISH SMARTSIDE CEDAR TEXTURE TRIM BOARD 5/4\" X 4\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "LP EXPERT FINISH SMARTSIDE CEDAR TEXTURE TRIM BOARD 5/4\" X 6\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "LP EXPERT FINISH SMARTSIDE CEDAR TEXTURE TRIM BOARD 5/4\" X 8\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "LP EXPERT FINISH SMARTSIDE CEDAR TEXTURE TRIM BOARD 5/4\" X 10\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "LP EXPERT FINISH SMARTSIDE CEDAR TEXTURE TRIM BOARD 5/4\" X 12\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "TYVEK HOUSEWRAP 3'X100' 3SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "TYVEK HOUSEWRAP 9'X100' 9SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "FANFOLD INSULATION 1/4\" 2SQ",
+        "rules": "",
+        "uom": "BD"
+      },
+      {
+        "name": "TYVEK, TAPE, HOUSEWRAP, TAPE",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "GRACE WINDOW FLASHING TAPE 4\"X75'",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "OSI, QUAD, CAULK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "OSI, QUAD, CAULK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "ACM, SMOOTH, TRIM COIL",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "HD GALVANIZED STEEL SIDING NAILS RING SHANK .092\" X 2-1/2\" 4800CT",
+        "rules": "",
+        "uom": "BX"
+      },
+      {
+        "name": "LP EXPERT FINISH 1QT TOUCH UP PAINT KIT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "LP EXPERT FINISH SMARTSIDE J BLOCK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "LP EXPERT FINISH SMARTSIDE SPLIT BLOCK",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "6/17/26",
+    "name": "ABC - Minnesota - 2026",
+    "trade": "ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/f18fea26-3c66-4dff-ae35-b2c66746a9b7",
+    "id": "f18fea26-3c66-4dff-ae35-b2c66746a9b7",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/f18fea26-3c66-4dff-ae35-b2c66746a9b7",
+    "customMaterials": [
+      {
+        "name": "TRI-BUILT ELECTRICAL MAST BOOT",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "REMOVE & REPLACE ROOFING",
+        "rules": "Product Type REMOVE AND REPLACE ROOFING Coverage 1 SQ Product Options ROOF PITCH RANGE Minimum Pitch /12 Maximum Pitch /12",
+        "uom": "SQ"
+      },
+      {
+        "name": "REMOVE 2ND LAYER",
+        "rules": "Product Type REMOVE SECOND LAYER Coverage 1 SQ",
+        "uom": "SQ"
+      },
+      {
+        "name": "REPLACE DECKING (PER SHEET)",
+        "rules": "AI Help Text Include the specified number during creation.",
+        "uom": "EA"
+      },
+      {
+        "name": "DUMP FEE",
+        "rules": "AI Help Text Default to 1.",
+        "uom": "EA"
+      }
+    ],
+    "materials": [
+      {
+        "name": "IKO, DYNASTY AR 3/S,",
+        "rules": "AI Help Text Use 15% waste factor for shingles. This covers 1 sq per unit. 1 sq = 100 square feet. Product Type SHINGLE",
+        "uom": "SQ"
+      },
+      {
+        "name": "IKO, CAMBRIDGE AR 3/S,",
+        "rules": "Product Type SHINGLE Coverage 1 SQ",
+        "uom": "SQ"
+      },
+      {
+        "name": "IKO, HIP & RIDGE 12 AR 33',",
+        "rules": "Product Type HIP AND RIDGE SHINGLES Coverage 30 LF",
+        "uom": "BD"
+      },
+      {
+        "name": "OC, STARTER STRIP PLUS 105', , 04OCSSPL",
+        "rules": "Product Type ROOFING STARTER Coverage 105 LF Product Options INCLUDE RAKES",
+        "uom": "BD"
+      },
+      {
+        "name": "IKO, STORMTAMER ICE & WATER, , 11IKST2",
+        "rules": "Product Type ICE AND WATER Coverage 60 LF",
+        "uom": "RL"
+      },
+      {
+        "name": "OC, FELT PRO GUARD 20 SYNTHETIC, , 05ABCPG20",
+        "rules": "Product Type FELT Coverage 9 SQ Product Options ROOF PITCH RANGE Minimum Pitch 2/12 Maximum Pitch 99/12",
+        "uom": "RL"
+      },
+      {
+        "name": "ACM, DRIP EDGE",
+        "rules": "Product Type DRIP EDGES Coverage 9 LF",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, GUTTER APRON",
+        "rules": "Product Type GUTTER APRON Coverage 9 LF",
+        "uom": "PC"
+      },
+      {
+        "name": "LOM, ROOF VENT 750,",
+        "rules": "AI Help Text Match to the number of box vents. Product Type VENTS",
+        "uom": "EA"
+      },
+      {
+        "name": "OC, VENTSURE 11 3/4\"X4' STRIP, BLACK, 17OCVS4BK",
+        "rules": "Product Type RIDGE VENTS Coverage 4 LF",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC LEAD BOOT 2\" PIPE JACK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC LEAD BOOT 3\" PIPE JACK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC LEAD BOOT 4\" PIPE JACK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC LEAD BOOT 5\" PIPE JACK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PIPE FLASHING PLASTIC 1\"-3\"",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PIPE FLASHING PLASTIC 3\"-4\"",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "QAP, SMOOTH TRIM COIL,",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "OSI, QUAD, CAULK,",
+        "rules": "Product Type SHINGLE Coverage 15 SQ",
+        "uom": "EA"
+      },
+      {
+        "name": "7/16\" GENERIC OSB",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "STEP FLASHING 5\"X7\"",
+        "rules": "Product Type STEP FLASHING Coverage 55 LF",
+        "uom": "BD"
+      },
+      {
+        "name": "GEN, COIL NAIL EG 1 1/4\", , 150080010",
+        "rules": "Product Type SHINGLE Coverage 15 SQ",
+        "uom": "BX"
+      },
+      {
+        "name": "GEN, PLASTIC CAP 1 1/4\", , 150080102",
+        "rules": "Product Type FELT Coverage 20 SQ Product Options ROOF PITCH RANGE Minimum Pitch 2/12 Maximum Pitch 99/12",
+        "uom": "BX"
+      },
+      {
+        "name": "GENERIC TOUCH UP SPRAY PAINT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC W VALLEY METAL",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "LOM, ROOF VENT BATH BRV34 KIT PRO, BLACK, 17LOBR34KB",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "LOM, ROOF VENT KITCHEN PRO KV68, BLACK, 17LOKV68BK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC ROOF PLUG 8\"X8\"",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "9/7/23",
+    "name": "ABC - Norandex - Master",
+    "trade": "SIDING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/8ca4cc05-75a4-44ae-99a5-adade29f5d07",
+    "id": "8ca4cc05-75a4-44ae-99a5-adade29f5d07",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/8ca4cc05-75a4-44ae-99a5-adade29f5d07",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "REMOVE & REPLACE SIDING",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "FASCIA",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "DUMP FEE",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "SOFFIT",
+        "rules": "",
+        "uom": "LF"
+      }
+    ],
+    "materials": [
+      {
+        "name": "NORANDEX, GREAT BARRIER",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "NORANDEX, CEDAR KNOLLS",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "NORANDEX, WOODSMAN SELECT",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "TYVEK HOUSEWRAP 3'X100' 3SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "TYVEK HOUSEWRAP 9'X100' 9SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "TYVEK HOUSEWRAP TAPE 1.88\"X164' 7SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "FANFOLD INSULATION 1/4\" 2SQ",
+        "rules": "",
+        "uom": "BD"
+      },
+      {
+        "name": "GENERIC STEEL STARTER STRIP 10'",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "TYVEK WINDOW FLASHING TAPE 4\"X75'",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "NORANDEX, OUTSIDE CORNER POST, 3-1/2\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "NORANDEX, INSIDE CORNER POST, 3/4\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "NORANDEX, J CHANNEL, 3/4\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "NORANDEX, UTILITY TRIM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MID AMERICA, MOUNT MASTER JUMBO, LIGHT BLOCK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MID AMERICA, MOUNT MASTER, LIGHT BLOCK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MID AMERICA, SPLIT BLOCK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MID AMERICA, HOODED DRYER VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MID AMERICA, VENTS, SCALLOPED EXHAUST",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "ACM, SMOOTH, TRIM COIL, .019",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "TRIM NAIL 1-1/4\"",
+        "rules": "",
+        "uom": "BX"
+      },
+      {
+        "name": "OSI, QUAD, CAULK, TO MATCH SIDING COLOR",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "OSI, QUAD, CAULK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC ELECTRO GALVANIZED NAILS 2\"",
+        "rules": "",
+        "uom": "BX"
+      },
+      {
+        "name": "ACM, NORANDEX, SOLID, SOFFIT",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, NORANDEX, FULL VENT, SOFFIT",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, SOFFIT, J CHANNEL, 3/8\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, NORANDEX, HIDDEN VENT, SOFFIT",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, SOFFIT, J CHANNEL, 1/2\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "7/16\" GENERIC OSB",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "9/14/23",
+    "name": "ABC - Royal - Master",
+    "trade": "SIDING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/e58038d2-d6f6-47a1-a930-375978ca13b7",
+    "id": "e58038d2-d6f6-47a1-a930-375978ca13b7",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/e58038d2-d6f6-47a1-a930-375978ca13b7",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "REMOVE & REPLACE SIDING",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "DUMP FEE",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "FASCIA",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "SOFFIT",
+        "rules": "",
+        "uom": "LF"
+      }
+    ],
+    "materials": [
+      {
+        "name": "ROYAL, WOODLAND CS",
+        "rules": "Product Type SIDING Coverage 1 SQ",
+        "uom": "SQ"
+      },
+      {
+        "name": "ROYAL, ESTATE CS",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "TYVEK HOUSEWRAP 3'X100' 3SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "TYVEK HOUSEWRAP 9'X100' 9SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "TYVEK HOUSEWRAP TAPE 1.88\"X164' 7SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "FANFOLD INSULATION 1/4\" 2SQ",
+        "rules": "",
+        "uom": "BD"
+      },
+      {
+        "name": "GENERIC STEEL STARTER STRIP 10'",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "TYVEK WINDOW FLASHING TAPE 4\"X75'",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "ROYAL, UNIVERSAL OUTSIDE, CORNER POST",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ROYAL, UNIVERSAL INSIDE, CORNER POST",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ROYAL, UNIVERSAL, J CHANNEL",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ROYAL, FINISH TRIM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ROYAL, MOUNT, LARGE CLASSIC",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ROYAL, MOUNT, CLASSIC",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ROYAL, MOUNT, RECESSED SPLIT",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ROYAL, VENT, DRYER",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ROYAL, VENT, BATHROOM EXHAUST",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ROYAL, VENT, INTAKE/EXHAUST",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, SMOOTH, TRIM COIL, .019",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "TRIM NAIL 1-1/4\"",
+        "rules": "",
+        "uom": "BX"
+      },
+      {
+        "name": "OSI, QUAD, CAULK, TO MATCH SIDING COLOR",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "OSI, QUAD, CAULK",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC ELECTRO GALVANIZED NAILS 2\"",
+        "rules": "",
+        "uom": "BX"
+      },
+      {
+        "name": "ACM, NORANDEX, SOLID, SOFFIT",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, NORANDEX, FULL VENT, SOFFIT",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, SOFFIT, J CHANNEL, 3/8\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, NORANDEX, HIDDEN VENT, SOFFIT",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, SOFFIT, J CHANNEL, 1/2\"",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "7/16\" GENERIC OSB",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "7/21/26",
+    "name": "Flat Roof",
+    "trade": "SPECIALTY_ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/31d7f5a3-0d6d-4984-a916-4d26e6181946",
+    "id": "31d7f5a3-0d6d-4984-a916-4d26e6181946",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/31d7f5a3-0d6d-4984-a916-4d26e6181946",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [],
+    "materials": [],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "8/28/23",
+    "name": "GUTTER TEMPLATE (MASTER)",
+    "trade": "GUTTERS",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/f3748663-5add-4089-bc22-536481902e33",
+    "id": "f3748663-5add-4089-bc22-536481902e33",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/f3748663-5add-4089-bc22-536481902e33",
+    "customMaterials": [
+      {
+        "name": "THIS PRODUCT EXISTS SO A PRODUCTION SCHEDULE CAN BE BUILT",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "GUTTERS 5\"",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "GUTTERS 6\"",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "DOWNSPOUTS 2\"X3\"",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "DOWNSPOUTS 3\"X4\"",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "5\" MITER",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "6\" MITER",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "GUTTER GUARDS - 5\" - MESH (ARMOUR LOCK)",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "GUTTER GUARDS - 6\" - MESH (ARMOUR LOCK)",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "GUTTER GUARDS - 5\" - ALUMINUM (SHUR-FLO / ECO GUARD)",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "GUTTER GUARDS - 6\" - ALUMINUM (SHUR-FLO / ECO GUARD)",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "GUTTER GUARDS - LEAF FREE (SOLID) Custom Labor",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "GUTTER GUARDS - RAIN DROP",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "GUTTER GUARD GENERIC (LABOR & MATERIAL)",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "GUTTER GUARDS - GUTTER HELMET (SOLID COVER)",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "RE-INSTALL GUTTER GUARDS Custom Labor",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "GUTTER APRON",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "HINGES Custom Labor",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "RAIN DIVERTER / VALLEY GUARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "GUTTER (ADAPTER) Custom Labor",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GUTTERS WITH T-STRAPS (EXTRA CHARGE)",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "REPLACE ROTTED FASCIA BOARD Custom Labor",
+        "rules": "",
+        "uom": "LF"
+      }
+    ],
+    "materials": [],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "11/11/24",
+    "name": "Gutter Template Simple",
+    "trade": "GUTTERS",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/3a252f83-0174-4066-9209-8e592a416bab",
+    "id": "3a252f83-0174-4066-9209-8e592a416bab",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/3a252f83-0174-4066-9209-8e592a416bab",
+    "customMaterials": [
+      {
+        "name": "THIS PRODUCT EXISTS SO A PRODUCTION SCHEDULE CAN BE BUILT",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "GUTTERS 5\"",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "GUTTERS 6\"",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "DOWNSPOUTS 2\"X3\"",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "DOWNSPOUTS 3\"X4\"",
+        "rules": "",
+        "uom": "LF"
+      }
+    ],
+    "materials": [],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "5/20/24",
+    "name": "MP 210 - 24 GA Galvalume",
+    "trade": "METAL_ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/206c1006-8277-4a76-af73-09c0e630ca94",
+    "id": "206c1006-8277-4a76-af73-09c0e630ca94",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/206c1006-8277-4a76-af73-09c0e630ca94",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [],
+    "materials": [
+      {
+        "name": "MP 210 STANDING SEAM - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "MP 210 PANEL CLIPS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 210 DRIP EDGE - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 INSIDE PITCH CHANGE - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 OUTSIDE PITCH CHANGE - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 RAKE TRIM - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 NORMAL RIDGE - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 WIDE RIDGE - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 W VALLEY - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 VALLEY CLEAT -10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 SNOW BAR - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "S-5 MINI CLAMP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 210 SIDE WALL TRIM - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 END WALL TRIM - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 SOLID Z BAR - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 VENTED Z BAR - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #3",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #6",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #9",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL SPLIT BOOT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PLASTIC CAP NAILS - 1 1/4\" (2000CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 5/8\" CONCEALER SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 1/2\" PANELTITE SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "RIVETS (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "NOVAFLEX SEALANT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BUTYL TAPE - 1\"X45\"",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "BROAN 636 BATH VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN 634 KITCHEN VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "FT SYNTHETICS PLATINUM HTB (2 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "RHINO U20 SYNTHETIC FELT (10 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "24 GA GALVALUME FLAT SHEET - 4'X10'",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "5/20/24",
+    "name": "MP 210 - 24 GA Premium Color",
+    "trade": "METAL_ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/25077f73-a796-4e68-b89d-727ccfccad47",
+    "id": "25077f73-a796-4e68-b89d-727ccfccad47",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/25077f73-a796-4e68-b89d-727ccfccad47",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [],
+    "materials": [
+      {
+        "name": "MP 210 STANDING SEAM - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "MP 210 PANEL CLIPS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 210 DRIP EDGE - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 INSIDE PITCH CHANGE - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 OUTSIDE PITCH CHANGE - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 RAKE TRIM - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 NORMAL RIDGE - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 WIDE RIDGE - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 W VALLEY - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 VALLEY CLEAT -10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 SNOW BAR - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "S-5 MINI CLAMP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 210 SIDE WALL TRIM - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 END WALL TRIM - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 SOLID Z BAR - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 VENTED Z BAR - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #3",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #6",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #9",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL SPLIT BOOT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PLASTIC CAP NAILS - 1 1/4\" (2000CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 5/8\" CONCEALER SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 1/2\" PANELTITE SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "RIVETS (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "NOVAFLEX SEALANT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BUTYL TAPE - 1\"X45\"",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "BROAN 636 BATH VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN 634 KITCHEN VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "FT SYNTHETICS PLATINUM HTB (2 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "RHINO U20 SYNTHETIC FELT (10 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "24 GA PREMIUM FLAT SHEET - 4'X10'",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "5/20/24",
+    "name": "MP 210 - 24 GA Standard Color",
+    "trade": "METAL_ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/7c0da186-8d59-41a8-abbb-5f4f2b91c43c",
+    "id": "7c0da186-8d59-41a8-abbb-5f4f2b91c43c",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/7c0da186-8d59-41a8-abbb-5f4f2b91c43c",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [],
+    "materials": [
+      {
+        "name": "MP 210 STANDING SEAM - 24 GA STANDARD",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "MP 210 PANEL CLIPS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 210 DRIP EDGE - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 INSIDE PITCH CHANGE - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 OUTSIDE PITCH CHANGE - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 RAKE TRIM - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 NORMAL RIDGE - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 WIDE RIDGE - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 W VALLEY - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 VALLEY CLEAT -10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 SNOW BAR - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "S-5 MINI CLAMP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 210 SIDE WALL TRIM - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 END WALL TRIM - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 SOLID Z BAR - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 210 VENTED Z BAR - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #3",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #6",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #9",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL SPLIT BOOT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PLASTIC CAP NAILS - 1 1/4\" (2000CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 5/8\" CONCEALER SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 1/2\" PANELTITE SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "RIVETS (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "NOVAFLEX SEALANT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BUTYL TAPE - 1\"X45\"",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "BROAN 636 BATH VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN 634 KITCHEN VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "FT SYNTHETICS PLATINUM HTB (2 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "RHINO U20 SYNTHETIC FELT (10 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "24 GA STANDARD FLAT SHEET - 4'X10'",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "5/20/24",
+    "name": "MP 675 - 24 GA Galvalume",
+    "trade": "METAL_ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/f4658d86-fce7-4418-9c59-386336a6fc6c",
+    "id": "f4658d86-fce7-4418-9c59-386336a6fc6c",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/f4658d86-fce7-4418-9c59-386336a6fc6c",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [],
+    "materials": [
+      {
+        "name": "MP 675 STANDING SEAM - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "MP 675 PANEL CLIPS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 DRIP EDGE - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 INSIDE PITCH CHANGE - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 OUTSIDE PITCH CHANGE - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 RAKE TRIM - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 NORMAL RIDGE - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 WIDE RIDGE - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 W VALLEY - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VALLEY CLEAT -10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SNOW BAR - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "S-5 MINI CLAMP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 SIDE WALL TRIM - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 END WALL TRIM - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SOLID Z BAR - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VENTED Z BAR - 10' - 24 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #3",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #6",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #9",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL SPLIT BOOT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PLASTIC CAP NAILS - 1 1/4\" (2000CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 5/8\" CONCEALER SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 1/2\" PANELTITE SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "RIVETS (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "NOVAFLEX SEALANT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BUTYL TAPE - 1\"X45\"",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "BROAN 636 BATH VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN 634 KITCHEN VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "FT SYNTHETICS PLATINUM HTB (2 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "RHINO U20 SYNTHETIC FELT (10 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "24 GA GALVALUME FLAT SHEET - 4'X10'",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "5/20/24",
+    "name": "MP 675 - 24 GA Premium Color",
+    "trade": "METAL_ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/1b318058-f76d-4cf1-84b0-b7458ef666a6",
+    "id": "1b318058-f76d-4cf1-84b0-b7458ef666a6",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/1b318058-f76d-4cf1-84b0-b7458ef666a6",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [],
+    "materials": [
+      {
+        "name": "MP 675 STANDING SEAM - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "MP 675 PANEL CLIPS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 DRIP EDGE - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 INSIDE PITCH CHANGE - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 OUTSIDE PITCH CHANGE - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 RAKE TRIM - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 NORMAL RIDGE - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 WIDE RIDGE - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 W VALLEY - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VALLEY CLEAT -10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SNOW BAR - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "S-5 MINI CLAMP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 SIDE WALL TRIM - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 END WALL TRIM - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SOLID Z BAR - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VENTED Z BAR - 10' - 24 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #3",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #6",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #9",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL SPLIT BOOT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PLASTIC CAP NAILS - 1 1/4\" (2000CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 5/8\" CONCEALER SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 1/2\" PANELTITE SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "RIVETS (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "NOVAFLEX SEALANT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BUTYL TAPE - 1\"X45\"",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "BROAN 636 BATH VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN 634 KITCHEN VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "FT SYNTHETICS PLATINUM HTB (2 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "RHINO U20 SYNTHETIC FELT (10 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "24 GA PREMIUM FLAT SHEET - 4'X10'",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "5/20/24",
+    "name": "MP 675 - 24 GA Standard Color",
+    "trade": "METAL_ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/2e6e8bb4-ff6d-4f3c-8bd5-266a1dc2cfc1",
+    "id": "2e6e8bb4-ff6d-4f3c-8bd5-266a1dc2cfc1",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/2e6e8bb4-ff6d-4f3c-8bd5-266a1dc2cfc1",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "METAL ROOF INSTALL (SQ) Custom Labor",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "METAL ROOF TRIM Custom Labor",
+        "rules": "",
+        "uom": "LF"
+      },
+      {
+        "name": "STEEP CHARGE 8/12+ Custom Labor",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "2 STORY CHARGE Custom Labor",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "3 STORY CHARGE Custom Labor",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "CHIMNEY FLASHING Custom Labor",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "SKYLIGHT FLASHING Custom Labor",
+        "rules": "",
+        "uom": "SQ"
+      }
+    ],
+    "materials": [
+      {
+        "name": "MP 675 STANDING SEAM - 24 GA STANDARD",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "MP 675 PANEL CLIPS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 DRIP EDGE - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 INSIDE PITCH CHANGE - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 OUTSIDE PITCH CHANGE - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 RAKE TRIM - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 NORMAL RIDGE - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 WIDE RIDGE - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 W VALLEY - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VALLEY CLEAT -10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SNOW BAR - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "S-5 MINI CLAMP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 SIDE WALL TRIM - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 END WALL TRIM - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SOLID Z BAR - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VENTED Z BAR - 10' - 24 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "PLASTIC CAP NAILS - 1 1/4\" (2000CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 5/8\" CONCEALER SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 1/2\" PANELTITE SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "RIVETS (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "NOVAFLEX SEALANT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BUTYL TAPE - 1\"X45\"",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "FT SYNTHETICS PLATINUM HTB (2 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "RHINO U20 SYNTHETIC FELT (10 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #3",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #6",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #9",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL SPLIT BOOT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN 636 BATH VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN 634 KITCHEN VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "24 GA STANDARD FLAT SHEET - 4'X10'",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "5/20/24",
+    "name": "MP 675 - 26 GA Galvalume",
+    "trade": "METAL_ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/6bb567aa-cc5e-4fb3-a741-f239960bd369",
+    "id": "6bb567aa-cc5e-4fb3-a741-f239960bd369",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/6bb567aa-cc5e-4fb3-a741-f239960bd369",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [],
+    "materials": [
+      {
+        "name": "MP 675 STANDING SEAM - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "MP 675 PANEL CLIPS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 DRIP EDGE - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 INSIDE PITCH CHANGE - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 OUTSIDE PITCH CHANGE - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 RAKE TRIM - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 NORMAL RIDGE - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 WIDE RIDGE - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 W VALLEY - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VALLEY CLEAT -10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SNOW BAR - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "S-5 MINI CLAMP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 SIDE WALL TRIM - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 END WALL TRIM - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SOLID Z BAR - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VENTED Z BAR - 10' - 26 GA GALVALUME",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #3",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #6",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #9",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL SPLIT BOOT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PLASTIC CAP NAILS - 1 1/4\" (2000CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 5/8\" CONCEALER SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 1/2\" PANELTITE SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "RIVETS (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "NOVAFLEX SEALANT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BUTYL TAPE - 1\"X45\"",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "BROAN 636 BATH VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN 634 KITCHEN VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "FT SYNTHETICS PLATINUM HTB (2 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "RHINO U20 SYNTHETIC FELT (10 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "26 GA GALVALUME FLAT SHEET - 4'X10'",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "5/20/24",
+    "name": "MP 675 - 26 GA Premium Color",
+    "trade": "METAL_ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/8e2e86ba-2904-43e5-8ea3-86aff027623e",
+    "id": "8e2e86ba-2904-43e5-8ea3-86aff027623e",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/8e2e86ba-2904-43e5-8ea3-86aff027623e",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [],
+    "materials": [
+      {
+        "name": "MP 675 STANDING SEAM - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "MP 675 PANEL CLIPS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 DRIP EDGE - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 INSIDE PITCH CHANGE - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 OUTSIDE PITCH CHANGE - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 RAKE TRIM - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 NORMAL RIDGE - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 WIDE RIDGE - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 W VALLEY - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VALLEY CLEAT -10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SNOW BAR - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "S-5 MINI CLAMP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 SIDE WALL TRIM - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 END WALL TRIM - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SOLID Z BAR - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VENTED Z BAR - 10' - 26 GA PREMIUM",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #3",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #6",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #9",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL SPLIT BOOT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PLASTIC CAP NAILS - 1 1/4\" (2000CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 5/8\" CONCEALER SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 1/2\" PANELTITE SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "RIVETS (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "NOVAFLEX SEALANT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BUTYL TAPE - 1\"X45\"",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "BROAN 636 BATH VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN 634 KITCHEN VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "FT SYNTHETICS PLATINUM HTB (2 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "RHINO U20 SYNTHETIC FELT (10 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "26 GA PREMIUM FLAT SHEET - 4'X10'",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "5/20/24",
+    "name": "MP 675 - 26 GA Standard Color",
+    "trade": "METAL_ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/4152dd0c-98ed-4ab8-858b-d011450aba89",
+    "id": "4152dd0c-98ed-4ab8-858b-d011450aba89",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/4152dd0c-98ed-4ab8-858b-d011450aba89",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [],
+    "materials": [
+      {
+        "name": "MP 675 STANDING SEAM - 26 GA STANDARD",
+        "rules": "",
+        "uom": "SQ"
+      },
+      {
+        "name": "MP 675 PANEL CLIPS",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 DRIP EDGE - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 INSIDE PITCH CHANGE - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 OUTSIDE PITCH CHANGE - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 RAKE TRIM - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 NORMAL RIDGE - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 WIDE RIDGE - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 W VALLEY - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VALLEY CLEAT -10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SNOW BAR - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "S-5 MINI CLAMP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "MP 675 SIDE WALL TRIM - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 END WALL TRIM - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 SOLID Z BAR - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "MP 675 VENTED Z BAR - 10' - 26 GA STANDARD",
+        "rules": "",
+        "uom": "PC"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #3",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #6",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL PIPE BOOT #9",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "DEKTITE METAL SPLIT BOOT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PLASTIC CAP NAILS - 1 1/4\" (2000CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 5/8\" CONCEALER SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "1 1/2\" PANELTITE SCREW (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "RIVETS (250CNT)",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "NOVAFLEX SEALANT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BUTYL TAPE - 1\"X45\"",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "BROAN 636 BATH VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN 634 KITCHEN VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "FT SYNTHETICS PLATINUM HTB (2 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "RHINO U20 SYNTHETIC FELT (10 SQ)",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "26 GA STANDARD FLAT SHEET - 4'X10'",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "9/22/23",
+    "name": "Owens Corning (ABC Master)",
+    "trade": "ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/2696dbd8-85b1-4d3e-8dbd-a37202c28fc1",
+    "id": "2696dbd8-85b1-4d3e-8dbd-a37202c28fc1",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/2696dbd8-85b1-4d3e-8dbd-a37202c28fc1",
+    "customMaterials": [],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "REMOVE & REPLACE ROOFING",
+        "rules": "Product Type REMOVE AND REPLACE ROOFING Coverage 1 SQ Product Options ROOF PITCH RANGE Minimum Pitch /12 Maximum Pitch /12",
+        "uom": "SQ"
+      },
+      {
+        "name": "DUMP FEE",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "REMOVE 2ND LAYER",
+        "rules": "",
+        "uom": "SQ"
+      }
+    ],
+    "materials": [
+      {
+        "name": "OWENS CORNING, DURATION",
+        "rules": "Product Type SHINGLE Coverage 1 SQ",
+        "uom": "SQ"
+      },
+      {
+        "name": "OWENS CORNING, PROEDGE HIP & RIDGE",
+        "rules": "Product Type HIP AND RIDGE SHINGLES Coverage 27 LF",
+        "uom": "BD"
+      },
+      {
+        "name": "OWENS CORNING, STARTER, STRIP PLUS",
+        "rules": "Product Type ROOFING STARTER Coverage 100 LF Product Options INCLUDE RAKES",
+        "uom": "BD"
+      },
+      {
+        "name": "RESISTO ICE & WATER SHIELD 2SQ",
+        "rules": "Product Type ICE AND WATER Coverage 60 LF",
+        "uom": "RL"
+      },
+      {
+        "name": "ABC PRO GUARD 20 SYNTHETIC 10SQ",
+        "rules": "Product Type FELT Coverage 10 SQ Product Options ROOF PITCH RANGE Minimum Pitch /12 Maximum Pitch /12",
+        "uom": "RL"
+      },
+      {
+        "name": "ACM, DRIP EDGE",
+        "rules": "Product Type DRIP EDGES Coverage 10 LF Product Options USING GUTTER APRON",
+        "uom": "PC"
+      },
+      {
+        "name": "ACM, GUTTER APRON",
+        "rules": "Product Type GUTTER APRON Coverage 10 LF",
+        "uom": "PC"
+      },
+      {
+        "name": "SLANT BACK, ROOF VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "AIRVENT SHINGLE RIDGE VENT 4'",
+        "rules": "Product Type RIDGE VENTS Coverage 4 LF",
+        "uom": "PC"
+      },
+      {
+        "name": "GENERIC LEAD BOOT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PIPE FLASHING PLASTIC 1\"-3\"",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PIPE FLASHING PLASTIC 3\"-4\"",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "QAP, SMOOTH TRIM COIL",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "OSI, QUAD, CAULK",
+        "rules": "Product Type ROOFING CAULK Coverage 15 SQ",
+        "uom": "EA"
+      },
+      {
+        "name": "7/16\" GENERIC OSB",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "STEP FLASHING 5\"X7\"",
+        "rules": "Product Type STEP FLASHING Coverage 58 LF",
+        "uom": "BD"
+      },
+      {
+        "name": "COIL NAILS 1-1/4\"",
+        "rules": "Product Type NAILS Coverage 15 SQ",
+        "uom": "BX"
+      },
+      {
+        "name": "GENERIC PLASTIC CAP NAILS 1-1/4\"",
+        "rules": "Product Type NAILS Coverage 20 SQ",
+        "uom": "BX"
+      },
+      {
+        "name": "GENERIC TOUCH UP SPRAY PAINT",
+        "rules": "Product Type SHINGLE Coverage 20 SQ",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC W VALLEY METAL",
+        "rules": "Product Type VALLEY METAL Coverage 10 LF",
+        "uom": "PC"
+      },
+      {
+        "name": "BROAN, 4\", EXHAUST VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "BROAN, 8\", EXHAUST VENT",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "GENERIC ROOF PLUG 8\"X8\"",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
+    "created": "3/19/26",
+    "name": "Reimagine - Shingles - Essentials (Re-build in SRS)",
+    "trade": "ROOFING",
+    "url": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/e5d52d74-01b7-413e-a4f6-b52c7fe27374",
+    "id": "e5d52d74-01b7-413e-a4f6-b52c7fe27374",
+    "blazeUrl": "https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/e5d52d74-01b7-413e-a4f6-b52c7fe27374",
+    "customMaterials": [
+      {
+        "name": "IKO CAMBRIDGE",
+        "rules": "Product Type SHINGLE Coverage 0.33 SQ",
+        "uom": "BD"
+      },
+      {
+        "name": "IKO HIP & RIDGE 12 ALGAE RESISTANT - 33 LF",
+        "rules": "Product Type HIP AND RIDGE SHINGLES Coverage 33 LF",
+        "uom": "BD"
+      },
+      {
+        "name": "VERDE INDUSTRIES 2X2 DRIP EDGE",
+        "rules": "Product Type DRIP EDGES Coverage 10 LF",
+        "uom": "PC"
+      },
+      {
+        "name": "VERDE 2.0\" CONE PIPE FLASHING STANDARD GALVANIZED",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "VERDE 1.5\" CONE PIPE FLASHING STANDARD GALVANIZED",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "VERDE 4\" CONE PIPE FLASHING STANDARD GALVANIZED",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "VERDE 3\" CONE PIPE FLASHING STANDARD GALVANIZED",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "VERDE INDUSTRIES 7\" GALVANIZED STD T-TOP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "VERDE INDUSTRIES 4\" GALVANIZED STD T-TOP",
+        "rules": "",
+        "uom": "EA"
+      },
+      {
+        "name": "PAINT ABC ROOF ACCESSORY",
+        "rules": "Product Type ROOFING SPRAY PAINT Coverage 4 EA",
+        "uom": "EA"
+      },
+      {
+        "name": "MULEHIDE JTS1 SEALANT",
+        "rules": "Product Type ROOFING CAULK Coverage 7 SQ",
+        "uom": "EA"
+      },
+      {
+        "name": "MULE-HIDE 210 PLASTIC CEMENT 3 GALLONS",
+        "rules": "",
+        "uom": "EA"
+      }
+    ],
+    "instructions": "",
+    "labor": [
+      {
+        "name": "REMOVE & REPLACE ROOFING",
+        "rules": "",
+        "uom": "SQ"
+      }
+    ],
+    "materials": [
+      {
+        "name": "RESISTO ICE & WATER SHIELD 2SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "IKO LEADING EDGE PLUS STARTER STRIP",
+        "rules": "",
+        "uom": "BD"
+      },
+      {
+        "name": "COIL NAILS 1-1/4\"",
+        "rules": "",
+        "uom": "BX"
+      },
+      {
+        "name": "PLASTIC CAP NAILS 1\"",
+        "rules": "",
+        "uom": "BX"
+      },
+      {
+        "name": "ABC PRO GUARD 20 SYNTHETIC 10SQ",
+        "rules": "",
+        "uom": "RL"
+      },
+      {
+        "name": "IKO, CAMBRIDGE",
+        "rules": "",
+        "uom": "SQ"
+      }
+    ],
+    "supplier": "",
+    "supplierLocation": ""
+  },
+  {
+    "active": "",
     "created": "7/7/26",
     "name": "Reimagine - SRS, Albuquerque - Tile POM",
     "trade": "ROOFING",
