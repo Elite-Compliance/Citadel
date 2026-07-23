@@ -44,7 +44,7 @@ async function selectRegion(page, region) {
   const picker = page.getByRole('combobox').first();
   await picker.click();
   await page.getByRole('option', { name: region, exact: true }).click();
-  await waitForOrdersTable(page, ORDER_STAGES[0]);
+  await page.locator('ng-http-loader .backdrop').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
 }
 
 async function selectStage(page, stage) {
