@@ -1,3 +1,4 @@
+
 import { chromium } from 'playwright';
 import { ensureAuthenticated } from './blaze.mjs';
 import { moneyNumber, stableId, stateCode } from './orders-compare.mjs';
@@ -73,8 +74,10 @@ async function readVisibleOrderRows(page, region, stage) {
 
 async function discoverOrders(page) {
   await page.goto(PRODUCTION_ORDERS_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await waitForOrdersTable(page);
   const regions = await regionNames(page);
+  if (!regions.length) {
+    throw new Error('Blaze did not provide any production-order regions.');
+  }
   const discovered = [];
   for (const region of regions) {
     await selectRegion(page, region);
