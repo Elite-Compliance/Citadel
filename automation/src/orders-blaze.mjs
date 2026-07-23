@@ -1,4 +1,3 @@
-
 import { chromium } from 'playwright';
 import { ensureAuthenticated } from './blaze.mjs';
 import { moneyNumber, stableId, stateCode } from './orders-compare.mjs';
@@ -26,8 +25,12 @@ function stagePanel(page, stage) {
   return page.getByLabel(stage, { exact: true });
 }
 
+function visibleStageTable(page, stage) {
+  return stagePanel(page, stage).locator('table:visible').first();
+}
+
 async function waitForOrdersTable(page, stage) {
-  await stagePanel(page, stage).getByRole('columnheader', { name: 'Job Number', exact: true })
+  await visibleStageTable(page, stage).getByRole('columnheader', { name: 'Job Number', exact: true })
     .waitFor({ state: 'visible', timeout: 60000 });
   await page.locator('ng-http-loader .backdrop').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
 }
@@ -54,7 +57,7 @@ async function selectStage(page, stage) {
 }
 
 async function readVisibleOrderRows(page, region, stage) {
-  return stagePanel(page, stage).locator('table tbody tr').evaluateAll((elements, context) => elements.map((row) => {
+  return visibleStageTable(page, stage).locator('tbody tr').evaluateAll((elements, context) => elements.map((row) => {
     const cells = [...row.querySelectorAll('td')];
     const link = cells[4]?.querySelector('a');
     if (!link) return null;
