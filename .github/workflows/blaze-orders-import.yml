@@ -1,0 +1,53 @@
+Exit code: 0
+Wall time: 2.1 seconds
+Output:
+name: Blaze Orders Import
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: blaze-orders-import
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  export-compare-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: automation
+    env:
+      BLAZE_EMAIL: ${{ secrets.BLAZE_EMAIL }}
+      BLAZE_PASSWORD: ${{ secrets.BLAZE_PASSWORD }}
+      BLAZE_TOTP_SECRET: ${{ secrets.BLAZE_TOTP_SECRET }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      ORDERS_SPREADSHEET_ID: 1peF6ujpJGi_vugM7hanoL06KLNUC_tarAOoW2dW6QfQ
+      PRICING_SPREADSHEET_ID: 1kF3oCkjkMzAqwohT-pYk2CSKkZ0C5hGx3aPee9XsIgY
+    steps:
+      - name: Check out Citadel
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install automation dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check Orders automation code
+        run: npm run check:orders
+
+      - name: Test Orders pricing comparison
+        run: npm run test:orders
+
+      - name: Import protected 2026 Orders data
+        run: npm run run:orders
+
