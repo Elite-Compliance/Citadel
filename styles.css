@@ -937,3 +937,10 @@ body[data-theme="light"] .supplier-item-list button{background:#12365b;color:#ff
 @media(max-width:1100px){.data-resource-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:900px){.data-connection-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.data-import-grid{grid-template-columns:1fr}.data-card-actions{flex-basis:min(320px,48%)}}
 @media(max-width:560px){.data-connections-intro,.data-connections-section{padding:10px}.data-connection-grid,.data-resource-grid{grid-template-columns:1fr}.data-import-card,.data-resource-card{align-items:stretch;flex-direction:column}.data-card-actions{grid-template-columns:1fr;flex-basis:auto}.data-import-card button,.data-import-card .data-link-button,.data-resource-card .data-link-button{width:100%}.data-admin-links{display:grid;grid-template-columns:1fr}.lien-import-modal-backdrop,.payment-import-modal-backdrop{padding:8px!important}.import-run-modal{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}}
+/* Contractor crew list */
+.contractor-crews{min-width:0}
+.contractor-crew-list{display:grid;gap:6px;min-width:0}
+.contractor-crew-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px;min-width:0;padding:8px 0;border-top:1px solid var(--line)}
+.contractor-crew-row strong{min-width:0;line-height:1.3;overflow-wrap:anywhere}
+.contractor-crew-row span{align-self:start;padding:2px 7px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:.75rem;font-weight:700;line-height:1.3;white-space:nowrap;text-transform:capitalize}
+@media(max-width:520px){.contractor-crew-row{grid-template-columns:1fr}.contractor-crew-row span{justify-self:start}}
