@@ -57,26 +57,61 @@ async function selectStage(page, stage) {
 }
 
 async function readVisibleOrderRows(page, region, stage) {
-  return visibleStageTable(page, stage).locator('tbody tr').evaluateAll((elements, context) => elements.map((row) => {
-    const cells = [...row.querySelectorAll('td')];
-    const link = cells[4]?.querySelector('a');
-    if (!link) return null;
-    return {
-      region: context.region,
-      dashboard_stage: context.stage,
-      supplier: cells[1]?.textContent?.trim() || '',
-      trade: cells[2]?.textContent?.trim() || '',
-      job_number: cells[3]?.textContent?.trim() || '',
-      customer: cells[4]?.textContent?.trim() || '',
-      job_href: link.getAttribute('href') || '',
-      customer_phone: cells[5]?.textContent?.trim() || '',
-      location: cells[6]?.textContent?.trim() || '',
-      supplier_notified_at: cells[7]?.textContent?.trim() || '',
-      supplier_acknowledged_at: cells[8]?.textContent?.trim() || '',
-      material_status: cells[9]?.textContent?.trim() || '',
-      delivery_date: cells[10]?.textContent?.trim() || ''
+  return visibleStageTable(page, stage).evaluate((table, context) => {
+    const headers = [...table.querySelectorAll('thead th')].map((header) => (
+      header.textContent?.replace(/\s+/g, ' ').trim().toLowerCase() || ''
+    ));
+    const column = (name) => headers.indexOf(name.toLowerCase());
+    const value = (cells, name) => {
+      const index = column(name);
+      return index >= 0 ? cells[index]?.textContent?.replace(/\s+/g, ' ').trim() || '' : '';
     };
-  }).filter(Boolean), { region, stage });
+    return [...table.querySelectorAll('tbody tr')].map((row) => {
+      const cells = [...row.querySelectorAll('td')];
+      const link = row.querySelector('a[href*="job-dashboard"]');
+      if (!link) return null;
+      return {
+        region: context.region,
+        dashboard_stage: context.stage,
+        supplier: value(cells, 'Supplier'),
+        trade: value(cells, 'Trade'),
+        job_number: value(cells, 'Job Number'),
+        customer: value(cells, 'Customer'),
+        job_href: link.getAttribute('href') || '',
+        customer_phone: value(cells, 'Phone'),
+        location: value(cells, 'Location'),
+        supplier_notified_at: value(cells, 'Supplier Notified'),
+        supplier_acknowledged_at: value(cells, 'Supplier Acknowledged'),
+        material_status: value(cells, 'Material Status'),
+        delivery_date: value(cells, 'Delivery Date')
+      };
+    }).filter(Boolean);
+  }, { region, stage });
+}
+
+async function readAllStageRows(page, region, stage) {
+  const rows = [];
+  const panel = stagePanel(page, stage);
+  const next = panel.getByRole('button', { name: 'Next page', exact: true });
+  for (let pageNumber = 1; pageNumber <= 250; pageNumber += 1) {
+    rows.push(...await readVisibleOrderRows(page, region, stage));
+    if (!(await next.count()) || await next.isDisabled()) break;
+    const previousRows = await visibleStageTable(page, stage).locator('tbody').innerText();
+    await next.click();
+    await page.locator('ng-http-loader .backdrop').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
+    await visibleStageTable(page, stage).locator('tbody').waitFor({ state: 'visible', timeout: 30000 });
+    await page.waitForFunction(
+      ({ stageName, previous }) => {
+        const panels = [...document.querySelectorAll('[role="tabpanel"]')];
+        const panelElement = panels.find((candidate) => candidate.getAttribute('aria-label') === stageName);
+        const body = panelElement?.querySelector('table tbody');
+        return body && body.innerText !== previous;
+      },
+      { stageName: stage, previous: previousRows },
+      { timeout: 30000 }
+    ).catch(() => {});
+  }
+  return rows;
 }
 
 async function discoverOrders(page) {
@@ -90,7 +125,7 @@ async function discoverOrders(page) {
     await selectRegion(page, region);
     for (const stage of ORDER_STAGES) {
       await selectStage(page, stage);
-      const rows = await readVisibleOrderRows(page, region, stage);
+      const rows = await readAllStageRows(page, region, stage);
       discovered.push(...rows);
     }
   }
@@ -125,9 +160,11 @@ async function openOrdersTab(page, jobUrl) {
 }
 
 async function definitionAfterTerm(scope, label) {
-  const term = scope.getByRole('term', { name: label, exact: true }).first();
-  if (!(await term.count())) return '';
-  return clean(await term.locator('xpath=following-sibling::*[1]').innerText().catch(() => ''));
+  return clean(await scope.locator('dt').evaluateAll((terms, expected) => {
+    const normalize = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
+    const term = terms.find((candidate) => normalize(candidate.textContent) === expected);
+    return term?.nextElementSibling?.textContent || '';
+  }, label));
 }
 
 async function headingSections(page) {
@@ -179,10 +216,10 @@ async function readRowsByHeader(page, headerPattern, lineType, state) {
 }
 
 async function readCrews(page) {
-  const crews = await page.getByRole('term', { name: 'Crew', exact: true }).evaluateAll((terms) => terms.map((term) => {
-    const definition = term.nextElementSibling;
-    return definition?.textContent?.trim() || '';
-  }).filter(Boolean));
+  const crews = await page.locator('dt').evaluateAll((terms) => terms
+    .filter((term) => term.textContent?.replace(/\s+/g, ' ').trim() === 'Crew')
+    .map((term) => term.nextElementSibling?.textContent?.replace(/\s+/g, ' ').trim() || '')
+    .filter(Boolean));
   return [...new Set(crews)];
 }
 
@@ -243,6 +280,9 @@ export async function exportOrders(credentials) {
     await ensureAuthenticated(page, credentials);
     const discovery = await discoverOrders(page);
     const groups = orderGroup(discovery.rows);
+    if (!groups.length) {
+      throw new Error('No Blaze production orders were discovered; protected order data was not changed.');
+    }
     const results = [];
     let cursor = 0;
     const workerCount = Math.min(3, groups.length);
@@ -265,14 +305,19 @@ export async function exportOrders(credentials) {
         await worker.close();
       }
     }));
+    const records = results.filter(Boolean);
+    if (!records.length) {
+      throw new Error(`Blaze exposed ${groups.length} jobs, but none produced a valid 2026 order; protected order data was not changed.`);
+    }
     return {
       regionsExpected: discovery.regions.length,
       regionsCompleted: discovery.regions.length,
       jobsDiscovered: groups.length,
-      records: results.filter(Boolean)
+      records
     };
   } finally {
     await context.close();
     await browser.close();
   }
 }
+
