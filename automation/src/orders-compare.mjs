@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 1.9 seconds
-Output:
 import crypto from 'node:crypto';
 
 const UOM_ALIASES = new Map([
@@ -213,5 +210,4 @@ export function aggregateOrder(order, lines) {
     comparison_status: comparisonStatus
   };
 }
-
 
