@@ -1,6 +1,6 @@
 const CITADEL_VERSION='2.1.2';
 const CITADEL_INITIAL_ADMIN_EMAIL = 'amashalom21@gmail.com';
-const CITADEL_ACCESS_MODULES = ['command-center', 'region-health', 'data-connections', 'inbox', 'tasks', 'legal', 'reviews', 'pricing', 'fleet', 'contractors', 'registrations', 'liens', 'suppliers', 'collections'];
+const CITADEL_ACCESS_MODULES = ['command-center', 'region-health', 'data-connections', 'inbox', 'tasks', 'legal', 'reviews', 'pricing', 'templates', 'fleet', 'contractors', 'registrations', 'liens', 'suppliers', 'collections'];
 const CITADEL_APP_ORIGIN = 'https://elite-compliance.github.io';
 const CITADEL_SESSION_HOURS = 8;
 const CITADEL_PASSWORD_ITERATIONS = 600000;
@@ -88,6 +88,7 @@ const SHEETS = {
   supplierNotes: 'SupplierNotes',
   supplierAlerts: 'SupplierAlerts',
   supplierAudit: 'SupplierAudit',
+  templatePriceOverrides: 'TemplatePriceOverrides',
   paymentImport: 'PaymentImport',
   paymentTransactions: 'Payments',
   paymentSummary: 'PaymentSummary',
@@ -130,6 +131,7 @@ const SUPPLIER_DOCUMENT_HEADERS = ['document_id', 'supplier_id', 'document_type'
 const SUPPLIER_NOTE_HEADERS = ['note_id', 'supplier_id', 'note_text', 'created_at', 'created_by'];
 const SUPPLIER_ALERT_HEADERS = ['alert_id', 'supplier_id', 'alert_text', 'due_date', 'status', 'created_at', 'created_by', 'resolved_at', 'resolved_by'];
 const SUPPLIER_AUDIT_HEADERS = ['audit_id', 'supplier_id', 'action', 'field_name', 'prior_value', 'new_value', 'changed_at', 'changed_by'];
+const TEMPLATE_PRICE_OVERRIDE_HEADERS = ['override_id', 'template_id', 'template_name', 'line_type', 'line_key', 'product_name', 'uom', 'manual_price', 'reason', 'source_match_key', 'active', 'created_at', 'created_by', 'updated_at', 'updated_by'];
 
 const COLLECTION_RECORD_HEADERS = ['collection_id', 'lien_id', 'assigned_attorney_id', 'assigned_attorney_name', 'collection_agency', 'date_sent_to_agency', 'amount_outstanding', 'amount_collected', 'amount_we_receive', 'date_received', 'tracking_status', 'created_at', 'updated_by', 'last_updated', 'active'];
 const COLLECTION_NOTE_HEADERS = ['note_id', 'collection_id', 'note_date', 'note_by', 'note_type', 'note_text', 'active'];
@@ -216,6 +218,14 @@ function doGet(e) {
 
     if (action === 'getPricing') {
       return output_(e, { ok: true, data: getPricing(e), version: CITADEL_VERSION });
+    }
+
+    if (action === 'getTemplatePriceOverrides') {
+      return output_(e, { ok: true, data: getTemplatePriceOverrides(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'saveTemplatePriceOverride') {
+      return output_(e, { ok: true, data: saveTemplatePriceOverride(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
     }
 
     if (action === 'getReviews') {
@@ -408,9 +418,25 @@ function doPost(e) {
       verifyLienAutomationToken_(payload.token);
       return output_(e, { ok: true, data: recordFleetAutomationRun_(payload), version: CITADEL_VERSION });
     }
+    const supplierPostActions = {
+      saveSupplierAccount: saveSupplierAccount,
+      saveSupplierContact: saveSupplierContact,
+      saveSupplierDocument: saveSupplierDocument,
+      saveSupplierNote: saveSupplierNote,
+      saveSupplierAlert: saveSupplierAlert
+    };
+    if (supplierPostActions[action]) {
+      e.parameter = Object.assign({}, payload);
+      CITADEL_REQUEST_CONTEXT = authorizeCitadelRequest_(e, action);
+      return citadelLoginBridgeOutput_({
+        ok: true,
+        data: supplierPostActions[action](payload),
+        version: CITADEL_VERSION
+      });
+    }
     return output_(e, { ok: false, error: 'Unknown action: ' + action });
   } catch (error) {
-    if (action === 'loginWithPassword') {
+    if (action === 'loginWithPassword' || /^saveSupplier/.test(action)) {
       return citadelLoginBridgeOutput_({ ok: false, error: error.message || String(error) });
     }
     return output_(e, { ok: false, error: error.message || String(error) });
@@ -473,6 +499,20 @@ function initializeCitadelAdministrator() {
     throw new Error('The administrator password is already configured. Reset it from Citadel User Access.');
   }
 
+  return setCitadelAdministratorPassword_(existing, 'initialize_administrator');
+}
+
+function resetCitadelAdministratorPassword() {
+  setupAccessControl();
+  const email = normalizeEmail_(CITADEL_INITIAL_ADMIN_EMAIL);
+  const users = readSheetObjects_(SPREADSHEETS.commandCenter, SHEETS.citadelUsers);
+  const existing = users.find(function(user) { return normalizeEmail_(user.email) === email; });
+  if (!existing) throw new Error('The administrator account is unavailable.');
+  return setCitadelAdministratorPassword_(existing, 'reset_administrator_password');
+}
+
+function setCitadelAdministratorPassword_(existing, auditAction) {
+  const email = normalizeEmail_(existing.email);
   const temporaryPassword = (secureCitadelToken_() + secureCitadelToken_()).replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
   const salt = secureCitadelToken_();
   const proof = citadelPbkdf2FirstBlock_(temporaryPassword, salt);
@@ -489,8 +529,9 @@ function initializeCitadelAdministrator() {
     updated_by: email
   });
   upsertSheetObject_(SPREADSHEETS.commandCenter, SHEETS.citadelUsers, 'email', email, record);
+  revokeCitadelUserSessions_(record.user_id, email);
   PropertiesService.getScriptProperties().setProperty('CITADEL_AUTH_ENFORCEMENT', 'true');
-  appendAccessAudit_({ user_id: record.user_id, email: email, action: 'initialize_administrator', resource: 'citadel', outcome: 'allowed', details: 'Administrator-managed password authentication enabled.' });
+  appendAccessAudit_({ user_id: record.user_id, email: email, action: auditAction, resource: 'citadel', outcome: 'allowed', details: 'Administrator-managed password authentication updated.' });
   const result = { administrator: email, temporary_password: temporaryPassword, enforcement_enabled: true };
   Logger.log(JSON.stringify(result, null, 2));
   return result;
@@ -543,10 +584,11 @@ function normalizeEmail_(value) {
 
 function getCitadelAuthConfig_() {
   const enabled = isCitadelAuthEnforced_();
+  const status = getAccessControlStatus();
   return {
     enforcement_enabled: enabled,
-    administrator_ready: getAccessControlStatus().initial_administrator_configured,
-    password_auth_ready: getAccessControlStatus().password_auth_ready,
+    administrator_ready: status.initial_administrator_configured,
+    password_auth_ready: status.password_auth_ready,
     session_hours: CITADEL_SESSION_HOURS,
     password_iterations: CITADEL_PASSWORD_ITERATIONS,
     password_management: 'administrator'
@@ -554,7 +596,6 @@ function getCitadelAuthConfig_() {
 }
 
 function getCitadelPasswordChallenge_(username) {
-  setupAccessControl();
   const email = normalizeEmail_(username);
   const users = readSheetObjects_(SPREADSHEETS.commandCenter, SHEETS.citadelUsers);
   const user = users.find(function(candidate) {
@@ -584,7 +625,6 @@ function consumeCitadelLoginChallenge_(challenge) {
 }
 
 function loginWithPassword_(payload) {
-  setupAccessControl();
   consumeCitadelLoginChallenge_(payload.login_challenge);
   const email = normalizeEmail_(payload.username);
   const passwordProof = String(payload.password_proof || '');
@@ -702,17 +742,22 @@ function createCitadelSession_(user) {
 }
 
 function citadelLoginBridgeOutput_(payload) {
-  const safePayload = JSON.stringify(payload || {}).replace(/</g, '\\u003c');
+  const encodedPayload = Utilities.base64EncodeWebSafe(JSON.stringify(payload || {}), Utilities.Charset.UTF_8).replace(/=+$/g, '');
+  const callbackUrl = CITADEL_APP_ORIGIN + '/Citadel/auth-callback.html#' + encodedPayload;
   const html = '<!doctype html><meta charset="utf-8"><script>' +
-    'window.parent.postMessage({type:"citadel-auth",payload:' + safePayload + '},' + JSON.stringify(CITADEL_APP_ORIGIN) + ');' +
+    'location.replace(' + JSON.stringify(callbackUrl) + ');' +
     '<\/script>';
   return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function authorizeCitadelRequest_(e, action) {
   if (!isCitadelAuthEnforced_()) return { bypass: true, action: action, user: null, session: null };
-  setupAccessControl();
   const params = e && e.parameter ? e.parameter : {};
+  const automationToken = String(params.automation_token || '').trim();
+  if (automationToken && (action === 'runLienImport' || action === 'runPaymentImport')) {
+    verifyLienAutomationToken_(automationToken);
+    return { bypass: true, automation: true, action: action, user: null, session: null };
+  }
   const sessionToken = String(params.session_token || '').trim();
   if (!sessionToken) throw new Error('Sign in is required.');
   const spreadsheetId = SPREADSHEETS.commandCenter;
@@ -743,6 +788,7 @@ function citadelAccessRule_(action) {
   const rules = {
     getLiens: ['liens', 'view'], getLienPayments: ['liens', 'view'], getPaymentImportStatus: ['data-connections', 'admin'], runPaymentImport: ['data-connections', 'admin', true],
     getLienImportStatus: ['data-connections', 'admin'], runLienImport: ['data-connections', 'admin', true], getContractors: ['contractors', 'view'], getPricing: ['pricing', 'view'],
+    getTemplatePriceOverrides: ['templates', 'view'], saveTemplatePriceOverride: ['templates', 'edit', true],
     getReviews: ['reviews', 'view'], getFleet: ['fleet', 'view'], getFleetImportStatus: ['data-connections', 'admin'], runFleetImport: ['data-connections', 'admin', true],
     getRegistrations: ['registrations', 'view'], getSuppliers: ['suppliers', 'view'], getCollections: ['collections', 'view'], getCurrentUser: ['', 'view'], logout: ['', 'view', true],
     getCitadelUsers: ['command-center', 'admin'], saveCitadelUser: ['command-center', 'admin', true]
@@ -918,7 +964,7 @@ function scopeCitadelResponse_(action, data, context) {
 function assertCitadelMutationRegion_(action, params, user) {
   const allowed = citadelAuthorizedRegions_(user);
   if (allowed === null || action === 'logout' || action === 'saveCitadelUser' || /^(run|setup|import|record)/i.test(action)) return;
-  if (action === 'saveBusinessContact' || action === 'saveCollectionAttorney') return;
+  if (action === 'saveBusinessContact' || action === 'saveCollectionAttorney' || action === 'saveTemplatePriceOverride') return;
   if (!allowed.length) throw new Error('No regions are assigned to your Citadel account.');
 
   const requestedRegions = String(params.regions || '').split(/[|,;]/).map(citadelRegionKey_).filter(Boolean);
@@ -1266,6 +1312,52 @@ function saveSupplierAlert(payload) {
   };
   appendObject_(SPREADSHEETS.suppliers, SHEETS.supplierAlerts, record);
   appendSupplierAudit_(supplierId, 'Alert Added', 'alert', '', alertText, record.created_by);
+  return record;
+}
+
+function getTemplatePriceOverrides() {
+  ensureSheetWithHeaders_(SPREADSHEETS.commandCenter, SHEETS.templatePriceOverrides, TEMPLATE_PRICE_OVERRIDE_HEADERS);
+  return readSheetObjects_(SPREADSHEETS.commandCenter, SHEETS.templatePriceOverrides)
+    .filter(isActiveRow_);
+}
+
+function saveTemplatePriceOverride(payload) {
+  payload = payload || {};
+  const lineKey = String(payload.line_key || '').trim();
+  if (!lineKey || !String(payload.template_id || '').trim() || !String(payload.product_name || '').trim()) {
+    throw new Error('Template, product, and line key are required.');
+  }
+
+  ensureSheetWithHeaders_(SPREADSHEETS.commandCenter, SHEETS.templatePriceOverrides, TEMPLATE_PRICE_OVERRIDE_HEADERS);
+  const existing = readSheetObjects_(SPREADSHEETS.commandCenter, SHEETS.templatePriceOverrides)
+    .find(function(row) { return String(row.line_key || '') === lineKey; }) || {};
+  const clearOverride = citadelBoolean_(payload.clear_override);
+  const rawPrice = String(payload.manual_price == null ? '' : payload.manual_price).replace(/[$,\s]/g, '');
+  const numericPrice = rawPrice === '' ? NaN : Number(rawPrice);
+  if (!clearOverride && (!isFinite(numericPrice) || numericPrice < 0)) throw new Error('Enter a valid price of zero or more.');
+
+  const now = new Date().toISOString();
+  const actor = CITADEL_REQUEST_CONTEXT && CITADEL_REQUEST_CONTEXT.user
+    ? (CITADEL_REQUEST_CONTEXT.user.email || CITADEL_REQUEST_CONTEXT.user.display_name)
+    : 'Citadel user';
+  const record = {
+    override_id: existing.override_id || makeId_('template-price'),
+    template_id: String(payload.template_id || ''),
+    template_name: String(payload.template_name || ''),
+    line_type: String(payload.line_type || 'material'),
+    line_key: lineKey,
+    product_name: String(payload.product_name || ''),
+    uom: String(payload.uom || ''),
+    manual_price: clearOverride ? '' : numericPrice,
+    reason: clearOverride ? '' : String(payload.reason || ''),
+    source_match_key: String(payload.source_match_key || ''),
+    active: !clearOverride,
+    created_at: existing.created_at || now,
+    created_by: existing.created_by || actor,
+    updated_at: now,
+    updated_by: actor
+  };
+  upsertSheetObject_(SPREADSHEETS.commandCenter, SHEETS.templatePriceOverrides, 'line_key', lineKey, record);
   return record;
 }
 
@@ -4011,15 +4103,7 @@ function getLienImportHealth_() {
     failureAt && !isNaN(failureAt.getTime()) &&
     (!successAt || isNaN(successAt.getTime()) || failureAt.getTime() > successAt.getTime())
   );
-  const automationAt = latestAutomation && (latestAutomation.completed_at || latestAutomation.started_at)
-    ? new Date(latestAutomation.completed_at || latestAutomation.started_at)
-    : null;
-  const automationFailed = !!(
-    latestAutomation &&
-    /^Failed/i.test(String(latestAutomation.status || '')) &&
-    automationAt && !isNaN(automationAt.getTime()) &&
-    (!successAt || isNaN(successAt.getTime()) || automationAt.getTime() > successAt.getTime())
-  );
+  const automationFailed = !!(latestAutomation && /^Failed/i.test(String(latestAutomation.status || '')));
   const failedAfterSuccess = importFailedAfterSuccess || automationFailed;
   return {
     latest_import: latest,
