@@ -2,11 +2,6 @@ name: Blaze Orders Import
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/orders-import-validation.txt
 
 concurrency:
   group: blaze-orders-import
