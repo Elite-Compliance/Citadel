@@ -1,6 +1,6 @@
 const CITADEL_VERSION='2.1.2';
 const CITADEL_INITIAL_ADMIN_EMAIL = 'amashalom21@gmail.com';
-const CITADEL_ACCESS_MODULES = ['command-center', 'region-health', 'data-connections', 'inbox', 'tasks', 'legal', 'reviews', 'pricing', 'templates', 'fleet', 'contractors', 'registrations', 'liens', 'suppliers', 'collections'];
+const CITADEL_ACCESS_MODULES = ['command-center', 'region-health', 'data-connections', 'inbox', 'tasks', 'legal', 'reviews', 'pricing', 'labor-pricing', 'templates', 'orders', 'fleet', 'contractors', 'registrations', 'liens', 'suppliers', 'collections'];
 const CITADEL_APP_ORIGIN = 'https://elite-compliance.github.io';
 const CITADEL_SESSION_HOURS = 8;
 const CITADEL_PASSWORD_ITERATIONS = 600000;
@@ -89,6 +89,10 @@ const SHEETS = {
   supplierAlerts: 'SupplierAlerts',
   supplierAudit: 'SupplierAudit',
   templatePriceOverrides: 'TemplatePriceOverrides',
+  orders: 'Orders',
+  orderLines: 'OrderLines',
+  orderExceptions: 'OrderExceptions',
+  orderImportLog: 'OrderImportLog',
   paymentImport: 'PaymentImport',
   paymentTransactions: 'Payments',
   paymentSummary: 'PaymentSummary',
@@ -132,6 +136,10 @@ const SUPPLIER_NOTE_HEADERS = ['note_id', 'supplier_id', 'note_text', 'created_a
 const SUPPLIER_ALERT_HEADERS = ['alert_id', 'supplier_id', 'alert_text', 'due_date', 'status', 'created_at', 'created_by', 'resolved_at', 'resolved_by'];
 const SUPPLIER_AUDIT_HEADERS = ['audit_id', 'supplier_id', 'action', 'field_name', 'prior_value', 'new_value', 'changed_at', 'changed_by'];
 const TEMPLATE_PRICE_OVERRIDE_HEADERS = ['override_id', 'template_id', 'template_name', 'line_type', 'line_key', 'product_name', 'uom', 'manual_price', 'reason', 'source_match_key', 'active', 'created_at', 'created_by', 'updated_at', 'updated_by'];
+const ORDER_HEADERS = ['order_id', 'order_number', 'job_id', 'job_number', 'job_url', 'customer', 'region', 'supplier', 'crew_name', 'trade', 'order_status', 'order_created_at', 'ordered_at', 'delivery_date', 'material_actual', 'material_expected', 'material_variance', 'labor_actual', 'labor_expected', 'labor_variance', 'comparison_status', 'source_updated_at', 'import_batch_id', 'active'];
+const ORDER_LINE_HEADERS = ['line_id', 'order_id', 'job_id', 'section_id', 'line_type', 'item_name', 'sku', 'color', 'uom', 'quantity', 'blaze_unit_price', 'blaze_total', 'master_unit_price', 'master_total', 'variance', 'variance_percent', 'price_source', 'match_method', 'match_confidence', 'comparison_status', 'imported_at', 'active'];
+const ORDER_EXCEPTION_HEADERS = ['exception_id', 'order_id', 'line_id', 'exception_type', 'status', 'reason', 'reviewed_by', 'reviewed_at', 'created_at', 'active'];
+const ORDER_IMPORT_LOG_HEADERS = ['import_id', 'started_at', 'completed_at', 'source', 'year', 'regions_expected', 'regions_completed', 'jobs_discovered', 'orders_discovered', 'order_lines_retained', 'duplicate_lines', 'unmatched_lines', 'status', 'warnings', 'error'];
 
 const COLLECTION_RECORD_HEADERS = ['collection_id', 'lien_id', 'assigned_attorney_id', 'assigned_attorney_name', 'collection_agency', 'date_sent_to_agency', 'amount_outstanding', 'amount_collected', 'amount_we_receive', 'date_received', 'tracking_status', 'created_at', 'updated_by', 'last_updated', 'active'];
 const COLLECTION_NOTE_HEADERS = ['note_id', 'collection_id', 'note_date', 'note_by', 'note_type', 'note_text', 'active'];
@@ -226,6 +234,14 @@ function doGet(e) {
 
     if (action === 'saveTemplatePriceOverride') {
       return output_(e, { ok: true, data: saveTemplatePriceOverride(paramsToRegistrationPayload_(e)), version: CITADEL_VERSION });
+    }
+
+    if (action === 'getOrders') {
+      return output_(e, { ok: true, data: getOrders(), version: CITADEL_VERSION });
+    }
+
+    if (action === 'setupOrdersSheet') {
+      return output_(e, { ok: true, data: setupOrdersSheet(), version: CITADEL_VERSION });
     }
 
     if (action === 'getReviews') {
@@ -788,7 +804,7 @@ function citadelAccessRule_(action) {
   const rules = {
     getLiens: ['liens', 'view'], getLienPayments: ['liens', 'view'], getPaymentImportStatus: ['data-connections', 'admin'], runPaymentImport: ['data-connections', 'admin', true],
     getLienImportStatus: ['data-connections', 'admin'], runLienImport: ['data-connections', 'admin', true], getContractors: ['contractors', 'view'], getPricing: ['pricing', 'view'],
-    getTemplatePriceOverrides: ['templates', 'view'], saveTemplatePriceOverride: ['templates', 'edit', true],
+    getTemplatePriceOverrides: ['templates', 'view'], saveTemplatePriceOverride: ['templates', 'edit', true], getOrders: ['orders', 'view'],
     getReviews: ['reviews', 'view'], getFleet: ['fleet', 'view'], getFleetImportStatus: ['data-connections', 'admin'], runFleetImport: ['data-connections', 'admin', true],
     getRegistrations: ['registrations', 'view'], getSuppliers: ['suppliers', 'view'], getCollections: ['collections', 'view'], getCurrentUser: ['', 'view'], logout: ['', 'view', true],
     getCitadelUsers: ['command-center', 'admin'], saveCitadelUser: ['command-center', 'admin', true]
@@ -955,6 +971,15 @@ function scopeCitadelResponse_(action, data, context) {
     scoped.rows = (data.rows || []).filter(function(row) { return citadelRowInRegionScope_(row, user); });
     scoped.total = scoped.rows.length;
     scoped.states = Array.from(new Set(scoped.rows.map(function(row) { return row.state; }).filter(Boolean))).sort();
+    return scoped;
+  }
+
+  if (action === 'getOrders') {
+    scoped.orders = (data.orders || []).filter(function(row) { return citadelRowInRegionScope_(row, user); });
+    const ids = scoped.orders.reduce(function(map, row) { map[String(row.order_id || '')] = true; return map; }, {});
+    scoped.lines = citadelFilterRelated_(data.lines, ['order_id'], ids);
+    scoped.exceptions = citadelFilterRelated_(data.exceptions, ['order_id'], ids);
+    scoped.metrics = buildOrderMetrics_(scoped.orders);
     return scoped;
   }
 
@@ -1359,6 +1384,50 @@ function saveTemplatePriceOverride(payload) {
   };
   upsertSheetObject_(SPREADSHEETS.commandCenter, SHEETS.templatePriceOverrides, 'line_key', lineKey, record);
   return record;
+}
+
+function setupOrdersSheet() {
+  const spreadsheetId = SPREADSHEETS.payments;
+  if (!spreadsheetId) throw new Error('The protected operations spreadsheet is not configured.');
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.orders, ORDER_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.orderLines, ORDER_LINE_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.orderExceptions, ORDER_EXCEPTION_HEADERS);
+  ensureSheetWithHeaders_(spreadsheetId, SHEETS.orderImportLog, ORDER_IMPORT_LOG_HEADERS);
+  return {
+    spreadsheet_id: spreadsheetId,
+    sheets: [SHEETS.orders, SHEETS.orderLines, SHEETS.orderExceptions, SHEETS.orderImportLog],
+    status: 'Ready'
+  };
+}
+
+function getOrders() {
+  setupOrdersSheet();
+  const spreadsheetId = SPREADSHEETS.payments;
+  const orders = readSheetObjects_(spreadsheetId, SHEETS.orders).filter(isActiveRow_);
+  const lines = readSheetObjects_(spreadsheetId, SHEETS.orderLines).filter(isActiveRow_);
+  const exceptions = readSheetObjects_(spreadsheetId, SHEETS.orderExceptions).filter(isActiveRow_);
+  const importLog = readSheetObjects_(spreadsheetId, SHEETS.orderImportLog);
+  return {
+    orders: orders,
+    lines: lines,
+    exceptions: exceptions,
+    metrics: buildOrderMetrics_(orders),
+    importStatus: importLog.length ? importLog[importLog.length - 1] : null
+  };
+}
+
+function buildOrderMetrics_(orders) {
+  const source = orders || [];
+  function sum(field) {
+    return source.reduce(function(total, row) { return total + Number(row[field] || 0); }, 0);
+  }
+  return {
+    total_orders: source.length,
+    pricing_exceptions: source.filter(function(row) { return /exception|overpay/i.test(String(row.comparison_status || '')); }).length,
+    material_overpayment: Math.max(0, sum('material_variance')),
+    labor_overpayment: Math.max(0, sum('labor_variance')),
+    needs_review: source.filter(function(row) { return /review|unmatched|missing/i.test(String(row.comparison_status || '')); }).length
+  };
 }
 
 function logSupplierChanges_(supplierId, before, after, changedBy, action) {
