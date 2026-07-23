@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.6 seconds
+Output:
 const state = {
   selectedId: "87249bff-0579-42bf-b78f-a18efdf4303f",
   filters: { trade: "All trades", supplier: "All suppliers", sort: "Name A-Z", search: "", quick: "all" },
@@ -15,31 +18,31 @@ const preview = {
   instructions: "***STRUCTURE 1 & STRUCTURE 2 ROOF***\n- Set up property protection.\n- Remove existing shingles and underlayment to decking.\n- Install drip edge and gutter apron, ice and water shield, synthetic felt, vents, flashing, starter shingles, IKO Dynasty shingles, and hip and ridge shingles.\n- Paint exposed pipes, boots, and flashing; seal as necessary; clean all job-related debris.",
   customMaterials: [item("ZIPPER BOOT", "EA")],
   materials: [
-    item("IKO DYNASTY CLASS 3", "", "SHINGLE · Coverage 1 SQ"),
-    item("IKO CAMBRIDGE", "", "SHINGLE · Coverage 1 SQ"),
-    item("IKO HIP & RIDGE 12", "", "HIP AND RIDGE SHINGLES · Coverage 30 LF"),
-    item("IKO 7\" STARTER 123' PER BUNDLE", "BDL", "ROOFING STARTER · Coverage 105 LF · Include rakes"),
-    item("ICE & WATER ALCO GRANULATED 2 SQ NOT BOX", "ROLL", "ICE AND WATER · Coverage 60 LF"),
-    item("VB DEFENDER SYNTHETIC UNDERLAYMENT 10 SQ", "ROLL", "FELT · Coverage 9 SQ · Pitch 2/12–99/12"),
-    item("T-DRIP 1.75\" Q/E", "", "DRIP EDGES · Coverage 10 LF · Using gutter apron"),
-    item("Q/E GUTTER APRON", "", "GUTTER APRON · Coverage 10 LF"),
+    item("IKO DYNASTY CLASS 3", "", "SHINGLE Â· Coverage 1 SQ"),
+    item("IKO CAMBRIDGE", "", "SHINGLE Â· Coverage 1 SQ"),
+    item("IKO HIP & RIDGE 12", "", "HIP AND RIDGE SHINGLES Â· Coverage 30 LF"),
+    item("IKO 7\" STARTER 123' PER BUNDLE", "BDL", "ROOFING STARTER Â· Coverage 105 LF Â· Include rakes"),
+    item("ICE & WATER ALCO GRANULATED 2 SQ NOT BOX", "ROLL", "ICE AND WATER Â· Coverage 60 LF"),
+    item("VB DEFENDER SYNTHETIC UNDERLAYMENT 10 SQ", "ROLL", "FELT Â· Coverage 9 SQ Â· Pitch 2/12â€“99/12"),
+    item("T-DRIP 1.75\" Q/E", "", "DRIP EDGES Â· Coverage 10 LF Â· Using gutter apron"),
+    item("Q/E GUTTER APRON", "", "GUTTER APRON Â· Coverage 10 LF"),
     item("AIRHAWK VENT SLA SLANT"),
-    item("SHINGLEVENT II 4' BLACK", "PC", "RIDGE VENTS · Coverage 4 LF"),
+    item("SHINGLEVENT II 4' BLACK", "PC", "RIDGE VENTS Â· Coverage 4 LF"),
     item("BROAN ROOF CAP VENTS #636B", "EACH"),
     item("BROAN ROOF CAP VENTS #634K", "EACH"),
     item("3\" LEAD STACK ADJUSTABLE", "EACH"),
     item("4\" LEAD STACK ADJUSTABLE", "EACH"),
     item("5\" LEAD STACK ADJUSTABLE", "EACH"),
     item("PIPE BOOT THERMO PLASTIC"),
-    item("COIL NAIL 1-1/4\"", "EACH", "NAILS · Coverage 15 SQ"),
-    item("PLASTIC CAP NAIL 1-1/4\" 2M/CTN", "BOX", "CAP NAILS · Coverage 20 SQ"),
-    item("OSI QUAD SEALANT #", "", "ROOFING CAULK · Coverage 15 SQ"),
-    item("Q/E SPRAY PAINT", "", "ROOFING SPRAY PAINT · Coverage 20 EA"),
-    item("W-VALLEY 18\"X10'", "", "VALLEY METAL · Coverage 10 LF"),
+    item("COIL NAIL 1-1/4\"", "EACH", "NAILS Â· Coverage 15 SQ"),
+    item("PLASTIC CAP NAIL 1-1/4\" 2M/CTN", "BOX", "CAP NAILS Â· Coverage 20 SQ"),
+    item("OSI QUAD SEALANT #", "", "ROOFING CAULK Â· Coverage 15 SQ"),
+    item("Q/E SPRAY PAINT", "", "ROOFING SPRAY PAINT Â· Coverage 20 EA"),
+    item("W-VALLEY 18\"X10'", "", "VALLEY METAL Â· Coverage 10 LF"),
     item("QA C24 COIL .024 #"),
     item("OSB 4X8 7/16", "SHT"),
     item("QUARRIX SMART PLUG PART 8\" #99008", "EACH"),
-    item("STEP FLASHING", "", "STEP FLASHING · Coverage 55 LF"),
+    item("STEP FLASHING", "", "STEP FLASHING Â· Coverage 55 LF"),
     item("DECK MOUNT SKYLIGHT RO"),
     item("EDL DECK MOUNT RO -")
   ],
@@ -166,7 +169,9 @@ function lineKey(record, lineType, line) {
 }
 
 function moneyValue(value) {
-  const number = Number(String(value == null ? "" : value).replace(/[$,\s]/g, ""));
+  const cleaned = String(value == null ? "" : value).replace(/[$,\s]/g, "");
+  if (!cleaned) return null;
+  const number = Number(cleaned);
   return Number.isFinite(number) ? number : null;
 }
 
@@ -366,7 +371,7 @@ function detailSection(id, title, lines, record, lineType = "", priceable = fals
       return `<article class="line-item">
         <div><strong>${escapeHtml(line.name)}</strong>${line.rules ? `<p>${escapeHtml(line.rules)}</p>` : ""}</div>
         <div class="line-values">
-          <span class="line-uom">${escapeHtml(line.uom || "—")}</span>
+          <span class="line-uom">${escapeHtml(line.uom || "â€”")}</span>
           ${priceable ? `<button class="line-price ${escapeHtml(resolved.status)}" type="button"
             data-price-key="${escapeHtml(resolved.key)}" data-line-type="${escapeHtml(lineType)}"
             data-product-name="${escapeHtml(line.name)}" data-uom="${escapeHtml(line.uom || "")}">
@@ -614,3 +619,4 @@ app.addEventListener("input", event => {
 initializeTheme();
 render();
 loadTemplatePriceOverrides();
+
