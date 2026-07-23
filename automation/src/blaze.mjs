@@ -56,7 +56,7 @@ async function dismissPushNotificationPrompt(page, waitTimeout = 0) {
   });
 }
 
-async function ensureAuthenticated(page, credentials) {
+export async function ensureAuthenticated(page, credentials) {
   await page.goto(RECEIVABLES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
   const savedView = page.getByRole('button', { name: LIEN_REPORTS[0].view, exact: true });
