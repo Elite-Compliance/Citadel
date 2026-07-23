@@ -51,7 +51,10 @@ const preview = {
   ]
 };
 
-state.records = [preview];
+state.records = Array.isArray(window.CITADEL_TEMPLATE_DATA) && window.CITADEL_TEMPLATE_DATA.length
+  ? window.CITADEL_TEMPLATE_DATA
+  : [preview];
+state.selectedId = state.records[0]?.id || "";
 
 const app = document.querySelector("#app");
 let searchTimer = 0;
@@ -149,7 +152,7 @@ function render() {
   const selected = selectedRecord(visible);
   const materialCount = selected ? (selected.customMaterials || []).length + (selected.materials || []).length : 0;
   app.innerHTML = `
-    <div class="status-line"><span class="status-pill">${state.records.length} detailed template record available</span></div>
+    <div class="status-line"><span class="status-pill">${state.records.length} detailed template records available</span></div>
     <section class="metrics">
       ${metric("Templates", state.records.length, "Indexed from Blaze")}
       ${metric("Materials", materialCount, "Selected template")}
@@ -263,3 +266,4 @@ app.addEventListener("input", event => {
 
 initializeTheme();
 render();
+
