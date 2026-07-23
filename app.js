@@ -108,55 +108,6 @@ var CONTRACTOR_RISK_OPTIONS=["70 High","50 Review","20 Monitor"];
 
 var pricingState={headers:[],keys:[],rows:[],allRows:[],total:0,offset:0,limit:75,chunkSize:1200,states:[],trades:[],types:[],suppliers:[],sheet:'',loading:false,cacheLoading:false,cacheReady:false,error:'',cacheMessage:'Loading most current pricing',filters:{search:'',state:'All states',trade:'All trades',type:'All types',supplier:'All suppliers',sort:'Default'},visibleColumns:null};
 var laborPricingState={selectedKey:'',filters:{search:'',state:'All states',supplier:'All suppliers',trade:'All trades',sort:'Name A-Z'}};
-var templateState={selectedIndex:0,filters:{search:'',trade:'All trades',supplier:'All suppliers',sort:'Name A-Z'},records:[]};
-function templateItem(name,uom,rules){return {name:name,uom:uom||'',rules:rules||''}}
-var TEMPLATE_PREVIEW_RECORD={
-  id:'87249bff-0579-42bf-b78f-a18efdf4303f',
-  name:"Richard's - St. Louis - 2026",
-  supplier:'Richards Building Supply',
-  supplierLocation:"Richards - St. Louis",
-  trade:'ROOFING',
-  created:'12/17/24',
-  blazeUrl:'https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/tool-dashboard/order-templates/87249bff-0579-42bf-b78f-a18efdf4303f',
-  instructions:'***STRUCTURE 1 & STRUCTURE 2 ROOF***\n- Set up property protection.\n- Remove existing shingles and underlayment to decking.\n- Install drip edge and gutter apron, ice and water shield, synthetic felt, vents, flashing, starter shingles, IKO Dynasty shingles, and hip and ridge shingles.\n- Paint exposed pipes, boots, and flashing; seal as necessary; clean all job-related debris.',
-  customMaterials:[templateItem('ZIPPER BOOT','EA')],
-  materials:[
-    templateItem('IKO DYNASTY CLASS 3','','SHINGLE · Coverage 1 SQ'),
-    templateItem('IKO CAMBRIDGE','','SHINGLE · Coverage 1 SQ'),
-    templateItem('IKO HIP & RIDGE 12','','HIP AND RIDGE SHINGLES · Coverage 30 LF'),
-    templateItem('IKO 7" STARTER 123\' PER BUNDLE','BDL','ROOFING STARTER · Coverage 105 LF · Include rakes'),
-    templateItem('ICE & WATER ALCO GRANULATED 2 SQ NOT BOX','ROLL','ICE AND WATER · Coverage 60 LF'),
-    templateItem('VB DEFENDER SYNTHETIC UNDERLAYMENT 10 SQ','ROLL','FELT · Coverage 9 SQ · Pitch 2/12–99/12'),
-    templateItem('T-DRIP 1.75" Q/E','','DRIP EDGES · Coverage 10 LF · Using gutter apron'),
-    templateItem('Q/E GUTTER APRON','','GUTTER APRON · Coverage 10 LF'),
-    templateItem('AIRHAWK VENT SLA SLANT','',''),
-    templateItem("SHINGLEVENT II 4' BLACK",'PC','RIDGE VENTS · Coverage 4 LF'),
-    templateItem('BROAN ROOF CAP VENTS #636B','EACH'),
-    templateItem('BROAN ROOF CAP VENTS #634K','EACH'),
-    templateItem('3" LEAD STACK ADJUSTABLE','EACH'),
-    templateItem('4" LEAD STACK ADJUSTABLE','EACH'),
-    templateItem('5" LEAD STACK ADJUSTABLE','EACH'),
-    templateItem('PIPE BOOT THERMO PLASTIC','',''),
-    templateItem('COIL NAIL 1-1/4"','EACH','NAILS · Coverage 15 SQ'),
-    templateItem('PLASTIC CAP NAIL 1-1/4" 2M/CTN','BOX','CAP NAILS · Coverage 20 SQ'),
-    templateItem('OSI QUAD SEALANT #','','ROOFING CAULK · Coverage 15 SQ'),
-    templateItem('Q/E SPRAY PAINT','','ROOFING SPRAY PAINT · Coverage 20 EA'),
-    templateItem('W-VALLEY 18"X10\'','','VALLEY METAL · Coverage 10 LF'),
-    templateItem('QA C24 COIL .024 #','',''),
-    templateItem('OSB 4X8 7/16','SHT'),
-    templateItem('QUARRIX SMART PLUG PART 8" #99008','EACH'),
-    templateItem('STEP FLASHING','','STEP FLASHING · Coverage 55 LF'),
-    templateItem('DECK MOUNT SKYLIGHT RO','',''),
-    templateItem('EDL DECK MOUNT RO -','','')
-  ],
-  labor:[
-    templateItem('REMOVE & REPLACE ROOFING','SQ','Coverage 1 SQ'),
-    templateItem('DUMP FEE','EA'),
-    templateItem('REMOVE 2ND LAYER','SQ'),
-    templateItem('REPLACE DECKING (PER SHEET)','EA')
-  ]
-};
-templateState.records=[TEMPLATE_PREVIEW_RECORD];
 var REVIEWS_CACHE_KEY="citadel_reviews_cache_v1";
 var reviewsData={records:[],notes:[],alerts:[],followUps:[],metrics:[],selectedIndex:0};var reviewsLoading=!!CITADEL_API_URL;var reviewsLoadError='';var reviewsLastUpdated='';var reviewFilters={platform:'All platforms',rating:'All ratings',status:'All statuses',sort:'Newest first',search:''};var activeReviewMetric='all';var reviewsPageEventsBound=false;var reviewWorkspaceStatus='';var reviewSearchTimer=null;
 var FLEET_CACHE_KEY="citadel_fleet_cache_v1";
@@ -318,100 +269,6 @@ function bindLaborPricingPage(){
     laborPricingState.filters.search=field.value;
     window.clearTimeout(field._laborTimer);
     field._laborTimer=window.setTimeout(function(){renderLaborPricingPage();bindLaborPricingPage();var next=pagePanel.querySelector('input[data-labor-filter="search"]');if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length)}},180)
-  })
-}
-
-function templateFacetValues(key){
-  var values={};
-  templateState.records.forEach(function(record){if(record[key])values[record[key]]=true});
-  return Object.keys(values).sort(function(a,b){return a.localeCompare(b)})
-}
-function visibleTemplateRecords(){
-  var filters=templateState.filters;
-  var search=String(filters.search||'').trim().toLowerCase();
-  var records=templateState.records.filter(function(record){
-    if(filters.trade!=='All trades'&&record.trade!==filters.trade)return false;
-    if(filters.supplier!=='All suppliers'&&record.supplier!==filters.supplier)return false;
-    var text=[record.name,record.supplier,record.supplierLocation,record.trade,record.created]
-      .concat((record.customMaterials||[]).map(function(item){return item.name}))
-      .concat((record.materials||[]).map(function(item){return item.name+' '+item.rules}))
-      .concat((record.labor||[]).map(function(item){return item.name+' '+item.rules}))
-      .join(' ').toLowerCase();
-    return !search||text.indexOf(search)>-1
-  });
-  records.sort(function(a,b){
-    if(filters.sort==='Newest created')return new Date(b.created)-new Date(a.created);
-    if(filters.sort==='Supplier A-Z')return String(a.supplier||'').localeCompare(String(b.supplier||''));
-    return String(a.name||'').localeCompare(String(b.name||''))
-  });
-  return records
-}
-function renderTemplateLineItems(title,items){
-  items=items||[];
-  return '<section class="liens-workflow template-line-section"><div class="card-heading"><h3>'+escapeHtml(title)+'</h3><span>'+escapeHtml(items.length)+' items</span></div>'+
-    (items.length?'<div class="template-line-list">'+items.map(function(item){return '<article><div><strong>'+escapeHtml(item.name)+'</strong>'+(item.rules?'<p>'+escapeHtml(item.rules)+'</p>':'')+'</div><span>'+escapeHtml(item.uom||'—')+'</span></article>'}).join('')+'</div>':'<p class="liens-empty">No '+escapeHtml(title.toLowerCase())+' included.</p>')+
-  '</section>'
-}
-function renderTemplatesPage(){
-  var visible=visibleTemplateRecords();
-  var selected=templateState.records[templateState.selectedIndex]||visible[0]||{};
-  var totalMaterials=(selected.customMaterials||[]).length+(selected.materials||[]).length;
-  pagePanel.className='page-panel liens-page templates-page';
-  pagePanel.innerHTML=renderModuleStatusLine(templateState.records.length+' template detail record'+(templateState.records.length===1?'':'s')+' available')+
-    '<div class="liens-metrics">'+
-      laborPricingMetric('Templates',String(templateState.records.length),'Indexed from Blaze')+
-      laborPricingMetric('Materials',String(totalMaterials),'Selected template')+
-      laborPricingMetric('Labor Items',String((selected.labor||[]).length),'Selected template')+
-      laborPricingMetric('Trade',selected.trade||'Not set','Selected template')+
-    '</div>'+
-    '<section class="liens-filter-card"><div><h3>Filters + Sort + Search</h3><p>Search template names, suppliers, materials, product rules, and labor lines.</p></div>'+
-      '<div class="workflow-entry-actions"><button type="button" data-template-report>Reports</button></div>'+
-      '<div class="liens-filters">'+
-        '<label>Trade<select data-template-filter="trade">'+renderSelectOptions('All trades',templateFacetValues('trade'),templateState.filters.trade)+'</select></label>'+
-        '<label>Supplier<select data-template-filter="supplier">'+renderSelectOptions('All suppliers',templateFacetValues('supplier'),templateState.filters.supplier)+'</select></label>'+
-        '<label>Sort<select data-template-filter="sort"><option'+(templateState.filters.sort==='Name A-Z'?' selected':'')+'>Name A-Z</option><option'+(templateState.filters.sort==='Supplier A-Z'?' selected':'')+'>Supplier A-Z</option><option'+(templateState.filters.sort==='Newest created'?' selected':'')+'>Newest created</option></select></label>'+
-        '<label>Search<input type="search" data-template-filter="search" placeholder="Search templates and line items" value="'+escapeHtml(templateState.filters.search)+'"></label>'+
-      '</div></section>'+
-    '<div class="liens-workspace"><section class="liens-records"><div class="liens-section-head"><div><h3>Order Templates</h3><p>Template-level information with complete material and labor detail.</p></div><strong>'+escapeHtml(visible.length)+' showing</strong></div>'+
-      '<div class="liens-table templates-table" role="table"><div class="liens-table-head" role="row"><span>Template</span><span>Trade</span><span>Supplier</span><span>Location</span><span>Created</span><span>Lines</span></div>'+
-      visible.map(function(record){var index=templateState.records.indexOf(record);var lines=(record.customMaterials||[]).length+(record.materials||[]).length+(record.labor||[]).length;return '<button type="button" class="liens-row'+(index===templateState.selectedIndex?' active':'')+'" data-template-index="'+index+'" role="row"><span><strong>'+escapeHtml(record.name)+'</strong></span><span>'+escapeHtml(record.trade||'')+'</span><span>'+escapeHtml(record.supplier||'')+'</span><span>'+escapeHtml(record.supplierLocation||'')+'</span><span>'+escapeHtml(record.created||'')+'</span><span>'+escapeHtml(lines)+'</span></button>'}).join('')+
-      (visible.length?'':'<div class="liens-empty">No templates match these filters.</div>')+'</div></section>'+
-    '<aside class="liens-detail templates-detail"><div class="liens-detail-head"><div><span>Selected template</span><h3>'+escapeHtml(selected.name||'No template selected')+'</h3><p>'+escapeHtml([selected.trade,selected.supplierLocation].filter(Boolean).join(' / '))+'</p></div></div>'+
-      '<div class="liens-detail-grid"><article><span>Supplier</span><strong>'+escapeHtml(selected.supplier||'Not set')+'</strong></article><article><span>Location</span><strong>'+escapeHtml(selected.supplierLocation||'Not set')+'</strong></article><article><span>Trade</span><strong>'+escapeHtml(selected.trade||'Not set')+'</strong></article><article><span>Created</span><strong>'+escapeHtml(selected.created||'Not set')+'</strong></article></div>'+
-      '<section class="liens-workflow"><div class="card-heading"><h3>Template Instructions</h3>'+(selected.blazeUrl?'<a class="record-link" href="'+escapeHtml(selected.blazeUrl)+'" target="_blank" rel="noopener">Open in Blaze</a>':'')+'</div><p class="template-instructions">'+escapeHtml(selected.instructions||'No instructions included.')+'</p></section>'+
-      renderTemplateLineItems('Custom Materials',selected.customMaterials)+
-      renderTemplateLineItems('Supplier Products',selected.materials)+
-      renderTemplateLineItems('Labor',selected.labor)+
-    '</aside></div>'
-}
-function openTemplatesReportsModal(){
-  var visible=visibleTemplateRecords();
-  var modal=document.createElement('div');
-  modal.className='citadel-modal-backdrop';
-  modal.innerHTML='<section class="citadel-modal" role="dialog" aria-modal="true" aria-label="Templates Reports"><div class="modal-head"><div><h3>Templates Reports</h3><p>Export the current template list or review the selected template details.</p></div><button type="button" data-close-modal aria-label="Close">X</button></div><div class="modal-body"><div class="report-summary-card"><strong>'+escapeHtml(visible.length)+' templates</strong><span>Current filtered view</span></div><p>Template reports include name, trade, supplier, location, created date, material count, and labor count.</p></div><div class="modal-actions"><button type="button" data-close-modal>Done</button></div></section>';
-  modal.addEventListener('click',function(event){if(event.target===modal||event.target.closest('[data-close-modal]'))modal.remove()});
-  document.body.appendChild(modal)
-}
-function bindTemplatesPage(){
-  if(pagePanel.getAttribute('data-templates-bound')==='true')return;
-  pagePanel.setAttribute('data-templates-bound','true');
-  pagePanel.addEventListener('click',function(event){
-    if(activePage!=='templates')return;
-    if(event.target.closest('[data-template-report]')){openTemplatesReportsModal();return}
-    var row=event.target.closest('[data-template-index]');
-    if(row){templateState.selectedIndex=Number(row.getAttribute('data-template-index'));renderTemplatesPage();bindTemplatesPage()}
-  });
-  pagePanel.addEventListener('change',function(event){
-    if(activePage!=='templates')return;
-    var field=event.target.closest('select[data-template-filter]');if(!field)return;
-    templateState.filters[field.getAttribute('data-template-filter')]=field.value;templateState.selectedIndex=0;renderTemplatesPage();bindTemplatesPage()
-  });
-  pagePanel.addEventListener('input',function(event){
-    if(activePage!=='templates')return;
-    var field=event.target.closest('input[data-template-filter="search"]');if(!field)return;
-    templateState.filters.search=field.value;
-    window.clearTimeout(field._templateTimer);
-    field._templateTimer=window.setTimeout(function(){renderTemplatesPage();bindTemplatesPage();var next=pagePanel.querySelector('input[data-template-filter="search"]');if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length)}},180)
   })
 }
 
@@ -2649,8 +2506,9 @@ function bindSuppliersPage(){
 }
 
 function renderRegistrationsModule(){pagePanel.className="page-panel registrations-module-page";pagePanel.innerHTML='<iframe class="registrations-module-frame" title="Registrations workspace" src="./modules/registrations/index.html?v=2.1.2.10"></iframe>'}
+function renderTemplatesModule(){pagePanel.className="page-panel registrations-module-page";pagePanel.innerHTML='<iframe class="registrations-module-frame" title="Templates workspace" src="./modules/templates/index.html?v=1.0.0"></iframe>'}
 
-function renderContent(){var label=getPageLabel(activePage);pageTitle.textContent=label;if(activePage==="command-center"){renderCommandCenter();bindCommandCenter();return}if(activePage==="region-health"){renderRegionHealthPage();bindStandardPage();return}if(activePage==="data-connections"){renderDataConnectionsPage();bindDataConnectionsPage();return}if(activePage==="liens"){renderLiensPage();bindLiensPage();return}if(activePage==="collections"){renderCollectionsPage();bindCollectionsPage();return}if(activePage==="suppliers"){renderSuppliersPage();bindSuppliersPage();return}if(activePage==="contractors"){renderContractorsPage();bindContractorsPage();return}if(activePage==="registrations"){renderRegistrationsModule();return}if(activePage==="reviews"){renderReviewsPage();bindReviewsPage();if(!reviewsData.records.length&&!reviewsLoading&&!reviewsLoadError)loadReviewsData();return}if(activePage==="pricing"){renderPricingPage();bindPricingPage();if(!pricingState.rows.length&&!pricingState.loading&&!pricingState.error)loadPricingData();return}if(activePage==="labor-pricing"){renderLaborPricingPage();bindLaborPricingPage();if(!pricingState.allRows.length&&!pricingState.loading&&!pricingState.error)loadPricingData();return}if(activePage==="templates"){renderTemplatesPage();bindTemplatesPage();return}if(activePage==="fleet"||activePage==="fleet-vehicles"||activePage==="fleet-drivers"){renderFleetPage();bindFleetPage();if(!fleetData.sourceRows.length&&!fleetData.vehicles.length&&!fleetData.drivers.length&&!fleetLoading&&!fleetLoadError)loadFleetData();return}renderStandardContent();bindStandardPage()}
+function renderContent(){var label=getPageLabel(activePage);pageTitle.textContent=label;if(activePage==="command-center"){renderCommandCenter();bindCommandCenter();return}if(activePage==="region-health"){renderRegionHealthPage();bindStandardPage();return}if(activePage==="data-connections"){renderDataConnectionsPage();bindDataConnectionsPage();return}if(activePage==="liens"){renderLiensPage();bindLiensPage();return}if(activePage==="collections"){renderCollectionsPage();bindCollectionsPage();return}if(activePage==="suppliers"){renderSuppliersPage();bindSuppliersPage();return}if(activePage==="contractors"){renderContractorsPage();bindContractorsPage();return}if(activePage==="registrations"){renderRegistrationsModule();return}if(activePage==="reviews"){renderReviewsPage();bindReviewsPage();if(!reviewsData.records.length&&!reviewsLoading&&!reviewsLoadError)loadReviewsData();return}if(activePage==="pricing"){renderPricingPage();bindPricingPage();if(!pricingState.rows.length&&!pricingState.loading&&!pricingState.error)loadPricingData();return}if(activePage==="labor-pricing"){renderLaborPricingPage();bindLaborPricingPage();if(!pricingState.allRows.length&&!pricingState.loading&&!pricingState.error)loadPricingData();return}if(activePage==="templates"){renderTemplatesModule();return}if(activePage==="fleet"||activePage==="fleet-vehicles"||activePage==="fleet-drivers"){renderFleetPage();bindFleetPage();if(!fleetData.sourceRows.length&&!fleetData.vehicles.length&&!fleetData.drivers.length&&!fleetLoading&&!fleetLoadError)loadFleetData();return}renderStandardContent();bindStandardPage()}
 function setActivePage(pageId){if(!citadelCanView(pageId)){pageId=citadelCanView('command-center')?'command-center':(visibleCitadelPages()[0]||{id:'command-center'}).id}activePage=pageId;renderNavigation();renderContent()}
 function bootCitadelApp(){if(citadelAppBooted)return;citadelAppBooted=true;hydrateLiensFromCache();hydrateCollectionsFromCache();hydrateSuppliersFromCache();hydrateContractorsFromCache();hydrateReviewsFromCache();hydrateFleetFromCache();loadPricingStaticData();setActivePage(activePage);loadLiensData();loadCollectionsData();loadSuppliersData();loadContractorsData();loadRegistrationsSummary();loadReviewsData();loadFleetData()}
 
