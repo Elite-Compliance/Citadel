@@ -1,6 +1,6 @@
 const state = {
   selectedId: "87249bff-0579-42bf-b78f-a18efdf4303f",
-  filters: { trade: "All trades", supplier: "All suppliers", sort: "Name A-Z", search: "" },
+  filters: { trade: "All trades", supplier: "All suppliers", sort: "Name A-Z", search: "", quick: "all" },
   records: []
 };
 
@@ -111,10 +111,37 @@ function recordSearchText(record) {
   ].join(" ").toLowerCase();
 }
 
+function recordLineCount(record) {
+  return (record.customMaterials || []).length + (record.materials || []).length + (record.labor || []).length;
+}
+
+function recordCreatedDate(record) {
+  const [month, day, year] = String(record.created || "").split("/").map(Number);
+  if (!month || !day || !year) return null;
+  return new Date(year < 100 ? 2000 + year : year, month - 1, day);
+}
+
+function isRecentlyAdded(record) {
+  const created = recordCreatedDate(record);
+  if (!created) return false;
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setHours(0, 0, 0, 0);
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  return created >= ninetyDaysAgo;
+}
+
+function matchesQuickFilter(record, quick) {
+  if (quick === "recent") return isRecentlyAdded(record);
+  if (quick === "ready") return recordLineCount(record) > 0;
+  if (quick === "review") return recordLineCount(record) === 0;
+  return true;
+}
+
 function visibleRecords() {
-  const { trade, supplier, sort } = state.filters;
+  const { trade, supplier, sort, quick } = state.filters;
   const search = state.filters.search.trim().toLowerCase();
   const records = state.records.filter(record =>
+    matchesQuickFilter(record, quick) &&
     (trade === "All trades" || record.trade === trade) &&
     (supplier === "All suppliers" || record.supplier === supplier) &&
     (!search || recordSearchText(record).includes(search))
@@ -131,8 +158,8 @@ function selectedRecord(visible) {
   return state.records.find(record => record.id === state.selectedId) || visible[0] || null;
 }
 
-function metric(action, label, value, caption) {
-  return `<button class="metric" type="button" data-metric-action="${escapeHtml(action)}" aria-label="${escapeHtml(`${label}: ${value}. ${caption}`)}">
+function metric(action, label, value, caption, active = false) {
+  return `<button class="metric${active ? " active" : ""}" type="button" data-metric-action="${escapeHtml(action)}" aria-pressed="${active}" aria-label="${escapeHtml(`${label}: ${value}. ${caption}`)}">
     <span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(caption)}</small>
   </button>`;
 }
@@ -152,14 +179,16 @@ function detailSection(id, title, lines) {
 function render() {
   const visible = visibleRecords();
   const selected = selectedRecord(visible);
-  const materialCount = selected ? (selected.customMaterials || []).length + (selected.materials || []).length : 0;
+  const recentCount = state.records.filter(isRecentlyAdded).length;
+  const readyCount = state.records.filter(record => recordLineCount(record) > 0).length;
+  const reviewCount = state.records.length - readyCount;
   app.innerHTML = `
     <div class="status-line"><span class="status-pill">${state.records.length} detailed template records available</span></div>
     <section class="metrics">
-      ${metric("templates", "Templates", state.records.length, "Indexed from Blaze")}
-      ${metric("materials", "Materials", materialCount, "Selected template")}
-      ${metric("labor", "Labor Items", selected ? (selected.labor || []).length : 0, "Selected template")}
-      ${metric("trade", "Trade", selected?.trade || "Not set", "Selected template")}
+      ${metric("all", "Templates", state.records.length, "All templates", state.filters.quick === "all")}
+      ${metric("recent", "Recently Added", recentCount, "Created in the last 90 days", state.filters.quick === "recent")}
+      ${metric("ready", "Ready to Use", readyCount, "Includes template line items", state.filters.quick === "ready")}
+      ${metric("review", "Needs Review", reviewCount, "No line items included", state.filters.quick === "review")}
     </section>
     <section class="filter-card">
       <div><h2>Filters + Sort + Search</h2><p>Search template names, suppliers, materials, product rules, and labor lines.</p></div>
@@ -180,7 +209,7 @@ function render() {
         <header class="section-head"><div><h2>Order Templates</h2><p>Template-level information with complete material and labor detail.</p></div><strong>${visible.length} showing</strong></header>
         <div class="table-head"><span>Template</span><span>Trade</span><span>Supplier</span><span>Location</span><span>Created</span><span>Lines</span></div>
         ${visible.length ? visible.map(record => {
-          const lineCount = (record.customMaterials || []).length + (record.materials || []).length + (record.labor || []).length;
+          const lineCount = recordLineCount(record);
           return `<button class="template-row${record.id === selected?.id ? " active" : ""}" type="button" data-template-id="${escapeHtml(record.id)}">
             <span><strong>${escapeHtml(record.name)}</strong></span><span>${escapeHtml(record.trade)}</span>
             <span>${escapeHtml(record.supplier)}</span><span>${escapeHtml(record.supplierLocation)}</span>
@@ -241,27 +270,14 @@ function scrollToSection(id) {
 }
 
 function activateMetric(action) {
-  const selected = selectedRecord(visibleRecords());
-  if (action === "templates") {
+  if (["all", "recent", "ready", "review"].includes(action)) {
+    state.filters.quick = action;
     state.filters.trade = "All trades";
     state.filters.supplier = "All suppliers";
     state.filters.search = "";
     render();
     scrollToSection("template-records");
-    return;
   }
-  if (action === "trade") {
-    if (selected?.trade) state.filters.trade = selected.trade;
-    render();
-    scrollToSection("template-records");
-    return;
-  }
-  if (action === "materials") {
-    const target = selected?.customMaterials?.length ? "template-custom-materials" : "template-materials";
-    scrollToSection(target);
-    return;
-  }
-  if (action === "labor") scrollToSection("template-labor");
 }
 
 app.addEventListener("click", event => {
