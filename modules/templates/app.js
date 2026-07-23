@@ -266,4 +266,3 @@ app.addEventListener("input", event => {
 
 initializeTheme();
 render();
-
