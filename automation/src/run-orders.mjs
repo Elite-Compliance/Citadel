@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 2 seconds
-Output:
 import { exportOrders } from './orders-blaze.mjs';
 import { createGoogleClients } from './google.mjs';
 import { loadMasterPricing, publishOrders, recordOrdersFailure } from './orders-google.mjs';
@@ -53,5 +50,4 @@ main().catch((error) => {
   console.error(error?.stack || error);
   process.exitCode = 1;
 });
-
 
