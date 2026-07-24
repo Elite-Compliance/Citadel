@@ -171,3 +171,4 @@ function setActivePage(pageId){if(!citadelCanView(pageId)){pageId=citadelCanView
 function bootCitadelApp(){if(citadelAppBooted)return;citadelAppBooted=true;hydrateLiensFromCache();hydrateCollectionsFromCache();hydrateSuppliersFromCache();hydrateContractorsFromCache();hydrateReviewsFromCache();hydrateFleetFromCache();loadPricingStaticData();setActivePage(activePage);loadLiensData();loadCollectionsData();loadSuppliersData();loadContractorsData();loadRegistrationsSummary();loadReviewsData();loadFleetData()}
 
 initSettingsMenu();initForceRefreshButton();checkForCitadelUpdate();initCitadelAuth().then(function(ready){if(ready)bootCitadelApp()});
+
