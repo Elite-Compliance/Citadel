@@ -26,7 +26,23 @@ function labeledValue(text, label) {
 }
 
 async function waitForLoading(page) {
-  await page.locator('ng-http-loader .backdrop').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
+  // Blaze uses both its HTTP loader and an ngx-spinner overlay. Give the
+  // overlay a moment to mount, then wait until neither loader is visible.
+  await page.waitForTimeout(250);
+  await page.waitForFunction(() => {
+    const loaders = document.querySelectorAll(
+      'ng-http-loader .backdrop, ngx-spinner .ngx-spinner-overlay, .ngx-spinner-overlay'
+    );
+    return [...loaders].every((loader) => {
+      const style = window.getComputedStyle(loader);
+      const bounds = loader.getBoundingClientRect();
+      return style.display === 'none'
+        || style.visibility === 'hidden'
+        || Number(style.opacity) === 0
+        || bounds.width === 0
+        || bounds.height === 0;
+    });
+  }, undefined, { timeout: 60000 });
 }
 
 async function waitForRegionPicker(page) {
@@ -94,17 +110,36 @@ async function readVisibleInvoices(page, region) {
   ), { region });
 }
 
+async function setRowsPerPage(page, paginator) {
+  const pageSize = paginator.getByRole('combobox', { name: /Items per page:/i });
+  if (!(await pageSize.count()) || !(await pageSize.isVisible())) return;
+  if (clean(await pageSize.textContent()) === '20') return;
+  await pageSize.click();
+  const option = page.getByRole('option', { name: '20', exact: true });
+  if (!(await option.count())) {
+    await pageSize.press('Escape').catch(() => {});
+    return;
+  }
+  await option.click();
+  await waitForLoading(page);
+}
+
 async function readRegionInvoices(page, region) {
   const rows = [];
   const paginator = page.locator('mat-paginator:visible').last();
   const next = paginator.getByRole('button', { name: 'Next page', exact: true });
+  await setRowsPerPage(page, paginator);
   for (let pageNumber = 1; pageNumber <= 100; pageNumber += 1) {
+    await waitForLoading(page);
     rows.push(...await readVisibleInvoices(page, region));
     if (!(await next.count()) || await next.isDisabled()) break;
     const firstInvoice = page.locator('a[href*="/production-invoices/"][href*="/crew-invoice-item-list"]').first();
     if (!(await firstInvoice.count())) break;
     const previous = await firstInvoice.getAttribute('href');
-    await next.click();
+    await waitForLoading(page);
+    if (await next.isDisabled()) break;
+    await next.click({ timeout: 15000 });
+    await waitForLoading(page);
     await page.waitForFunction((href) => {
       const first = document.querySelector('a[href*="/production-invoices/"][href*="/crew-invoice-item-list"]');
       return first && first.getAttribute('href') !== href;
