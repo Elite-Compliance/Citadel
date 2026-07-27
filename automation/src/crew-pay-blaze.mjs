@@ -93,13 +93,6 @@ async function readVisibleInvoices(page, region) {
 async function readRegionInvoices(page, region) {
   const rows = [];
   const paginator = page.locator('mat-paginator:visible').last();
-  const pageSize = paginator.getByRole('combobox', { name: /Items per page/ });
-  if (await pageSize.count() && await pageSize.isVisible()) {
-    await pageSize.click();
-    const largest = page.getByRole('option').last();
-    await largest.click().catch(() => {});
-    await waitForRegionResults(page);
-  }
   const next = paginator.getByRole('button', { name: 'Next page', exact: true });
   for (let pageNumber = 1; pageNumber <= 100; pageNumber += 1) {
     rows.push(...await readVisibleInvoices(page, region));
