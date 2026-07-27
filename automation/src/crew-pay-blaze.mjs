@@ -25,9 +25,23 @@ function labeledValue(text, label) {
   return clean(text.match(pattern)?.[1] || '');
 }
 
-async function waitForPage(page) {
+async function waitForLoading(page) {
   await page.locator('ng-http-loader .backdrop').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
-  await page.getByRole('link', { name: /Invoice\s*#/i }).first().waitFor({ state: 'visible', timeout: 60000 });
+}
+
+async function waitForRegionPicker(page) {
+  await waitForLoading(page);
+  await page.getByRole('combobox').first().waitFor({ state: 'visible', timeout: 60000 });
+}
+
+async function waitForRegionResults(page) {
+  await waitForLoading(page);
+  await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
+  await page.waitForFunction(() => {
+    const invoice = document.querySelector('a[href*="/production-invoices/"][href*="/crew-invoice-item-list"]');
+    const empty = /no\s+(?:production\s+)?invoices?|no\s+records?|no\s+data/i.test(document.body?.innerText || '');
+    return Boolean(invoice || empty);
+  }, undefined, { timeout: 60000 });
 }
 
 async function regionNames(page) {
@@ -42,7 +56,7 @@ async function selectRegion(page, region) {
   const picker = page.getByRole('combobox').first();
   await picker.click();
   await page.getByRole('option', { name: region, exact: true }).click();
-  await waitForPage(page);
+  await waitForRegionResults(page);
 }
 
 async function readVisibleInvoices(page, region) {
@@ -84,13 +98,15 @@ async function readRegionInvoices(page, region) {
     await pageSize.click();
     const largest = page.getByRole('option').last();
     await largest.click().catch(() => {});
-    await waitForPage(page);
+    await waitForRegionResults(page);
   }
   const next = paginator.getByRole('button', { name: 'Next page', exact: true });
   for (let pageNumber = 1; pageNumber <= 100; pageNumber += 1) {
     rows.push(...await readVisibleInvoices(page, region));
     if (!(await next.count()) || await next.isDisabled()) break;
-    const previous = await page.locator('a[href*="/production-invoices/"][href*="/crew-invoice-item-list"]').first().getAttribute('href');
+    const firstInvoice = page.locator('a[href*="/production-invoices/"][href*="/crew-invoice-item-list"]').first();
+    if (!(await firstInvoice.count())) break;
+    const previous = await firstInvoice.getAttribute('href');
     await next.click();
     await page.waitForFunction((href) => {
       const first = document.querySelector('a[href*="/production-invoices/"][href*="/crew-invoice-item-list"]');
@@ -102,7 +118,7 @@ async function readRegionInvoices(page, region) {
 
 async function discoverInvoices(page) {
   await page.goto(PRODUCTION_INVOICES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await waitForPage(page);
+  await waitForRegionPicker(page);
   const regions = await regionNames(page);
   if (!regions.length) throw new Error('Blaze did not provide any production-invoice regions.');
   const rows = [];
