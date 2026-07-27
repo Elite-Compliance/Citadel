@@ -31,7 +31,19 @@ async function waitForLoading(page) {
 
 async function waitForRegionPicker(page) {
   await waitForLoading(page);
-  await page.getByRole('combobox').first().waitFor({ state: 'visible', timeout: 60000 });
+  await regionPicker(page).then((picker) => picker.waitFor({ state: 'visible', timeout: 60000 }));
+}
+
+async function regionPicker(page) {
+  const named = page.getByRole('combobox', { name: /region/i }).first();
+  if (await named.count()) return named;
+  const attributed = page.locator(
+    'mat-select[name*="region" i], mat-select[formcontrolname*="region" i], [role="combobox"][aria-label*="region" i]'
+  ).first();
+  if (await attributed.count()) return attributed;
+  const labeled = page.locator('mat-form-field').filter({ hasText: /region/i }).getByRole('combobox').first();
+  if (await labeled.count()) return labeled;
+  throw new Error('Blaze production invoices did not expose a Region selector.');
 }
 
 async function waitForRegionResults(page) {
@@ -45,7 +57,7 @@ async function waitForRegionResults(page) {
 }
 
 async function regionNames(page) {
-  const picker = page.getByRole('combobox').first();
+  const picker = await regionPicker(page);
   await picker.click();
   const names = (await page.getByRole('option').allTextContents()).map(clean).filter(Boolean);
   await picker.press('Escape').catch(() => {});
@@ -53,7 +65,7 @@ async function regionNames(page) {
 }
 
 async function selectRegion(page, region) {
-  const picker = page.getByRole('combobox').first();
+  const picker = await regionPicker(page);
   await picker.click();
   await page.getByRole('option', { name: region, exact: true }).click();
   await waitForRegionResults(page);
