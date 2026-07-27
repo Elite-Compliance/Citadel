@@ -54,6 +54,13 @@ async function regionPicker(page) {
   return page.getByRole('combobox', { name: 'Region', exact: true });
 }
 
+async function closeSelectOverlay(page) {
+  const backdrop = page.locator('.cdk-overlay-backdrop-showing').last();
+  if (!(await backdrop.count())) return;
+  await page.keyboard.press('Escape');
+  await backdrop.waitFor({ state: 'hidden', timeout: 10000 });
+}
+
 async function waitForRegionResults(page) {
   await waitForLoading(page);
   await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
@@ -68,7 +75,7 @@ async function regionNames(page) {
   const picker = await regionPicker(page);
   await picker.click();
   const names = (await page.getByRole('option').allTextContents()).map(clean).filter(Boolean);
-  await picker.press('Escape').catch(() => {});
+  await closeSelectOverlay(page);
   return [...new Set(names)];
 }
 
@@ -76,6 +83,7 @@ async function selectRegion(page, region) {
   const picker = await regionPicker(page);
   await picker.click();
   await page.getByRole('option', { name: region, exact: true }).click();
+  await page.locator('.cdk-overlay-backdrop-showing').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
   await waitForRegionResults(page);
 }
 
@@ -114,6 +122,7 @@ async function setRowsPerPage(page, paginator) {
   const pageSize = paginator.getByRole('combobox', { name: /Items per page:/i });
   if (!(await pageSize.count()) || !(await pageSize.isVisible())) return;
   if (clean(await pageSize.textContent()) === '20') return;
+  await closeSelectOverlay(page);
   await pageSize.click();
   const option = page.getByRole('option', { name: '20', exact: true });
   if (!(await option.count())) {
@@ -121,6 +130,7 @@ async function setRowsPerPage(page, paginator) {
     return;
   }
   await option.click();
+  await page.locator('.cdk-overlay-backdrop-showing').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
   await waitForLoading(page);
 }
 
