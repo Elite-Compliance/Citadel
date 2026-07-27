@@ -107,10 +107,15 @@ async function selectRegion(page, region) {
       await closeSelectOverlay(page);
       const picker = await ensureInvoicePage(page);
       await picker.click();
-      const option = page.getByRole('option', { name: region, exact: true });
+      const selectedOptions = page.locator('[role="option"][aria-selected="true"]');
+      for (let guard = 0; guard < 100 && await selectedOptions.count(); guard += 1) {
+        await selectedOptions.first().click();
+      }
+      const option = page.getByRole('option', { name: region, exact: true }).first();
       await option.waitFor({ state: 'visible', timeout: 15000 });
       await option.click();
-      await page.locator('.cdk-overlay-backdrop-showing').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+      await page.keyboard.press('Escape');
+      await page.locator('.cdk-overlay-backdrop-showing').waitFor({ state: 'hidden', timeout: 10000 });
       await waitForRegionResults(page);
       return;
     } catch (error) {
