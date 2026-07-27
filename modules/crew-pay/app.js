@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 1.3 seconds
-Output:
 const app=document.querySelector("#app");
 const state={data:window.CITADEL_CREW_PAY_DATA||{},loading:true,error:"",selected:"",quick:"all",report:false,reportMode:"invoices",reportUom:"SQ",reportTolerance:5,filters:{region:"All regions",crew:"All crews",trade:"All trades",status:"All statuses",comparison:"All results",from:"",to:"",search:""},sort:"Newest invoice"};
 let searchTimer=0;
