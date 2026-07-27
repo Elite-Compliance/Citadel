@@ -92,9 +92,9 @@ async function readVisibleInvoices(page, region) {
 
 async function readRegionInvoices(page, region) {
   const rows = [];
-  const paginator = page.locator('mat-paginator').last();
+  const paginator = page.locator('mat-paginator:visible').last();
   const pageSize = paginator.getByRole('combobox', { name: /Items per page/ });
-  if (await pageSize.count()) {
+  if (await pageSize.count() && await pageSize.isVisible()) {
     await pageSize.click();
     const largest = page.getByRole('option').last();
     await largest.click().catch(() => {});
