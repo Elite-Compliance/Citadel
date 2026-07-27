@@ -45,13 +45,33 @@ async function waitForLoading(page) {
   }, undefined, { timeout: 60000 });
 }
 
-async function waitForRegionPicker(page) {
-  await waitForLoading(page);
-  await regionPicker(page).then((picker) => picker.waitFor({ state: 'visible', timeout: 60000 }));
+function regionPicker(page) {
+  return page.locator('[role="combobox"][aria-label="Region"], mat-select[aria-label="Region"]').first();
 }
 
-async function regionPicker(page) {
-  return page.getByRole('combobox', { name: 'Region', exact: true });
+async function waitForRegionPicker(page) {
+  await waitForLoading(page);
+  const picker = regionPicker(page);
+  if (await picker.isVisible().catch(() => false)) return picker;
+
+  const showFilters = page.getByRole('button', { name: 'Show Filters', exact: true });
+  if (await showFilters.isVisible().catch(() => false)) {
+    await showFilters.click();
+  }
+  await picker.waitFor({ state: 'visible', timeout: 60000 });
+  return picker;
+}
+
+async function ensureInvoicePage(page) {
+  if (!page.url().startsWith(PRODUCTION_INVOICES_URL)) {
+    await page.goto(PRODUCTION_INVOICES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  }
+  try {
+    return await waitForRegionPicker(page);
+  } catch {
+    await page.goto(PRODUCTION_INVOICES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    return waitForRegionPicker(page);
+  }
 }
 
 async function closeSelectOverlay(page) {
@@ -72,19 +92,33 @@ async function waitForRegionResults(page) {
 }
 
 async function regionNames(page) {
-  const picker = await regionPicker(page);
+  const picker = await ensureInvoicePage(page);
   await picker.click();
   const names = (await page.getByRole('option').allTextContents()).map(clean).filter(Boolean);
   await closeSelectOverlay(page);
+  await ensureInvoicePage(page);
   return [...new Set(names)];
 }
 
 async function selectRegion(page, region) {
-  const picker = await regionPicker(page);
-  await picker.click();
-  await page.getByRole('option', { name: region, exact: true }).click();
-  await page.locator('.cdk-overlay-backdrop-showing').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
-  await waitForRegionResults(page);
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await closeSelectOverlay(page);
+      const picker = await ensureInvoicePage(page);
+      await picker.click();
+      const option = page.getByRole('option', { name: region, exact: true });
+      await option.waitFor({ state: 'visible', timeout: 15000 });
+      await option.click();
+      await page.locator('.cdk-overlay-backdrop-showing').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+      await waitForRegionResults(page);
+      return;
+    } catch (error) {
+      lastError = error;
+      await page.goto(PRODUCTION_INVOICES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    }
+  }
+  throw new Error(`Blaze region "${region}" could not be selected after 3 attempts: ${lastError?.message || 'unknown error'}`);
 }
 
 async function readVisibleInvoices(page, region) {
