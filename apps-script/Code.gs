@@ -1481,11 +1481,44 @@ function getCrewPay() {
   const analysis = readSheetObjects_(spreadsheetId, SHEETS.crewRateAnalysis);
   const exceptions = readSheetObjects_(spreadsheetId, SHEETS.crewInvoiceExceptions).filter(isActiveRow_);
   const importLog = readSheetObjects_(spreadsheetId, SHEETS.crewInvoiceImportLog);
+  const contractorSpreadsheetId = getContractorsSpreadsheetId_();
+  const contractorRecords = sheetExists_(contractorSpreadsheetId, SHEETS.contractorRecords)
+    ? readSheetObjects_(contractorSpreadsheetId, SHEETS.contractorRecords)
+    : [];
+  const activeContractors = contractorRecords.filter(function(row) {
+    return /^(yes|true|active|1)$/i.test(String(row.Active || row.active || '').trim());
+  });
+  const activeContractorIds = {};
+  activeContractors.forEach(function(row) {
+    activeContractorIds[String(row.contractor_id || '').trim()] = true;
+  });
+  const contractorCrews = sheetExists_(contractorSpreadsheetId, SHEETS.contractorCrews)
+    ? readSheetObjects_(contractorSpreadsheetId, SHEETS.contractorCrews)
+    : [];
+  const crewsByContractor = {};
+  contractorCrews.forEach(function(row) {
+    const contractorId = String(row.contractor_id || '').trim();
+    if (!activeContractorIds[contractorId]) return;
+    if (/^(no|false|inactive|0)$/i.test(String(row.active || '').trim())) return;
+    if (!crewsByContractor[contractorId]) crewsByContractor[contractorId] = [];
+    const crewName = String(row.crew_name || '').trim();
+    if (crewName && crewsByContractor[contractorId].indexOf(crewName) < 0) crewsByContractor[contractorId].push(crewName);
+  });
+  const activeSubcontractors = activeContractors.map(function(row) {
+    const contractorId = String(row.contractor_id || '').trim();
+    return {
+      contractor_id: contractorId,
+      contractor_name: String(row.Contractor || row.contractor_name || '').trim(),
+      regions: String(row.Regions || row.regions || '').trim(),
+      crew_names: crewsByContractor[contractorId] || []
+    };
+  });
   return {
     invoices: invoices,
     lines: lines,
     analysis: analysis,
     exceptions: exceptions,
+    activeSubcontractors: activeSubcontractors,
     metrics: buildCrewPayMetrics_(invoices, lines, analysis),
     importStatus: importLog.length ? importLog[importLog.length - 1] : null
   };
