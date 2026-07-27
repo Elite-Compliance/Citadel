@@ -3,16 +3,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check src/run.mjs && node --check src/blaze.mjs && node --check src/google.mjs && node --check src/validate.mjs && npm run check:reviews && npm run check:contractors && npm run check:orders",
+    "check": "node --check src/run.mjs && node --check src/blaze.mjs && node --check src/google.mjs && node --check src/validate.mjs && npm run check:reviews && npm run check:contractors && npm run check:orders && npm run check:crew-pay",
     "check:reviews": "node --check src/run-reviews.mjs && node --check src/removify.mjs && node --check src/reviews-google.mjs && node --check src/reviews-validate.mjs",
     "check:contractors": "node --check src/run-contractors.mjs && node --check src/blaze.mjs && node --check src/config.mjs && node --check src/contractors-google.mjs && node --check src/contractors-validate.mjs",
     "check:orders": "node --check src/run-orders.mjs && node --check src/orders-blaze.mjs && node --check src/orders-compare.mjs && node --check src/orders-google.mjs",
+    "check:crew-pay": "node --check src/run-crew-pay.mjs && node --check src/crew-pay-blaze.mjs && node --check src/crew-pay-compare.mjs && node --check src/crew-pay-google.mjs",
     "test:contractors": "node --test test/contractors-validate.test.mjs",
     "test:orders": "node --test test/orders-compare.test.mjs",
+    "test:crew-pay": "node --test test/crew-pay-compare.test.mjs",
     "run": "node src/run.mjs",
     "run:reviews": "node src/run-reviews.mjs",
     "run:contractors": "node src/run-contractors.mjs",
-    "run:orders": "node src/run-orders.mjs"
+    "run:orders": "node src/run-orders.mjs",
+    "run:crew-pay": "node src/run-crew-pay.mjs"
   },
   "dependencies": {
     "csv-parse": "5.6.0",
