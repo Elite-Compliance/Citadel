@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.7 seconds
+Output:
 import { chromium } from 'playwright';
 import { ensureAuthenticated } from './blaze.mjs';
 import { moneyNumber, stableId } from './orders-compare.mjs';
@@ -271,6 +274,32 @@ async function definitionValue(page, label) {
   }, label));
 }
 
+async function pageLabeledValue(page, label) {
+  return clean(await page.locator('main').evaluate((root, expected) => {
+    const normalize = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
+    const wanted = expected.replace(/:$/, '').toLowerCase();
+    const labels = [...root.querySelectorAll('*')].filter((element) => {
+      const text = normalize(element.textContent).replace(/:$/, '').toLowerCase();
+      if (text !== wanted) return false;
+      return ![...element.children].some((child) => (
+        normalize(child.textContent).replace(/:$/, '').toLowerCase() === wanted
+      ));
+    });
+    const labelElement = labels[0];
+    if (!labelElement) return '';
+    const directSibling = labelElement.nextElementSibling;
+    if (directSibling && normalize(directSibling.textContent)) {
+      return normalize(directSibling.textContent);
+    }
+    const container = labelElement.parentElement;
+    if (!container) return '';
+    const valueElement = [...container.querySelectorAll('p, strong, a, span')]
+      .find((element) => element !== labelElement && normalize(element.textContent)
+        && normalize(element.textContent).replace(/:$/, '').toLowerCase() !== wanted);
+    return normalize(valueElement?.textContent);
+  }, label));
+}
+
 async function readInvoiceDetail(page, source) {
   await page.goto(source.source_url, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.getByRole('columnheader', { name: 'Item', exact: true }).waitFor({ state: 'visible', timeout: 60000 });
@@ -279,9 +308,16 @@ async function readInvoiceDetail(page, source) {
   const jobHref = await jobLink.getAttribute('href').catch(() => '');
   const jobUrl = jobHref ? absoluteBlazeUrl(jobHref) : '';
   const heading = clean(await jobLink.innerText().catch(() => ''));
-  const invoiceNumber = await definitionValue(page, 'Invoice Number') || source.invoice_number;
-  const crewName = await definitionValue(page, 'Crew') || source.crew_name;
-  const trade = await definitionValue(page, 'Trade') || source.trade;
+  const [headingJobNumber, ...headingCustomerParts] = heading.split(':');
+  const invoiceNumber = await pageLabeledValue(page, 'Invoice #')
+    || await definitionValue(page, 'Invoice Number')
+    || source.invoice_number;
+  const crewName = await pageLabeledValue(page, 'Crew Name')
+    || await definitionValue(page, 'Crew')
+    || source.crew_name;
+  const trade = await pageLabeledValue(page, 'Trade')
+    || await definitionValue(page, 'Trade')
+    || source.trade;
   const status = await definitionValue(page, 'Status') || source.invoice_status;
   const invoiceDate = await definitionValue(page, 'Date Of Invoice') || source.invoice_date;
   const approvedBy = await definitionValue(page, 'Approved By') || source.approved_by;
@@ -313,9 +349,9 @@ async function readInvoiceDetail(page, source) {
     invoice_id: source.invoice_id,
     invoice_number: invoiceNumber,
     job_id: jobIdFromUrl(jobUrl),
-    job_number: source.job_number || heading.split(':')[0],
+    job_number: clean(headingJobNumber) || source.job_number,
     job_url: jobUrl,
-    customer: heading.includes(':') ? heading.split(':').slice(1).join(':').trim() : '',
+    customer: clean(headingCustomerParts.join(':')),
     region: source.region,
     crew_name: crewName,
     trade,
@@ -389,3 +425,4 @@ export async function exportCrewPay(credentials) {
     await browser.close();
   }
 }
+
