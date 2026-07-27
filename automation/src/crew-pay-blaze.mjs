@@ -46,7 +46,7 @@ async function waitForLoading(page) {
 }
 
 function regionPicker(page) {
-  return page.locator('[role="combobox"][aria-label="Region"], mat-select[aria-label="Region"]').first();
+  return page.getByRole('combobox', { name: 'Region', exact: true });
 }
 
 async function waitForRegionPicker(page) {
