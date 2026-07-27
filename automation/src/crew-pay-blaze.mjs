@@ -54,12 +54,24 @@ async function waitForLoading(page) {
   }, undefined, { timeout: 60000 });
 }
 
+function filterPicker(page, label) {
+  return page
+    .locator('mat-form-field')
+    .filter({
+      has: page.locator('mat-label').filter({
+        hasText: new RegExp(`^${label}$`, 'i')
+      })
+    })
+    .getByRole('combobox')
+    .first();
+}
+
 function regionPicker(page) {
-  return page.getByRole('combobox', { name: 'Region', exact: true });
+  return filterPicker(page, 'Region');
 }
 
 function statusPicker(page) {
-  return page.getByRole('combobox', { name: /^(?:Invoice )?Status$/i }).first();
+  return filterPicker(page, 'Status');
 }
 
 async function waitForFilters(page) {
