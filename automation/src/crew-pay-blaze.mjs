@@ -3,6 +3,15 @@ import { ensureAuthenticated } from './blaze.mjs';
 import { moneyNumber, stableId } from './orders-compare.mjs';
 
 export const PRODUCTION_INVOICES_URL = 'https://blaze-crm.com/64daaf06-5043-4886-b9a2-1362e47b0b65/production-dashboard/production-invoices';
+const INVOICE_STATUSES = [
+  'APPROVED',
+  'DENIED',
+  'DENIED_PRE_APPROVED',
+  'PAID',
+  'PENDING',
+  'PRE_APPROVED',
+  'SUBMITTED'
+];
 
 function clean(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
@@ -49,17 +58,28 @@ function regionPicker(page) {
   return page.getByRole('combobox', { name: 'Region', exact: true });
 }
 
-async function waitForRegionPicker(page) {
+function statusPicker(page) {
+  return page.getByRole('combobox', { name: /^(?:Invoice )?Status$/i }).first();
+}
+
+async function waitForFilters(page) {
   await waitForLoading(page);
-  const picker = regionPicker(page);
-  if (await picker.isVisible().catch(() => false)) return picker;
+  const region = regionPicker(page);
+  const status = statusPicker(page);
+  if (
+    await region.isVisible().catch(() => false)
+    && await status.isVisible().catch(() => false)
+  ) {
+    return { region, status };
+  }
 
   const showFilters = page.getByRole('button', { name: 'Show Filters', exact: true });
   if (await showFilters.isVisible().catch(() => false)) {
     await showFilters.click();
   }
-  await picker.waitFor({ state: 'visible', timeout: 60000 });
-  return picker;
+  await region.waitFor({ state: 'visible', timeout: 60000 });
+  await status.waitFor({ state: 'visible', timeout: 60000 });
+  return { region, status };
 }
 
 async function ensureInvoicePage(page) {
@@ -67,10 +87,10 @@ async function ensureInvoicePage(page) {
     await page.goto(PRODUCTION_INVOICES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   }
   try {
-    return await waitForRegionPicker(page);
+    return await waitForFilters(page);
   } catch {
     await page.goto(PRODUCTION_INVOICES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    return waitForRegionPicker(page);
+    return waitForFilters(page);
   }
 }
 
@@ -91,42 +111,60 @@ async function waitForRegionResults(page) {
   }, undefined, { timeout: 60000 });
 }
 
-async function regionNames(page) {
-  const picker = await ensureInvoicePage(page);
-  await picker.click();
-  const names = (await page.getByRole('option').allTextContents()).map(clean).filter(Boolean);
-  await closeSelectOverlay(page);
-  await ensureInvoicePage(page);
-  return [...new Set(names)];
+function normalizeStatus(value) {
+  return clean(value).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
-async function selectRegion(page, region) {
+async function clearSelections(page) {
+  const selected = page.locator('[role="option"][aria-selected="true"]:visible');
+  for (let guard = 0; guard < 100 && await selected.count(); guard += 1) {
+    await selected.first().click();
+  }
+}
+
+async function clearRegionFilter(page) {
+  await closeSelectOverlay(page);
+  const { region } = await ensureInvoicePage(page);
+  await region.click();
+  await clearSelections(page);
+  await page.keyboard.press('Escape');
+  await closeSelectOverlay(page);
+  await waitForRegionResults(page);
+}
+
+async function selectInvoiceStatus(page, status) {
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
       await closeSelectOverlay(page);
-      const picker = await ensureInvoicePage(page);
+      const { status: picker } = await ensureInvoicePage(page);
       await picker.click();
-      const selectedOptions = page.locator('[role="option"][aria-selected="true"]');
-      for (let guard = 0; guard < 100 && await selectedOptions.count(); guard += 1) {
-        await selectedOptions.first().click();
+      await clearSelections(page);
+      const options = page.locator('[role="option"]:visible');
+      let match = null;
+      for (let index = 0; index < await options.count(); index += 1) {
+        const option = options.nth(index);
+        if (normalizeStatus(await option.textContent()) === status) {
+          match = option;
+          break;
+        }
       }
-      const option = page.getByRole('option', { name: region, exact: true }).first();
-      await option.waitFor({ state: 'visible', timeout: 15000 });
-      await option.click();
+      if (!match) throw new Error(`status option ${status} is unavailable`);
+      await match.click();
       await page.keyboard.press('Escape');
-      await page.locator('.cdk-overlay-backdrop-showing').waitFor({ state: 'hidden', timeout: 10000 });
+      await closeSelectOverlay(page);
       await waitForRegionResults(page);
       return;
     } catch (error) {
       lastError = error;
       await page.goto(PRODUCTION_INVOICES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await clearRegionFilter(page);
     }
   }
-  throw new Error(`Blaze region "${region}" could not be selected after 3 attempts: ${lastError?.message || 'unknown error'}`);
+  throw new Error(`Blaze invoice status "${status}" could not be selected after 3 attempts: ${lastError?.message || 'unknown error'}`);
 }
 
-async function readVisibleInvoices(page, region) {
+async function readVisibleInvoices(page, context) {
   return page.locator('a[href*="/production-invoices/"][href*="/crew-invoice-item-list"]').evaluateAll((links, context) => (
     links.map((link) => {
       const card = link.closest('tr, mat-card, .card, [class*="invoice"], [class*="list-item"]') || link.parentElement?.parentElement || link;
@@ -139,14 +177,14 @@ async function readVisibleInvoices(page, region) {
         return (text.match(expression)?.[1] || '').trim();
       };
       return {
-        region: context.region,
+        region: '',
         invoice_href: link.getAttribute('href') || '',
         invoice_number: invoiceNumber,
         job_number: read('Job Number'),
         crew_name: read('Crew Name'),
         trade: read('Trade'),
         total_amount: read('Total'),
-        invoice_status: read('Status'),
+        invoice_status: read('Status') || context.status,
         invoice_date: read('Date Of Invoice'),
         approved_by: read('Approved By'),
         approved_on: read('Approved On'),
@@ -154,7 +192,7 @@ async function readVisibleInvoices(page, region) {
         card_text: text
       };
     })
-  ), { region });
+  ), context);
 }
 
 async function setRowsPerPage(page, paginator) {
@@ -173,14 +211,14 @@ async function setRowsPerPage(page, paginator) {
   await waitForLoading(page);
 }
 
-async function readRegionInvoices(page, region) {
+async function readStatusInvoices(page, status) {
   const rows = [];
   const paginator = page.locator('mat-paginator:visible').last();
   const next = paginator.getByRole('button', { name: 'Next page', exact: true });
   await setRowsPerPage(page, paginator);
-  for (let pageNumber = 1; pageNumber <= 100; pageNumber += 1) {
+  for (let pageNumber = 1; pageNumber <= 1000; pageNumber += 1) {
     await waitForLoading(page);
-    rows.push(...await readVisibleInvoices(page, region));
+    rows.push(...await readVisibleInvoices(page, { status }));
     if (!(await next.count()) || await next.isDisabled()) break;
     const firstInvoice = page.locator('a[href*="/production-invoices/"][href*="/crew-invoice-item-list"]').first();
     if (!(await firstInvoice.count())) break;
@@ -199,13 +237,14 @@ async function readRegionInvoices(page, region) {
 
 async function discoverInvoices(page) {
   await page.goto(PRODUCTION_INVOICES_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await waitForRegionPicker(page);
-  const regions = await regionNames(page);
-  if (!regions.length) throw new Error('Blaze did not provide any production-invoice regions.');
+  await waitForFilters(page);
+  await clearRegionFilter(page);
   const rows = [];
-  for (const region of regions) {
-    await selectRegion(page, region);
-    rows.push(...await readRegionInvoices(page, region));
+  const completedStatuses = [];
+  for (const status of INVOICE_STATUSES) {
+    await selectInvoiceStatus(page, status);
+    rows.push(...await readStatusInvoices(page, status));
+    completedStatuses.push(status);
   }
   const unique = new Map();
   for (const row of rows) {
@@ -214,7 +253,11 @@ async function discoverInvoices(page) {
     if (!invoiceId) continue;
     unique.set(invoiceId, { ...row, invoice_id: invoiceId, source_url: sourceUrl });
   }
-  return { regions, rows: [...unique.values()] };
+  return {
+    regions: ['All regions'],
+    statuses: completedStatuses,
+    rows: [...unique.values()]
+  };
 }
 
 async function definitionValue(page, label) {
