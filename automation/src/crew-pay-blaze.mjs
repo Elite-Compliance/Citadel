@@ -35,15 +35,7 @@ async function waitForRegionPicker(page) {
 }
 
 async function regionPicker(page) {
-  const named = page.getByRole('combobox', { name: /region/i }).first();
-  if (await named.count()) return named;
-  const attributed = page.locator(
-    'mat-select[name*="region" i], mat-select[formcontrolname*="region" i], [role="combobox"][aria-label*="region" i]'
-  ).first();
-  if (await attributed.count()) return attributed;
-  const labeled = page.locator('mat-form-field').filter({ hasText: /region/i }).getByRole('combobox').first();
-  if (await labeled.count()) return labeled;
-  throw new Error('Blaze production invoices did not expose a Region selector.');
+  return page.getByRole('combobox', { name: 'Region', exact: true });
 }
 
 async function waitForRegionResults(page) {
