@@ -243,16 +243,24 @@ async function readInvoiceDetail(page, source) {
   const paidOn = await definitionValue(page, 'Paid On');
   const rows = await page.locator('table').filter({ has: page.getByRole('columnheader', { name: 'Item', exact: true }) }).first()
     .locator('tbody tr').evaluateAll((tableRows) => tableRows.map((row) => {
-      const values = [...row.querySelectorAll('td')].map((cell) => cell.textContent?.replace(/\s+/g, ' ').trim() || '');
+      const cell = (column) => (
+        row.querySelector(`.cdk-column-${column}, .mat-column-${column}`)
+      );
+      const text = (column) => (
+        cell(column)?.textContent?.replace(/\s+/g, ' ').trim() || ''
+      );
+      const fieldValue = (column, selector) => (
+        cell(column)?.querySelector(selector)?.value?.trim() || ''
+      );
       return {
-        item_name: values[0] || '',
-        uom: values[1] || '',
-        invoice_unit_price: values[2] || '',
-        quantity: values[3] || '',
-        original_quantity: values[4] || '',
-        invoice_total: values[5] || '',
-        note: values[6] || '',
-        requirements: values[7] || ''
+        item_name: text('description'),
+        uom: text('uom'),
+        invoice_unit_price: text('itemCost'),
+        quantity: fieldValue('quantity', 'input') || text('quantity').replace(/^QTY\s*/i, ''),
+        original_quantity: text('originalQuantity'),
+        invoice_total: text('itemPrice'),
+        note: fieldValue('note', 'textarea, input') || text('note').replace(/^Note\s*/i, ''),
+        requirements: cell('requirements')?.querySelector('button')?.getAttribute('title') || text('requirements')
       };
     }));
   const invoice = {
