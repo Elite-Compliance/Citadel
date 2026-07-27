@@ -7,6 +7,7 @@ const SHEETS = {
   analysis: 'CrewRateAnalysis',
   exceptions: 'CrewInvoiceExceptions',
   importLog: 'CrewInvoiceImportLog',
+  orders: 'Orders',
   orderLines: 'OrderLines'
 };
 
@@ -115,15 +116,25 @@ async function appendLog(sheets, spreadsheetId, row) {
 
 export async function publishCrewPay(sheets, spreadsheetId, pricingRows, exportResult, runId, startedAt) {
   await ensureSheets(sheets, spreadsheetId);
-  const [orderLineValues, exceptionValues] = await Promise.all([
+  const [orderValues, orderLineValues, exceptionValues] = await Promise.all([
+    readSheet(sheets, spreadsheetId, SHEETS.orders),
     readSheet(sheets, spreadsheetId, SHEETS.orderLines),
     readSheet(sheets, spreadsheetId, SHEETS.exceptions)
   ]);
+  const orders = rowsToObjects(orderValues);
+  const orderByJob = new Map(
+    orders.filter((order) => clean(order.job_id)).map((order) => [clean(order.job_id), order])
+  );
   const orderLines = rowsToObjects(orderLineValues);
   const reviewed = new Map(rowsToObjects(exceptionValues).map((row) => [row.exception_id, row]));
   const lines = [];
   const invoices = exportResult.records.map((detail) => {
-    const compared = compareCrewInvoiceLines(detail.invoice, detail.lines, orderLines, pricingRows);
+    const matchingOrder = orderByJob.get(clean(detail.invoice.job_id));
+    const invoice = {
+      ...detail.invoice,
+      region: detail.invoice.region || matchingOrder?.region || ''
+    };
+    const compared = compareCrewInvoiceLines(invoice, detail.lines, orderLines, pricingRows);
     lines.push(...compared.map((line) => ({
       ...line,
       normalized_item: normalizeKey(line.item_name),
@@ -131,7 +142,7 @@ export async function publishCrewPay(sheets, spreadsheetId, pricingRows, exportR
       active: 'Yes'
     })));
     return {
-      ...aggregateCrewInvoice(detail.invoice, compared),
+      ...aggregateCrewInvoice(invoice, compared),
       source_updated_at: new Date().toISOString(),
       import_batch_id: runId,
       active: 'Yes'
