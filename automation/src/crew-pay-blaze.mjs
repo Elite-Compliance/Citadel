@@ -54,24 +54,15 @@ async function waitForLoading(page) {
   }, undefined, { timeout: 60000 });
 }
 
-function filterPicker(page, label) {
-  return page
-    .locator('mat-form-field')
-    .filter({
-      has: page.locator('mat-label').filter({
-        hasText: new RegExp(`^${label}$`, 'i')
-      })
-    })
-    .getByRole('combobox')
-    .first();
-}
-
 function regionPicker(page) {
-  return filterPicker(page, 'Region');
+  return page.getByRole('combobox', { name: 'Region', exact: true });
 }
 
 function statusPicker(page) {
-  return filterPicker(page, 'Status');
+  const status = '(?:APPROVED|DENIED|DENIED_PRE_APPROVED|PAID|PENDING|PRE_APPROVED|SUBMITTED)';
+  return page.getByRole('combobox', {
+    name: new RegExp(`^${status}(?:,\\s*${status})*$`, 'i')
+  }).first();
 }
 
 async function waitForFilters(page) {
