@@ -168,33 +168,33 @@ async function selectInvoiceStatus(page, status) {
 }
 
 async function readVisibleInvoices(page, context) {
-  return page.locator('a[href*="/production-invoices/"][href*="/crew-invoice-item-list"]').evaluateAll((links, context) => (
-    links.map((link) => {
-      const card = link.closest('tr, mat-card, .card, [class*="invoice"], [class*="list-item"]') || link.parentElement?.parentElement || link;
-      const text = card.textContent?.replace(/\s+/g, ' ').trim() || '';
-      const invoiceNumber = (link.textContent || '').match(/Invoice\s*#?\s*(\d+)/i)?.[1]
-        || text.match(/Invoice\s*#?\s*(\d+)/i)?.[1]
-        || '';
-      const read = (label) => {
-        const expression = new RegExp(`${label}\\s*:?\\s*(.*?)(?=\\s+(?:Job Number|Crew Name|Trade|Total|Status|Approved By|Approved On|Date Of Invoice|Last Updated)\\s*:?|$)`, 'i');
-        return (text.match(expression)?.[1] || '').trim();
-      };
+  return page.locator('main table tbody tr').evaluateAll((rows, context) => (
+    rows.map((row) => {
+      const cellText = (column) => (
+        row.querySelector(`.cdk-column-${column}, .mat-column-${column}`)
+          ?.textContent?.replace(/\s+/g, ' ').trim() || ''
+      );
+      const invoiceLink = row.querySelector(
+        'a[href*="/production-invoices/"][href*="/crew-invoice-item-list"]'
+      );
       return {
         region: '',
-        invoice_href: link.getAttribute('href') || '',
-        invoice_number: invoiceNumber,
-        job_number: read('Job Number'),
-        crew_name: read('Crew Name'),
-        trade: read('Trade'),
-        total_amount: read('Total'),
-        invoice_status: read('Status') || context.status,
-        invoice_date: read('Date Of Invoice'),
-        approved_by: read('Approved By'),
-        approved_on: read('Approved On'),
-        source_updated_at: read('Last Updated'),
-        card_text: text
+        invoice_href: invoiceLink?.getAttribute('href') || '',
+        invoice_number: cellText('name'),
+        job_number: cellText('jobNumber'),
+        customer: cellText('jobName'),
+        crew_name: cellText('crewName'),
+        trade: cellText('tradeType'),
+        total_amount: cellText('totalAmount'),
+        invoice_status: cellText('invoiceStatus') || context.status,
+        invoice_type: cellText('invoiceType'),
+        invoice_date: cellText('completedDate'),
+        approved_by: '',
+        approved_on: '',
+        source_updated_at: '',
+        card_text: row.textContent?.replace(/\s+/g, ' ').trim() || ''
       };
-    })
+    }).filter((row) => row.invoice_href)
   ), context);
 }
 
@@ -348,7 +348,7 @@ async function readInvoiceDetail(page, source) {
     job_id: jobIdFromUrl(jobUrl),
     job_number: clean(headingJobNumber) || source.job_number,
     job_url: jobUrl,
-    customer: clean(headingCustomerParts.join(':')),
+    customer: clean(headingCustomerParts.join(':')) || source.customer,
     region: source.region,
     crew_name: crewName,
     trade,
@@ -372,6 +372,14 @@ async function readInvoiceDetail(page, source) {
     invoice_total: moneyNumber(line.invoice_total),
     custom_labor: /^\*/.test(line.item_name) ? 'Yes' : ''
   }));
+  if (!invoice.invoice_number || !invoice.job_number || !invoice.crew_name
+    || !invoice.trade || !Number.isFinite(invoice.total_amount) || !lines.length) {
+    throw new Error(
+      `Incomplete Blaze invoice detail (invoice=${invoice.invoice_number || 'missing'}, `
+      + `job=${invoice.job_number || 'missing'}, crew=${invoice.crew_name || 'missing'}, `
+      + `trade=${invoice.trade || 'missing'}, lines=${lines.length})`
+    );
+  }
   return { invoice, lines };
 }
 
